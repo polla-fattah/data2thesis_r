@@ -1,10 +1,10 @@
 ---
-title:  Advanced Statistical Techniques
+title: ANOVA and Regression
 slug: chapter07
 order: 065
 published: false
 abstract: >
-    Building on the basics, this chapter explores ANOVA, regression analysis, and logistic regression. Practical examples demonstrate how these techniques can be applied to uncover relationships between variables and predict outcomes in research datasets.
+    Building on the two-group comparisons of the previous chapter, this chapter introduces ANOVA for comparing many groups, followed by linear and logistic regression for modelling relationships between variables. Readers will learn to fit, interpret, and check these models, culminating in a case study predicting survival on the Titanic.
 ---
 
 

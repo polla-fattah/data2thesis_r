@@ -3,13 +3,16 @@ layout: home
 title: R for non-Technical Researchers
 ---
 
+*Every chapter ends with a chapter review: a short summary and a list of key terms, which are collected in the glossary (Appendix B).*
+
 ## **Part 1: Foundations of R Programming and Data Handling**
 
-### **Chapter 1: Getting Started with R and RStudio**
+### **Chapter 1: Getting Started with R**
 
 - Installing and setting up R and RStudio.
 - Exploring the RStudio interface: Source, Console, Environment, and Plots panes.
 - Writing and executing R scripts.
+- Organizing your work with RStudio Projects and reliable file paths (`here`).
 - Overview of R libraries and packages.
 
 ### **Chapter 2: Data Structures in R**
@@ -18,7 +21,8 @@ title: R for non-Technical Researchers
 - Indexing, subsetting, and modifying data structures.
 - Handling Errors Gracefully
 - Packages and Libraries in R.
-- Importing and exporting data (CSV, Excel, SPSS).
+- Importing and exporting data: CSV, Excel (`readxl`), and SPSS (`haven`), keeping variable and value labels.
+- Coming from SPSS or Excel: how familiar tasks map to R.
 - Basic exploratory analysis: summary statistics and data visualization.
 
 ### **Chapter 3: Data Manipulation with dplyr and tidyr**
@@ -45,12 +49,13 @@ title: R for non-Technical Researchers
 
 ### **Chapter 6: Hypothesis Testing and Statistical Inference**
 
+- Sampling distributions by simulation, and bootstrap confidence intervals.
 - Basics of hypothesis testing: p-values and confidence intervals.
 - One-sample, two-sample, and paired t-tests.
 - Chi-square tests for categorical data.
 - Non-parametric tests: Wilcoxon and Mann-Whitney U tests.
 
-### **Chapter 7: Advanced Statistical Techniques**
+### **Chapter 7: ANOVA and Regression**
 
 - ANOVA (one-way and two-way) and post hoc testing.
 - Linear regression: simple and multiple.
@@ -64,16 +69,24 @@ title: R for non-Technical Researchers
 - Clustering methods: k-means and hierarchical clustering.
 - Case study: Identifying patterns in complex datasets.
 
+### **Chapter 9: Mixed-Effects Models**
+
+- Why ordinary regression fails with repeated measures and nested data.
+- Random intercepts and random slopes with `lme4`.
+- Interpreting and reporting mixed models: p-values with `lmerTest` and the intraclass correlation (ICC).
+- Generalized linear mixed models for binary and count outcomes.
+- Case study: Analyzing repeated measurements from a longitudinal study.
+
 ## **Part 3: Machine Learning with R**
 
-### **Chapter 9: Introduction to Machine Learning in R**
+### **Chapter 10: Introduction to Machine Learning in R**
 
 - Supervised vs. unsupervised learning: An overview.
 - Preprocessing data: scaling, normalization, and feature engineering.
 - Splitting datasets into training, testing, and validation sets.
 - Cross-validation and hyperparameter tuning.
 
-### **Chapter 10: Classification Models**
+### **Chapter 11: Classification Models**
 
 - Decision trees and random forests.
 - k-Nearest Neighbors (k-NN).
@@ -81,20 +94,20 @@ title: R for non-Technical Researchers
 - Evaluating classification performance: confusion matrix, precision, recall, and F1 score.
 - Case study: Classifying observations in a research dataset.
 
-### **Chapter 11: Regression Models**
+### **Chapter 12: Predictive Regression**
 
 - Ridge, Lasso, and Elastic Net regression.
 - Boosting methods: Gradient Boosting, XGBoost.
 - Evaluating regression models: RMSE, MAE, and R².
 - Hands-on project: Regression modeling on real-world data.
 
-### **Chapter 12: Clustering Techniques**
+### **Chapter 13: Advanced Clustering**
 
 - Advanced clustering: DBSCAN and Gaussian Mixture Models.
 - Evaluating clustering performance metrics.
 - Case study: Grouping data points for pattern discovery.
 
-### **Chapter 13: Advanced Machine Learning Techniques**
+### **Chapter 14: Advanced Machine Learning Techniques**
 
 - Ensemble methods: Bagging and Boosting.
 - Introduction to neural networks using R (`keras` and `tensorflow`).
@@ -103,7 +116,7 @@ title: R for non-Technical Researchers
 
 ## **Part 4: Reproducible Research and Applications**
 
-### **Chapter 14: Reproducible Research with R Markdown, Shiny, and LaTeX**
+### **Chapter 15: Reproducible Research with R Markdown, Shiny, and LaTeX**
 
 - Writing dynamic documents with R Markdown.
 - Exporting to PDF, Word, and HTML.
@@ -111,16 +124,26 @@ title: R for non-Technical Researchers
 - Introduction to Shiny for creating interactive dashboards and tools.
 - Best practices for reproducibility in research.
 
-### **Chapter 15: Putting It All Together: Final Projects and Advanced Tools**
+### **Chapter 16: Using AI with R**
+
+- How AI assistants work, and what they are good and bad at when writing R code.
+- Using ChatGPT, Claude, and Copilot to write, explain, and debug R code, and verifying what they produce.
+- AI inside the editor: GitHub Copilot in RStudio and Positron Assistant.
+- Calling language models from R with `ellmer`: classifying text, coding open-ended survey responses, and extracting structured data.
+- Responsible use: invented functions, data privacy, reproducibility, and disclosing AI use in publications.
+- Hands-on project: Coding qualitative survey responses with a language model and validating them against human coding.
+
+### **Chapter 17: Putting It All Together: Final Projects and Advanced Tools**
 
 - Building a complete research project in R: Data wrangling, analysis, and visualization.
 - Presenting results with R Markdown and Shiny.
 - Overcoming challenges in domain-specific research applications.
 - Future directions and advanced resources for learning R.
-- 
+
 ### **Appendices:**
 
 - **Appendix A:** Installation and Setup Guide for R and RStudio.
-- **Appendix B:** Glossary of R Functions and Commands.
+- **Appendix B:** Glossary of Key Terms, R Functions, and Commands.
 - **Appendix C:** Recommended R Packages and Libraries.
 - **Appendix D:** Common Errors in R and How to Fix Them.
+- **Appendix E:** Further Learning Resources: videos and courses, including Arabic-language resources.

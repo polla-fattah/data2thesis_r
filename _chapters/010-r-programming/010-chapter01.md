@@ -1,5 +1,5 @@
 ---
-title: R Programming Language
+title: Getting Started with R
 slug: chapter01
 order: 030
 published: true

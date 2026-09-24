@@ -1,609 +1,620 @@
 ---
-title:  Classification Models
+title: Introduction to Machine Learning in R
 slug: chapter10
-order: 085
+order: 080
 published: false
 abstract: >
-    Focusing on supervised learning, this chapter explores classification techniques such as decision trees, random forests, and SVMs. Readers will learn to evaluate model performance using metrics like precision, recall, and F1 score.
+    This chapter introduces the concepts of supervised and unsupervised learning. Readers will learn how to preprocess data, split datasets for validation, and implement cross-validation, laying the groundwork for building machine learning models.
 ---
 
 
+This chapter marks a conceptual shift from the preceding parts of the book. While Chapters 5 through 9 focused on the principles of *statistical inference*—using data to understand relationships, test formal hypotheses, and draw conclusions about a wider population—Part 3 ventures into the domain of *predictive modeling*. Here, the primary objective is different. The goal is no longer just to explain the world as it is, but to build algorithms that can make accurate, generalizable predictions about new, unseen data. We move from asking "Why?" to asking "What will happen next?".
 
-Having established a robust foundation in data handling and visualization, we now transition from describing data to predicting it. This chapter delves into classification, a fundamental task in supervised machine learning. The objective of classification is to build a model that predicts a categorical outcome—a class or label—based on a set of input features or predictors.1 This stands in contrast to regression, which you will explore in the next chapter, where the goal is to predict a continuous numerical value. For instance, classifying an email as 'spam' or 'not spam' is a classification task, whereas predicting the exact price of a house is a regression task.
+To navigate this new landscape, we will adopt the tidymodels ecosystem as our primary toolkit. tidymodels is a modern, modular collection of R packages designed with the same tidyverse principles of coherence, usability, and power that you have become familiar with.1 It provides a unified framework for the entire modeling process, from initial data splitting and preprocessing to model tuning and evaluation. The core packages we will encounter—
 
-This chapter will equip you with a powerful and versatile toolkit of classification algorithms, each operating on a distinct philosophy. We will begin with the intuitive, rule-based logic of **Decision Trees**, which mirror human decision-making processes. We will then build upon this concept to explore **Random Forests**, an ensemble method that leverages the "wisdom of the crowds" to create highly accurate and robust models. Following that, we will investigate **k-Nearest Neighbors (k-NN)**, an instance-based approach that classifies new data based on proximity to known data points. Finally, we will examine **Support Vector Machines (SVMs)**, a sophisticated algorithm that finds the optimal boundary to separate classes. For each model, we will cover its theoretical underpinnings, practical implementation in R, and methods for performance evaluation, culminating in a real-world case study.1
+rsample, recipes, parsnip, workflows, tune, and yardstick—each handle a specific stage of the machine learning pipeline, working together seamlessly to create robust and reproducible models.3
 
-## **10.1 Decision Trees: From Intuition to Implementation**
+This chapter will construct a complete, end-to-end machine learning workflow from the ground up. To make these concepts tangible, we will follow a single, running case study: predicting the quality of red wine using the well-known Wine Quality dataset from the UCI Machine Learning Repository.5 We will transform this problem from its original regression format (predicting a quality score from 0-10) into a more practical binary classification task: predicting whether a wine is of "good" or "poor" quality. This common and realistic approach will allow us to demonstrate every key concept on a single, coherent problem, building a foundational blueprint that we will reuse and adapt in the chapters to come.
 
-Decision trees are among the most intuitive and interpretable models in machine learning. They are a type of supervised learning algorithm that functions like a flowchart, using a tree-like graph of decisions and their possible consequences to classify data.3 Their structure makes them exceptionally easy to understand, even for non-experts, as they closely mirror the logical, question-based process humans use to make decisions.2
+## **10.1 The Machine Learning Paradigm: Supervised and Unsupervised Learning**
 
-### **10.1.1 The Logic of Recursive Partitioning**
+The fundamental division in machine learning is dictated by the nature of the data available and the question being asked. The most significant distinction lies in the presence or absence of a known outcome or "label" that the algorithm is intended to predict. This distinction gives rise to the two primary paradigms: supervised and unsupervised learning.7
 
-At its core, a decision tree works by recursively splitting the dataset into smaller and more homogeneous subsets. This process is known as recursive partitioning.2 To understand this, let's define the key components of a tree 2:
+### **10.1.1 Supervised Learning: Learning with a Teacher**
 
-* **Root Node**: This is the top-most node of the tree, representing the entire dataset before any splits are made.  
-* **Splitting**: This is the process of dividing a node into two or more sub-nodes based on a specific condition applied to a predictor variable.  
-* **Decision Node**: When a node is split, it becomes a decision node. It has branches leading to other nodes.  
-* **Leaf/Terminal Node**: These are the final nodes at the bottom of the tree that are not split further. Each leaf node represents a final class prediction.  
-* **Branch/Sub-Tree**: A subsection of the entire tree, consisting of a decision node and its descendant nodes.
+Supervised learning is the most common form of machine learning and is analogous to a student learning with a teacher. The algorithm is provided with a dataset that contains both input features (the predictors) and the corresponding correct outputs (the labels or outcome variable). The "supervision" comes from these labeled examples, which allow the model to learn a mapping function that can generalize to predict the output for new, unseen inputs.8 The goal is to create a model that is accurate in its predictions.
 
-The algorithm starts at the root node and evaluates all possible splits on all available features. It selects the single best split that does the best job of separating the data into more homogeneous groups. This process is then repeated for each of the resulting sub-nodes, and so on, until a stopping criterion is met, such as reaching a maximum tree depth or a node becoming perfectly pure (containing observations of only one class).
+Supervised learning problems are typically categorized into two main types:
 
-### **10.1.2 The Splitting Engine: Gini Impurity and Entropy**
+* **Classification**: The goal is to predict a discrete, categorical label. The output variable belongs to a finite set of classes. Classic examples include email spam detection ("spam" or "not spam"), medical diagnosis ("disease" or "no disease"), and sentiment analysis ("positive," "negative," or "neutral"). Our running example of classifying wine quality as "good" or "poor" is a quintessential classification task.8 Common algorithms for this task, which we will explore in subsequent chapters, include Logistic Regression, Support Vector Machines (SVMs), Decision Trees, and Random Forests.  
+* **Regression**: The goal is to predict a continuous, numerical value. The output variable can take any value within a given range. Examples include forecasting sales revenue, predicting the price of a house based on its features, or estimating a patient's blood pressure. Had we chosen to predict the exact wine quality score on its 0-10 scale, it would have been a regression problem.8 Linear Regression, which you encountered in Chapter 7, is a foundational regression algorithm.
 
-The fundamental question a decision tree must answer at each step is: "How do I decide where to split?" The goal is to make each resulting sub-node as "pure" as possible, meaning it should ideally contain observations from a single class.3 The two most common metrics used to measure this purity and guide the splitting process are Gini Impurity and Entropy.
+The power of supervised learning lies in its direct, measurable feedback loop. Because the correct answers are known for the training data, the model's performance can be explicitly calculated by comparing its predictions to the true labels. This error signal is then used to iteratively adjust the model's internal parameters to improve its accuracy.8 However, this high performance comes with a significant prerequisite: the availability of high-quality, labeled data. The process of collecting and labeling data can be the most labor-intensive and expensive part of a machine learning project, often requiring substantial human effort and deep domain expertise.10 The ultimate success of the models we will build in Chapters 11 and 12 is fundamentally dependent on the quality of the labeled data we provide them.
 
-Gini Impurity  
-The Gini Impurity (or Gini Index) is a measure of the probability that a randomly chosen element from a node would be incorrectly classified if it were randomly labeled according to the distribution of classes in that node.5 The formula for Gini Impurity is:  
-Gini=1−i=1∑C​(pi​)2  
-where C is the number of classes and pi​ is the proportion of observations belonging to class i in the node. A Gini score of 0 represents perfect purity (all observations in the node belong to one class), while a higher Gini score indicates greater impurity. The CART (Classification and Regression Trees) algorithm, implemented in R's rpart package, uses the Gini Index by default. It selects the split that results in the lowest weighted average Gini Impurity in the child nodes.6
+### **10.1.2 Unsupervised Learning: Finding Patterns on Your Own**
 
-Entropy and Information Gain  
-Borrowed from information theory, Entropy is a measure of uncertainty or randomness in a node.7 A node with high entropy is very mixed, while a node with zero entropy is perfectly pure. The formula for Entropy is:  
-Entropy=−i=1∑C​pi​log2​(pi​)  
-The algorithm doesn't use entropy directly but instead calculates **Information Gain**, which is the reduction in entropy achieved by a split. The split that yields the highest Information Gain is chosen as the best one.3 Algorithms like ID3 and C4.5 use this criterion. In practice, Gini Impurity and Entropy often produce very similar trees, but Gini is slightly faster to compute as it avoids logarithmic calculations.7
+In contrast, unsupervised learning is akin to being given a vast library of books with no cataloging system and being asked to find the inherent structure within it. The data provided to an unsupervised algorithm is unlabeled; there is no pre-defined outcome variable to guide the learning process. The algorithm's task is to explore the data on its own and discover interesting patterns, groupings, or relationships.8
 
-### **10.1.3 Building a Decision Tree with rpart**
+The main tasks in unsupervised learning include:
 
-The classic package for building decision trees in R is rpart, which stands for Recursive Partitioning and Regression Trees. It is a robust implementation of the original CART algorithm.8 Let's build our first tree using the well-known
+* **Clustering**: This is a technique for grouping similar data points together based on their features. The goal is to create clusters where the observations within a cluster are very similar to each other, and observations in different clusters are very different. Applications include customer segmentation (grouping customers by purchasing behavior), document analysis (grouping articles by topic), and image compression.8 We will delve into clustering methods like k-means in Chapter 8, and more advanced methods in Chapter 13.  
+* **Association**: This method is used to discover rules that describe relationships between variables in large datasets. The most famous example is "market basket analysis," which can identify rules like, "Customers who buy product A also tend to buy product B." This is the technology behind many recommendation engines.8  
+* **Dimensionality Reduction**: When dealing with datasets with a very high number of features (high dimensionality), it can be difficult to model and visualize. Dimensionality reduction techniques aim to reduce the number of variables while preserving the most important information and structure of the data. Principal Component Analysis (PCA), which we covered in Chapter 8, is a prime example of this. It is often used as a preprocessing step to improve the performance of supervised learning algorithms.8
 
-iris dataset, which contains measurements for three species of iris flowers.10
+Because there are no correct labels to compare against, evaluating the success of an unsupervised model can be more subjective and often requires human intervention to validate whether the discovered patterns are meaningful and useful.8
 
-First, ensure the rpart package is installed and loaded. We will then use the rpart() function, specifying the formula, the data, and the method. For classification, the method is "class".11
+### **10.1.3 Semi-Supervised Learning: The Best of Both Worlds**
 
-R
+A third paradigm, semi-supervised learning, exists as a bridge between the two. This approach uses a combination of a small amount of labeled data and a large amount of unlabeled data. The underlying idea is that the patterns discovered in the unlabeled data can help improve the model's ability to make predictions on the labeled data. This is particularly useful in domains like medical imaging, where obtaining expert-labeled data (e.g., a radiologist identifying tumors in scans) is very expensive, but unlabeled data is plentiful.8
 
-\# Install and load required packages  
-\# install.packages("rpart")  
-\# install.packages("rpart.plot")
+To solidify these concepts, Table 10.1 provides a side-by-side comparison of the core characteristics of supervised and unsupervised learning.
 
-library(rpart)  
-library(rpart.plot)
+**Table 10.1: Supervised vs. Unsupervised Learning at a Glance**
 
-\# Use the iris dataset  
-data(iris)
+| Characteristic | Supervised Learning | Unsupervised Learning |
+| :---- | :---- | :---- |
+| **Primary Goal** | Predict a known outcome or label.8 | Discover hidden patterns, structures, or insights in data.8 |
+| **Input Data** | Labeled data (features and corresponding outcomes).7 | Unlabeled data (features only).7 |
+| **Human Involvement** | High upfront effort for data collection and labeling.10 | High effort for interpreting and validating the discovered patterns.8 |
+| **Common Tasks** | Classification, Regression.8 | Clustering, Association, Dimensionality Reduction.8 |
+| **Example Algorithms** | Linear Regression, Random Forest, Support Vector Machines.8 | K-Means, Principal Component Analysis (PCA), Apriori.8 |
+| **Evaluation** | Direct comparison of predictions to known true values (e.g., accuracy, RMSE). | Indirect measures of structure quality (e.g., cluster separation, variance explained). |
 
-\# Build the decision tree model  
-\# We want to predict the 'Species' based on all other variables (denoted by '.')  
-set.seed(123) \# for reproducibility  
-tree\_model \<- rpart(Species \~., data \= iris, method \= "class")
+## **10.2 The Blueprint for Preprocessing: Feature Engineering with recipes**
 
-\# Print the model summary  
-print(tree\_model)
+Raw data is rarely, if ever, in a suitable state for direct use in machine learning models. The adage "Garbage In, Garbage Out" is a fundamental truth in data science: the performance of even the most sophisticated algorithm is capped by the quality of the data it is fed.11
 
-The output from print(tree\_model) provides a text-based representation of the tree's rules. For example, it might show a rule like 2\) Petal.Length\< 2.45 50 0 setosa (1.00000000 0.00000000 0.00000000) \*. This line indicates that for the node where Petal.Length is less than 2.45 cm, there are 50 observations, 0 are misclassified, and the predicted class is setosa with 100% probability.11
+**Feature engineering** is the crucial process of transforming raw data into a set of features that better represent the underlying problem to the predictive models. This can involve cleaning, transforming, and creating new variables.12 The
 
-### **10.1.4 Visualizing Trees for Interpretability with rpart.plot**
+recipes package, a cornerstone of the tidymodels ecosystem, provides a powerful, elegant, and reproducible framework for defining and executing this entire preprocessing pipeline.14
 
-While the text output is useful, the true power of a decision tree lies in its visual interpretation.2 The
+### **10.2.1 Hands-On: Loading and Exploring the Wine Quality Data**
 
-rpart.plot package provides a far superior plotting function compared to the base R alternative, creating aesthetically pleasing and highly informative diagrams.13
+Let's begin by loading our case study dataset, which contains physicochemical properties of 1,599 red "Vinho Verde" wine samples from Portugal. Our goal is to predict the wine's quality.
 
-Let's visualize the tree we just built. The rpart.plot() function has many arguments for customization, but its defaults are often excellent. Key arguments include type to change the plot's layout, extra to add more information to the nodes (like class probabilities), and box.palette to automatically color the nodes.15
+First, we load the necessary libraries and the data. The original dataset has column names with spaces, which can be cumbersome in R, so we will clean them using the janitor package.
 
 R
 
-\# Create a beautiful plot of the decision tree  
-rpart.plot(tree\_model,   
-           type \= 4,   
-           extra \= 104,   
-           box.palette \= "GnBu",   
-           fallen.leaves \= TRUE,  
-           main \= "Decision Tree for Iris Species Classification")
+\# Load necessary libraries  
+library(tidyverse)  
+library(tidymodels)  
+library(janitor)
 
-This plot provides an immediate, intuitive understanding of the model's logic. You can trace the path from the root node down to a leaf to see exactly how a prediction is made. For example, the very first split is likely on Petal.Length. If it's less than 2.45 cm, the model immediately and confidently predicts the species is setosa. This direct, human-readable logic is what makes decision trees invaluable not just for prediction, but for exploratory data analysis. A domain expert, such as a botanist, could look at this tree and instantly validate whether the rules learned by the algorithm align with their scientific knowledge, a feature most other complex models lack.16
+\# Load the data  
+wine\_raw \<- read\_csv("https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv",   
+                     col\_types \= cols()) %\>%  
+  \# The original file uses semicolons as separators  
+  separate(col \= 1, into \= c("fixed\_acidity", "volatile\_acidity", "citric\_acid",   
+                               "residual\_sugar", "chlorides", "free\_sulfur\_dioxide",   
+                               "total\_sulfur\_dioxide", "density", "pH", "sulphates",   
+                               "alcohol", "quality"), sep \= ";") %\>%  
+  \# Convert all columns to numeric  
+  mutate(across(everything(), as.numeric))
 
-### **10.1.5 Taming Complexity: Pruning to Prevent Overfitting**
+\# Let's inspect the data  
+glimpse(wine\_raw)
 
-The major drawback of decision trees is their propensity to **overfit** the training data. If left to grow unchecked, a tree can become excessively complex, creating splits that capture noise and random fluctuations in the training set rather than the true underlying signal.17 Such a model will perform exceptionally well on the data it was trained on but will fail to generalize to new, unseen data.
+\#\# Rows: 1,599  
+\#\# Columns: 12  
+\#\# $ fixed\_acidity        \<dbl\> 7.4, 7.8, 7.8, 11.2, 7.4, 7.4, 7.9, 7.3, 7.8, 7.5,…  
+\#\# $ volatile\_acidity     \<dbl\> 0.700, 0.880, 0.760, 0.280, 0.700, 0.660, 0.600, …  
+\#\# $ citric\_acid          \<dbl\> 0.00, 0.00, 0.04, 0.56, 0.00, 0.00, 0.06, 0.00, …  
+\#\# $ residual\_sugar       \<dbl\> 1.9, 2.6, 2.3, 1.9, 1.9, 1.8, 1.6, 1.2, 2.0, 6.1,…  
+\#\# $ chlorides            \<dbl\> 0.076, 0.098, 0.092, 0.075, 0.076, 0.075, 0.069, …  
+\#\# $ free\_sulfur\_dioxide  \<dbl\> 11, 25, 15, 17, 11, 13, 15, 15, 9, 17, 15, 17, 16…  
+\#\# $ total\_sulfur\_dioxide \<dbl\> 34, 67, 54, 60, 34, 40, 59, 21, 18, 102, 65, 102,…  
+\#\# $ density              \<dbl\> 0.9978, 0.9968, 0.9970, 0.9980, 0.9978, 0.9978, …  
+\#\# $ ph                   \<dbl\> 3.51, 3.20, 3.26, 3.16, 3.51, 3.51, 3.30, 3.39, …  
+\#\# $ sulphates            \<dbl\> 0.56, 0.68, 0.65, 0.58, 0.56, 0.56, 0.46, 0.47, …  
+\#\# $ alcohol              \<dbl\> 9.4, 9.8, 9.8, 9.8, 9.4, 9.4, 9.4, 10.0, 9.5, 10…  
+\#\# $ quality              \<dbl\> 5, 5, 5, 6, 5, 5, 5, 7, 7, 5, 5, 5, 5, 5, 5, 5, …
 
-The solution to overfitting is **pruning**: strategically cutting back the tree to a more optimal size.2 In
-
-rpart, this is controlled primarily by the **complexity parameter (cp)**. The cp specifies the minimum improvement in the model's fit required for a split to be attempted. Any split that doesn't reduce the overall complexity by at least the cp value will be ignored.11
-
-We can examine the effect of cp by using the printcp() function, which displays a table of complexity values for the tree at different sizes.
-
-R
-
-\# Display the complexity parameter table  
-printcp(tree\_model)
-
-This table shows the cross-validation error (xerror) for trees of different sizes (nsplit). The best tree is typically the smallest one whose xerror is within one standard error of the minimum xerror. We can then use the prune() function with the corresponding cp value to create a more robust, pruned tree.19
-
-R
-
-\# Find the optimal cp value  
-optimal\_cp \<- tree\_model$cptable\[which.min(tree\_model$cptable\[,"xerror"\]),"CP"\]
-
-\# Prune the tree  
-pruned\_model \<- prune(tree\_model, cp \= optimal\_cp)
-
-\# Plot the pruned tree  
-rpart.plot(pruned\_model,  
-           main \= "Pruned Decision Tree for Iris Species")
-
-This pruned tree will be simpler and more likely to perform well on new data, striking a balance between bias and variance.
-
-## **10.2 Random Forests: The Power of the Ensemble**
-
-While pruning helps a single decision tree generalize better, we can achieve even greater predictive power by moving from a single tree to a forest. A **Random Forest** is an *ensemble learning method* that operates by constructing a multitude of decision trees at training time and outputting the class that is the mode of the classes from individual trees.17 This approach is designed specifically to overcome the high variance and overfitting tendency of individual decision trees, often resulting in a model with significantly higher accuracy and robustness.17
-
-### **10.2.1 From Bagging to Random Forests**
-
-To understand Random Forests, we must first understand **Bootstrap Aggregating**, or **Bagging**. The idea behind bagging is simple yet powerful:
-
-1. Create many bootstrap samples from the original training data. A bootstrap sample is a random sample of the same size as the original, drawn *with replacement*.17 This means some observations may appear multiple times, while others may not appear at all.  
-2. Train a deep, unpruned decision tree on each of these bootstrap samples.4  
-3. To make a prediction for a new observation, let every tree in the ensemble "vote" for a class. The final prediction is the class that receives the most votes.
-
-Bagging helps reduce the variance of the model because the errors of the individual, diverse trees tend to average out. However, if the dataset has one or two very strong predictors, most of the bagged trees will still use those same predictors for their top splits. This makes the trees highly correlated, which limits the amount of variance reduction.
-
-**Random Forest** introduces a clever twist to solve this problem. In addition to bagging, it adds another layer of randomness: at each split in each tree, the algorithm is only allowed to consider a random subset of the predictor variables (denoted by the hyperparameter mtry).20 For example, if there are 10 predictors, a random forest might only be allowed to choose from a random set of 3 predictors at each split. This forces the trees to be different from one another—they can't all rely on the same dominant predictor. This process
-
-**de-correlates** the trees, which dramatically improves the variance reduction of the ensemble and is the key reason for the algorithm's superior performance.17
-
-### **10.2.2 The randomForest Package in Practice**
-
-The canonical implementation of Random Forest in R is the randomForest package, created by the algorithm's originators, Leo Breiman and Adele Cutler.22 Let's apply it to the
-
-iris dataset.
+The quality variable is an integer score from 3 to 8\. For our classification task, we will create a binary outcome variable, quality\_category. A common practice for this dataset is to define wines with a quality score of 7 or higher as "good" and the rest as "poor".6
 
 R
 
-\# Install and load the randomForest package  
-\# install.packages("randomForest")  
-library(randomForest)
+wine\_data \<- wine\_raw %\>%  
+  mutate(quality\_category \= factor(ifelse(quality \>= 7, "good", "poor"), levels \= c("good", "poor"))) %\>%  
+  \# We no longer need the original numeric quality variable  
+  select(-quality)
 
-\# Build the random forest model  
-set.seed(123) \# for reproducibility  
-rf\_model \<- randomForest(Species \~., data \= iris, ntree \= 500, importance \= TRUE)
+\# Check the distribution of our new outcome  
+wine\_data %\>%  
+  count(quality\_category)
 
-\# Print the model summary  
-print(rf\_model)
+\#\# \# A tibble: 2 × 2  
+\#\#   quality\_category     n  
+\#\#   \<fct\>            \<int\>  
+\#\# 1 good               217  
+\#\# 2 poor              1382
 
-The output provides a wealth of information:
+This is an imbalanced dataset, with many more "poor" quality wines than "good" ones. We will need to keep this in mind throughout our workflow.
 
-* **Type of random forest**: classification  
-* **Number of trees (ntree)**: 500 (the default)  
-* **No. of variables tried at each split (mtry)**: 2 (the default for classification is the square root of the number of predictors, 4​=2)  
-* **OOB estimate of error rate**: This is the Out-of-Bag error, a powerful, built-in estimate of the model's performance on unseen data.  
-* **Confusion matrix**: This matrix shows the model's predictions on the OOB samples, giving a detailed breakdown of its performance per class.
+### **10.2.2 Creating a Recipe: The recipe() Function**
 
-### **10.2.3 Tuning for Performance: ntree and mtry**
+A recipe defines the sequence of steps for data preprocessing. The recipe() function initializes this process. It takes two main arguments: a formula and the data.15
 
-While Random Forest performs well out-of-the-box, its performance can often be improved by tuning its two main hyperparameters: ntree and mtry.17
+* **Formula**: This uses the standard R formula syntax (e.g., outcome \~ predictor1 \+ predictor2). A common and powerful convention is to use outcome \~., which specifies that the variable on the left of the \~ is the outcome, and all other variables in the data are predictors.  
+* **Data**: This is the dataset the recipe will be based on, which should always be the **training data**. The recipe function doesn't perform any operations on this data; it simply uses it as a template to learn the variable names and their data types (e.g., numeric, factor).15
 
-* **ntree (Number of Trees)**: Generally, the more trees, the better. However, after a certain point, the model's error rate will stabilize, and adding more trees only increases computational cost without improving performance. We can visualize this by plotting the randomForest object, which shows the OOB error as more trees are added.20  
-  R  
-  \# Plot the model to see error rate convergence  
-  plot(rf\_model, main \= "OOB Error Rate by Number of Trees")
-
-  The plot helps identify the point at which the error lines flatten out, suggesting an adequate number of trees for the model.  
-* **mtry (Number of Variables per Split)**: This is the most critical tuning parameter. It controls the trade-off between the strength of individual trees and the correlation between them. A smaller mtry de-correlates the trees more but may result in weaker individual trees. A larger mtry leads to more correlated but potentially stronger trees. The tuneRF() function provides a systematic way to find the optimal mtry value by testing a range of values and selecting the one that minimizes the OOB error.17  
-  R  
-  \# Tune mtry to find the optimal value  
-  \# Separate predictors (x) and response (y)  
-  x \<- iris\[, \-5\]  
-  y \<- iris\[, 5\]
-
-  set.seed(123)  
-  best\_mtry \<- tuneRF(x, y,   
-                      stepFactor \= 1.5,   
-                      improve \= 0.01,   
-                      ntreeTry \= 500,   
-                      trace \= TRUE,   
-                      plot \= TRUE)
-
-  The tuneRF function will output a plot and a data frame showing the OOB error for different mtry values, helping you select the best one to rebuild your final model.
-
-### **10.2.4 Beyond Prediction: OOB Error and Variable Importance**
-
-Two of the most powerful features of the Random Forest algorithm are its built-in validation and feature selection capabilities.
-
-* **Out-of-Bag (OOB) Error**: As mentioned, each tree in the forest is built using a bootstrap sample, which leaves out about one-third of the original observations. These "out-of-bag" observations can be used as a natural test set for that specific tree. By aggregating the predictions for all OOB observations across the entire forest, we get an unbiased estimate of the test set error without needing to perform a separate cross-validation or train/test split.21  
-* **Variable Importance**: Random Forest provides a reliable way to rank the importance of predictor variables. This is extremely useful for feature selection and understanding the underlying drivers in your data. The two primary measures are 17:  
-  1. **Mean Decrease Accuracy**: For each variable, its values are randomly shuffled (permuted) in the OOB samples, and the decrease in model accuracy is measured. A large drop in accuracy indicates that the model relies heavily on that variable, making it important.  
-  2. **Mean Decrease Gini**: This measures the total reduction in node impurity (using the Gini Index) that a variable contributes, averaged over all trees in the forest. A higher value signifies a more important variable.
-
-We can access these scores using the importance() function and visualize them with varImpPlot(), provided we set importance=TRUE when building the model.23
+Let's create a basic recipe for our wine classification problem.
 
 R
 
-\# View the importance scores  
-importance(rf\_model)
+\# Note: We haven't created wine\_train yet. We are just creating the recipe object.  
+\# We will split the data in section 9.3. For now, we use the full dataset as a template.  
+wine\_recipe\_initial \<- recipe(quality\_category \~., data \= wine\_data)
 
-\# Plot the variable importance  
-varImpPlot(rf\_model, main \= "Variable Importance for Iris Dataset")
+wine\_recipe\_initial
 
-This plot quickly reveals which features (e.g., Petal.Length and Petal.Width in the iris case) are most influential in predicting the outcome.
+\#\# Recipe  
+\#\#   
+\#\# Inputs:  
+\#\#   
+\#\#       role \#variables  
+\#\#    outcome          1  
+\#\#  predictor         11
 
-## **10.3 k-Nearest Neighbors (k-NN): Classification by Proximity**
+### **10.2.3 Essential Preprocessing step\_\* Functions**
 
-The k-Nearest Neighbors (k-NN) algorithm is fundamentally different from the model-based approaches we have seen so far. It is a **non-parametric**, instance-based algorithm, often referred to as a "lazy learner".1 It is considered "lazy" because it does not build an explicit, general model during a training phase. Instead, it simply memorizes the entire training dataset.24
+Once a recipe is initialized, we add preprocessing steps using a series of step\_\* functions, chained together with the %\>% pipe operator.
 
-The classification process for a new, unseen data point is straightforward and intuitive:
+* **Handling Missing Data**: Our wine dataset is complete 17, but in most real-world projects, missing data is a major issue. Imputation is the process of filling in these missing values. Common strategies provided by  
+  recipes include:  
+  * step\_impute\_mean() / step\_impute\_median(): Replaces missing numeric values with the mean or median of the column (calculated from the training set).11  
+  * step\_impute\_knn(): A more sophisticated method that finds the *k* most similar rows (neighbors) based on the other predictors and uses their values to impute the missing one.18  
+* **Encoding Categorical Data**: Most machine learning algorithms require all input features to be numeric. If we had categorical predictors (e.g., region of origin), we would need to convert them. The standard method is one-hot encoding, which creates new binary (0/1) columns for each level of a categorical variable. This is done with step\_dummy().16  
+* **Handling Problematic Variables**: Some variables can cause issues during modeling.  
+  * step\_zv(): Removes "zero-variance" predictors—variables that have only a single unique value and thus provide no information.18  
+  * step\_corr(): Removes predictors that are highly correlated with other predictors. This can help stabilize models like linear regression that are sensitive to multicollinearity.18
 
-1. Calculate the distance between the new point and every single point in the training dataset. The most common distance metric is **Euclidean distance**.  
-2. Identify the 'k' closest points in the training data. These are the "nearest neighbors."  
-3. Assign the new data point the class label that is most common among its 'k' neighbors (a majority vote).24
+### **10.2.4 Transforming Numeric Predictors: Scaling and Normalization**
 
-The choice of 'k' is a critical hyperparameter. A small 'k' (e.g., k=1) makes the model highly flexible and sensitive to local noise (low bias, high variance), while a large 'k' makes the decision boundary smoother and more stable but potentially less accurate in complex regions (high bias, low variance).24
+Many machine learning algorithms, particularly those based on distance calculations like k-Nearest Neighbors (k-NN) and Support Vector Machines (SVMs), are sensitive to the scale of the input features. A predictor with a large range (e.g., total\_sulfur\_dioxide in our data, which ranges up to 289\) can numerically dominate a predictor with a small range (e.g., pH, which ranges from 2.74 to 4.01), even if the smaller-range variable is more important for prediction. Scaling ensures all predictors are on a comparable footing.14
 
-### **10.3.1 The Critical Role of Feature Scaling**
+While the terms are sometimes used interchangeably, it is useful to distinguish between *scaling* (changing the range of data, e.g., to ) and *normalization* (changing the shape of the data's distribution, e.g., to a standard normal distribution).23 In
 
-Because k-NN relies entirely on distance calculations, it is extremely sensitive to the scale of the predictor variables.25 If one feature has a much larger range of values than others (e.g., income in dollars vs. age in years), it will dominate the distance calculation, and the other features will have a negligible effect. This renders the notion of "closeness" meaningless.
+recipes, the most common transformation combines both aspects.
 
-Therefore, **feature scaling is a mandatory preprocessing step for k-NN**. The most common method is **standardization**, where each feature is transformed to have a mean of 0 and a standard deviation of 1\. This ensures that all features contribute equally to the distance metric. This step highlights a crucial aspect of machine learning: the success of an algorithm like k-NN is often determined more by the diligence of the data preparation and preprocessing than by the modeling step itself.
+* **step\_normalize()**: This is the most widely used scaling method, also known as **standardization**. For each predictor, it subtracts the mean and divides by the standard deviation. The resulting transformed variable will have a mean of 0 and a standard deviation of 1 (a Z-score).20  
+* **step\_range()**: This method performs min-max scaling, transforming the data to fall within a specified range, typically .21 The formula is  
+  xnew​=xmax​−xmin​x−xmin​​.  
+* **step\_YeoJohnson()** or **step\_BoxCox()**: These are power transformations designed to reduce skewness in a predictor's distribution, making it more symmetric. This can sometimes improve the performance of certain models.25
 
-We can perform scaling using the base R scale() function or, for a more robust workflow that can be applied to new data, the preProcess() function from the caret package.24
+### **10.2.5 The recipe Workflow: prep(), bake(), and juice()**
 
-### **10.3.2 Implementing k-NN: From class to caret**
+A core design principle of the recipes package is the separation of the *definition* of the preprocessing steps from their *execution*. This is a critical feature for maintaining the statistical integrity of the modeling process and is accomplished through three key functions: prep(), bake(), and juice().14
 
-Let's implement k-NN on the iris dataset. First, we must split our data and scale it.
+This separation is the primary defense against a pernicious problem in machine learning known as **data leakage**. Data leakage occurs when information from outside the training dataset is used to create the model. This leads to an overly optimistic and biased evaluation of the model's performance, as the model has inadvertently "cheated" by seeing information from the data it will be tested on.
+
+The recipes workflow prevents this by design:
+
+1. **prep(recipe, training \= train\_data)**: This function *estimates* the required parameters for each step *using only the training data*. For step\_normalize(), it calculates the means and standard deviations of the predictors in train\_data. For step\_dummy(), it identifies the unique levels of the factor variables present in train\_data. The result is a "prepped" or "trained" recipe that contains all the necessary information for the transformations.  
+2. **bake(prepped\_recipe, new\_data \=...)**: This function *applies* the pre-calculated transformations to new data (which could be the training set itself, a validation set, or the final test set). It does *not* re-estimate any parameters from the new\_data. It uses the means, standard deviations, and factor levels that were learned from the training data during the prep() stage. This ensures that the test set is treated as truly "unseen" data.  
+3. **juice(prepped\_recipe)**: This is a convenient shortcut for bake(prepped\_recipe, new\_data \= NULL), which simply returns the processed *training set*.
+
+This prep \-\> bake sequence is not merely procedural; it is the guardian of your model's validity, ensuring that the performance you measure is an honest reflection of its ability to generalize.
+
+### **10.2.6 Hands-On: A Complete Recipe for the Wine Quality Dataset**
+
+Let's now build a comprehensive recipe for our wine data, incorporating the steps we've discussed. We will normalize all numeric predictors and remove any zero-variance variables.
 
 R
 
-library(caret)
+wine\_recipe \<- recipe(quality\_category \~., data \= wine\_data) %\>%  
+  \# Normalize all numeric predictors (all predictors in this case)  
+  step\_normalize(all\_numeric\_predictors()) %\>%  
+  \# Remove any variables that have only one unique value  
+  step\_zv(all\_predictors())
 
-\# 1\. Split the data  
+\# Now, let's imagine we have split our data (we'll do this for real in the next section)  
+\# For demonstration, we'll use the full dataset to show the mechanics  
 set.seed(123)  
-trainIndex \<- createDataPartition(iris$Species, p \= 0.8, list \= FALSE)  
-train\_data \<- iris\[trainIndex, \]  
-test\_data  \<- iris\[-trainIndex, \]
+temp\_split \<- initial\_split(wine\_data, prop \= 0.75)  
+temp\_train \<- training(temp\_split)  
+temp\_test \<- testing(temp\_split)
 
-\# 2\. Preprocess (Scale) the data  
-\# Create a pre-processing object from the training data  
-preproc\_values \<- preProcess(train\_data\[, \-5\], method \= c("center", "scale"))
+\# 1\. Prep the recipe using ONLY the training data  
+prepped\_recipe \<- prep(wine\_recipe, training \= temp\_train)
 
-\# Apply the scaling to both training and testing data  
-train\_scaled \<- predict(preproc\_values, train\_data\[, \-5\])  
-test\_scaled  \<- predict(preproc\_values, test\_data\[, \-5\])
+\# 2\. Bake the recipe on the test data  
+baked\_test\_data \<- bake(prepped\_recipe, new\_data \= temp\_test)
 
-A basic k-NN model can be built using the knn() function from the class package. This requires providing the scaled training and test sets, the vector of true labels from the training set (cl), and a value for k.24
+\# View the result  
+glimpse(baked\_test\_data)
 
-R
+\#\# Rows: 401  
+\#\# Columns: 12  
+\#\# $ fixed\_acidity        \<dbl\> 1.63, \-0.28, \-0.85, \-0.85, \-0.28, 0.06, \-0.28, \-0…  
+\#\# $ volatile\_acidity     \<dbl\> 1.00, 1.83, 0.44, 0.44, 0.78, 0.44, 0.17, 0.06, …  
+\#\# $ citric\_acid          \<dbl\> \-1.37, \-1.37, \-1.22, \-1.22, \-1.37, \-1.07, \-0.81, …  
+\#\# $ residual\_sugar       \<dbl\> \-0.47, \-0.09, \-0.28, \-0.28, \-0.47, \-0.54, \-0.54, …  
+\#\# $ chlorides            \<dbl\> \-0.23, 0.23, \-0.03, \-0.03, \-0.23, \-0.41, \-0.39, …  
+\#\# $ free\_sulfur\_dioxide  \<dbl\> 1.00, 1.00, \-0.05, \-0.05, \-0.43, \-0.81, \-0.05, \-0…  
+\#\# $ total\_sulfur\_dioxide \<dbl\> 0.61, 0.61, \-0.36, \-0.36, \-0.09, \-0.57, \-0.81, \-0…  
+\#\# $ density              \<dbl\> 0.99, \-0.12, 0.04, 0.04, 0.99, 0.47, \-0.96, \-0.7…  
+\#\# $ ph                   \<dbl\> 1.25, \-0.73, \-0.33, \-0.33, 1.25, 1.25, \-0.06, \-0…  
+\#\# $ sulphates            \<dbl\> \-0.54, 0.12, \-0.54, \-0.54, \-0.54, \-0.60, 0.06, \-…  
+\#\# $ alcohol              \<dbl\> \-0.93, \-0.55, \-0.55, \-0.55, \-0.93, \-0.84, \-0.17, …  
+\#\# $ quality\_category     \<fct\> poor, poor, poor, poor, poor, poor, poor, poor, …
 
-library(class)
+Notice that all predictor columns are now numeric and have been scaled. The data is ready for modeling.
 
-\# Predict using k=3  
-set.seed(123)  
-knn\_pred\_basic \<- knn(train \= train\_scaled,   
-                      test \= test\_scaled,   
-                      cl \= train\_data$Species,   
-                      k \= 3)
+## **10.3 A Framework for Robust Evaluation: Data Splitting and Resampling**
 
-While this is functional, it doesn't help us find the *optimal* value of k. A much better approach is to use the caret package's train() function, which can perform cross-validation to automatically find the best k.24
+How can we build a model and be confident in its performance on future data? The answer lies in rigorously evaluating it on data it has never seen during its training process. This section outlines the critical strategies for partitioning data to obtain a reliable and unbiased estimate of how the model will perform in the real world.27
 
-R
+### **10.3.1 The Peril of Overfitting**
 
-\# Use caret to find the optimal k  
-set.seed(123)  
-knn\_model\_caret \<- train(x \= train\_scaled,   
-                         y \= train\_data$Species,  
-                         method \= "knn",  
-                         trControl \= trainControl(method \= "cv", number \= 10),  
-                         tuneGrid \= expand.grid(k \= seq(1, 15, by \= 2)))
+The central challenge in predictive modeling is **overfitting**. This occurs when a model learns the training data *too* well. Instead of capturing the general, underlying patterns in the data, it also memorizes the random noise and idiosyncrasies specific to that particular training set. An overfit model will exhibit excellent performance on the data it was trained on but will fail to generalize, performing poorly when presented with new, unseen data.28 This is the fundamental problem that proper data splitting and resampling techniques are designed to prevent.
 
-\# View the results and the best k  
-print(knn\_model\_caret)
+### **10.3.2 The Initial Split: Training vs. Testing**
 
-\# Plot the accuracy for different k values  
-plot(knn\_model\_caret)
+The most important partition of your data is the initial split into a **training set** and a **testing set**.
 
-The train() function handles the cross-validation, tests each value of k specified in tuneGrid, and reports the one that yielded the highest average accuracy. This is a far more rigorous and reliable method for building a k-NN model. The final, tuned model can then be used for prediction on the test set.
+* The **training set** is the workbench. It is used for all aspects of model development: training the algorithm's parameters, estimating the preprocessing steps in a recipe, and tuning hyperparameters.  
+* The **testing set** is the final exam. It must be held in a metaphorical "vault," completely untouched during the entire model development process. It is used only *once*, at the very end of the project, to get a final, unbiased report on the chosen model's performance on unseen data.27
 
-## **10.4 Support Vector Machines (SVM): Finding the Optimal Boundary**
+In tidymodels, we use the rsample package for this task. The initial\_split() function creates the split object. A crucial argument is strata, which performs stratified sampling. This ensures that the proportion of the outcome variable's levels (e.g., the percentage of "good" vs. "poor" wines) is the same in both the training and testing sets. This is especially important for imbalanced datasets like ours, as it prevents the rare class from being disproportionately represented (or absent) in one of the splits.30
 
-Support Vector Machines (SVMs) are a powerful and sophisticated class of supervised learning models that approach classification by finding the optimal boundary, or **hyperplane**, that separates the different classes in the feature space.26 Unlike other models that might focus on the "center" of the data, SVMs are defined by the data points at the edges of the classes.
-
-### **10.4.1 The Maximal Margin Classifier**
-
-For data that is linearly separable, the SVM algorithm doesn't just find *any* line that separates the classes; it finds the single best line. The "best" hyperplane is defined as the one that maximizes the **margin**, which is the total distance between the hyperplane and the closest data points from each class.27 Think of this as finding the widest possible "street" that can be drawn between the two classes.
-
-The data points that lie on the edges of this street are called the **Support Vectors**. These are the critical points that "support" or define the hyperplane. If any of these points were to move, the hyperplane would also move. All other points, further away from the boundary, have no influence on the model. This property makes SVMs memory-efficient, as the model is defined only by this subset of training points.26
-
-In most real-world scenarios, data is not perfectly separable. To handle this, SVMs use a **soft margin**, which allows some observations to be misclassified or to fall inside the margin. This is controlled by a tuning parameter called cost (or C). A high cost value heavily penalizes misclassifications, leading to a narrower margin that tries to fit the training data perfectly (potentially overfitting). A low cost value is more tolerant of errors, allowing for a wider, more generalizable margin.26
-
-### **10.4.2 The Kernel Trick for Non-Linearity**
-
-The true power of SVMs is revealed when dealing with data that is not linearly separable. The algorithm employs a mathematical technique known as the **kernel trick** to handle complex, non-linear relationships.2
-
-Instead of explicitly transforming the data into a much higher-dimensional space where it might become linearly separable (a computationally expensive process), kernel functions can compute the dot products between data points *as if* they were in that higher-dimensional space. This allows the SVM to learn a non-linear decision boundary in the original feature space. This is the "magic" of SVMs: they can solve infinitely complex problems without explicitly modeling that complexity, but this power comes at the cost of interpretability. The resulting model is often a "black box," as we can visualize the boundary but cannot easily express it as a simple set of rules like a decision tree.29
-
-The e1071 package in R provides several common kernels 2:
-
-* **linear**: For problems that are already linearly separable.  
-* **polynomial**: Creates a polynomial decision boundary.  
-* **radial** (Radial Basis Function or RBF): A highly flexible and powerful default kernel, capable of creating very complex non-linear boundaries. Its behavior is controlled by another hyperparameter, gamma.  
-* **sigmoid**: Another option for non-linear classification.
-
-### **10.4.3 Fitting and Tuning SVMs with e1071**
-
-The primary package for SVMs in R is e1071, which provides an interface to the highly efficient libsvm library.30 The core function is
-
-svm().
-
-Let's fit an SVM with a radial kernel to the iris data. As with k-NN, SVMs are sensitive to feature scaling, so we should use our scaled data from the previous section. The key to building a good SVM is tuning its hyperparameters. For an RBF kernel, these are cost and gamma.26 The
-
-tune() function in e1071 is perfect for this, as it performs a grid search over specified parameter ranges using cross-validation.
+Let's now perform the official split for our wine analysis. We will allocate 75% of the data for training and 25% for testing.
 
 R
 
-library(e1071)
+library(rsample)
 
-\# Tune the SVM model to find the best cost and gamma  
-set.seed(123)  
-tuned\_svm \<- tune(svm,   
-                  train.x \= train\_scaled,   
-                  train.y \= train\_data$Species,  
-                  kernel \= "radial",  
-                  ranges \= list(cost \= c(0.1, 1, 10, 100),  
-                                gamma \= c(0.1, 0.5, 1, 2)))
+\# Set a seed for reproducibility of the random split  
+set.seed(123)
 
-\# View the tuning results  
-summary(tuned\_svm)
+\# Create the split object, stratifying by our outcome variable  
+wine\_split \<- initial\_split(wine\_data, prop \= 0.75, strata \= quality\_category)
 
-\# Get the best performing model  
-svm\_model \<- tuned\_svm$best.model  
-summary(svm\_model)
+\# Extract the training and testing data frames  
+wine\_train \<- training(wine\_split)  
+wine\_test  \<- testing(wine\_split)
 
-\# Plot the decision boundaries (works for 2 predictors)  
-\# We can plot pairs of predictors to visualize the boundaries  
-plot(svm\_model, data \= train\_data, Petal.Width \~ Petal.Length,  
-     slice \= list(Sepal.Width \= 3, Sepal.Length \= 4))
+\# Verify the dimensions and proportions  
+dim(wine\_train)  
+\#\#  1198   12  
+dim(wine\_test)  
+\#\#  401  12
 
-The tune() function will identify the combination of cost and gamma that resulted in the lowest cross-validation error. This best.model is then ready to be used for making predictions on the test set. The plot() function can help visualize the complex, non-linear decision boundaries that the RBF kernel is able to create.28
+\# Check proportions in training data  
+wine\_train %\>% count(quality\_category) %\>% mutate(prop \= n/sum(n))  
+\#\# \# A tibble: 2 × 3  
+\#\#   quality\_category     n  prop  
+\#\#   \<fct\>            \<int\> \<dbl\>  
+\#\# 1 good               163 0.136  
+\#\# 2 poor              1035 0.864
 
-## **10.5 Evaluating Classification Model Performance**
+\# Check proportions in testing data  
+wine\_test %\>% count(quality\_category) %\>% mutate(prop \= n/sum(n))  
+\#\# \# A tibble: 2 × 3  
+\#\#   quality\_category     n  prop  
+\#\#   \<fct\>            \<int\> \<dbl\>  
+\#\# 1 good                54 0.135  
+\#\# 2 poor               347 0.865
 
-Building a model is only half the battle; we must rigorously evaluate its performance to understand its strengths, weaknesses, and suitability for a given task. Simply calculating the percentage of correct predictions is often insufficient and can be misleading.
+The proportions are nearly identical, confirming that our stratified split was successful.
 
-### **10.5.1 The Confusion Matrix: The Bedrock of Evaluation**
+### **10.3.3 Resampling for Model Tuning: Cross-Validation**
 
-The fundamental tool for evaluating a classifier is the **confusion matrix**. It is a simple table that summarizes the performance of a classification model by cross-tabulating the predicted classes against the actual classes.33 For a binary classification problem (e.g., "Positive" vs. "Negative"), the matrix has four cells:
+During model development, we need to make many choices. For instance, is a k-NN model with k=5 better than one with k=7? Or is a Random Forest model better than an SVM? To make these decisions, we need to evaluate the performance of each candidate model.
 
-* **True Positives (TP)**: The model correctly predicted "Positive."  
-* **True Negatives (TN)**: The model correctly predicted "Negative."  
-* **False Positives (FP)**: The model incorrectly predicted "Positive" (also known as a Type I Error).  
-* **False Negatives (FN)**: The model incorrectly predicted "Negative" (also known as a Type II Error).
+A critical mistake would be to use our carefully sequestered test set for these intermediate evaluations. If we did, we would be "tuning" our model selection process to that specific test set. The model we ultimately choose would be the one that happens to do best on that particular slice of data, and its performance would no longer be an unbiased estimate of real-world performance. We would have reintroduced the very bias we sought to eliminate.29
 
-Understanding the *type* of error a model makes is often more important than the overall error rate. The consequences of a false positive versus a false negative can be vastly different depending on the problem context.
+The solution is to create temporary training and validation sets *from our main training set*. This process is called **resampling**. The most robust and widely used resampling technique is **k-fold cross-validation (CV)**.
 
-### **10.5.2 Beyond Accuracy: Precision, Recall, and the F1-Score**
+In k-fold CV, the training data is randomly partitioned into *k* equal-sized subsets, or "folds" (k is typically 5 or 10). The model is then trained and evaluated *k* times. In each iteration, one of the folds is held out as a temporary test set (the **validation set**), and the model is trained on the remaining k-1 folds. The performance metrics (like accuracy) are calculated on the validation set for that iteration. After all *k* iterations are complete, the *k* performance estimates are averaged to produce a single, more stable, and reliable measure of the model's performance.28
 
-From the four values in the confusion matrix, we can derive a set of much more informative performance metrics.33
-
-* Accuracy: TP+TN+FP+FNTP+TN​  
-  This is the proportion of all predictions that were correct. It's a good general-purpose metric but can be very misleading on imbalanced datasets. For example, if 99% of cases are negative, a model that always predicts "Negative" will have 99% accuracy but is completely useless.  
-* Precision: TP+FPTP​  
-  Also known as Positive Predictive Value, precision answers the question: "Of all the predictions I made as 'Positive', how many were actually correct?" This metric is crucial when the cost of a false positive is high. For example, in a spam filter, you want high precision to avoid flagging important emails as spam.34  
-* Recall (Sensitivity): TP+FNTP​  
-  Also known as the True Positive Rate, recall answers the question: "Of all the actual 'Positive' cases, how many did my model successfully identify?" This metric is critical when the cost of a false negative is high. For example, in medical screening for a disease, you want very high recall to avoid missing any sick patients.33  
-* **The Precision-Recall Trade-off**: It is important to understand that precision and recall often have an inverse relationship. Tuning a model to be more cautious and increase its precision (fewer FPs) will often cause it to miss more positive cases, thus lowering its recall (more FNs), and vice-versa.35  
-* F1-Score: 2×Precision+RecallPrecision×Recall​  
-  The F1-score is the harmonic mean of precision and recall. It provides a single, balanced measure of a model's performance, which is especially useful for imbalanced datasets or when both false positives and false negatives are costly. It punishes extreme values, meaning a model must have both good precision and good recall to achieve a high F1-score.33
-
-The choice of which metric to optimize is not a statistical decision but a business or research one. It requires understanding the real-world consequences of the model's errors. For a cancer screening test, a false negative is catastrophic, so **Recall** is paramount. For a marketing campaign that offers expensive discounts, a false positive is costly, so **Precision** is key.
-
-### **10.5.3 A Unified Approach with caret**
-
-The caret package provides the confusionMatrix() function, which is the definitive tool for model evaluation in R. It calculates all the key metrics in a single, convenient command.33
-
-Let's assume we have predictions (a factor of predicted classes) and actual\_values (a factor of the true classes).
+In rsample, we use the vfold\_cv() function on the *training data* to create the cross-validation resampling object. Again, we use strata to ensure each fold has a representative sample of the outcome classes.
 
 R
 
-\# Assuming 'knn\_model\_caret' is our trained model from section 10.3.2  
-\# and 'test\_data' and 'test\_scaled' are available
+\# Set a seed for reproducibility of the random folds  
+set.seed(456)
 
-\# Make predictions on the test set  
-predictions \<- predict(knn\_model\_caret, newdata \= test\_scaled)
+\# Create 10 cross-validation folds from the training data  
+wine\_folds \<- vfold\_cv(wine\_train, v \= 10, strata \= quality\_category)
 
-\# Get the actual values  
-actual\_values \<- test\_data$Species
+wine\_folds
 
-\# Generate the confusion matrix and all associated stats  
-cm \<- confusionMatrix(data \= predictions, reference \= actual\_values)
+\#\# \# 10-fold cross-validation using stratification   
+\#\# \# A tibble: 10 × 2  
+\#\#    splits             id      
+\#\#    \<list\>             \<chr\>   
+\#\#  1 \<split \[1078/120\]\> Fold01  
+\#\#  2 \<split \[1078/120\]\> Fold02  
+\#\#  3 \<split \[1078/120\]\> Fold03  
+\#\#  4 \<split \[1078/120\]\> Fold04  
+\#\#  5 \<split \[1078/120\]\> Fold05  
+\#\#  6 \<split \[1078/120\]\> Fold06  
+\#\#  7 \<split \[1078/120\]\> Fold07  
+\#\#  8 \<split \[1078/120\]\> Fold08  
+\#\#  9 \<split \[1078/120\]\> Fold09  
+\#\# 10 \<split \[1079/119\]\> Fold10
 
-\# Print the results  
-print(cm)
+This wine\_folds object contains 10 different splits of our training data, each ready to be used to train and validate a model during the tuning process. Table 10.2 clarifies the distinct roles of these different data partitions.
 
-The output of confusionMatrix() is incredibly rich. It provides:
+**Table 10.2: Data Splitting and Resampling Strategies**
 
-1. The confusion matrix table itself.  
-2. Overall statistics like Accuracy and Kappa.  
-3. A "By Class" section with detailed metrics for each class, including Sensitivity (Recall), Specificity, Precision, Recall, F1-Score, and Balanced Accuracy.
+| Partition | Created From | Purpose | When to Use |
+| :---- | :---- | :---- | :---- |
+| **Training Set** | Full Dataset | To train model parameters, estimate preprocessing steps, and serve as the basis for resampling. | Throughout the entire model development and tuning process. |
+| **Testing Set** | Full Dataset | To obtain a final, unbiased performance estimate of the *single best* chosen model. | Only once, at the very end of the project. |
+| **Validation Set (Fold)** | Training Set | To evaluate and compare the performance of different models or hyperparameter settings during the tuning process. | Repeatedly, once for each resample, during model tuning. |
 
-This function streamlines the evaluation process, allowing for efficient and comprehensive comparison of different models.
+## **10.4 Finding the Best Model: An Introduction to Hyperparameter Tuning**
 
-## **10.6 Case Study: Classifying Observations in a Research Dataset**
+Most machine learning algorithms are not monolithic entities; they come with a set of "dials" or "knobs" that control their learning behavior. These are known as **hyperparameters**, and their values are not learned from the data during the training process itself. Instead, they must be set by the user beforehand. **Hyperparameter tuning** is the systematic process of finding the optimal combination of these hyperparameter values that yields the best model performance.33
 
-To bring all these concepts together, we will conduct a case study using the **Pima Indians Diabetes Database**. This is a classic and challenging binary classification dataset from the UCI Machine Learning Repository.36 The objective is to predict whether a patient has diabetes (
+### **10.4.1 Parameters vs. Hyperparameters**
 
-Outcome \= 1\) or not (Outcome \= 0\) based on eight medical predictor variables such as Glucose, BMI, and Age.
+It is essential to distinguish between a model's parameters and its hyperparameters:
 
-### **10.6.1 Data Exploration and Preprocessing**
+* **Parameters** are values that the algorithm learns directly from the training data. For example, in a linear regression model, the intercept and the coefficients for each predictor (β^​0​,β^​1​,…) are parameters. Their values are the output of the model fitting process.  
+* **Hyperparameters** are settings that are external to the model and are specified by the analyst *before* the learning process begins. They define the model's architecture or how it learns. For example, in a k-Nearest Neighbors model, the number of neighbors to consider (k) is a hyperparameter. In a regularized regression, the strength of the penalty (λ) is a hyperparameter.33
 
-The first and most critical step is to understand and clean the data. A naive approach can lead to a fundamentally flawed model.
+### **10.4.2 The tidymodels Tuning Engine: workflows and tune**
 
-R
+The tidymodels framework provides a seamless and integrated system for hyperparameter tuning, centered around the workflows and tune packages.
 
-\# Load the PimaIndiansDiabetes2 dataset from the mlbench package, which has NAs  
-\# install.packages("mlbench")  
-library(mlbench)  
-data(PimaIndiansDiabetes2)  
-pima\_data \<- PimaIndiansDiabetes2
+* **The workflow Object**: A workflow() is a central container object that bundles a parsnip model specification with a recipes preprocessing plan.16 This is a crucial organizational tool that ensures the correct preprocessing is always applied with the correct model, preventing inconsistencies and errors, especially during the complex process of resampling and tuning.  
+* **The parsnip Model Specification with tune()**: When we define a model using a parsnip function (e.g., nearest\_neighbor()), we can mark any hyperparameter we wish to optimize with the special placeholder tune().37 This signals to the  
+  tidymodels ecosystem that this is not a fixed value but a variable to be optimized.
 
-\# Initial exploration  
-summary(pima\_data)
-
-The summary() output immediately reveals a critical issue. Variables like glucose, pressure, triceps (skin thickness), insulin, and mass (BMI) have minimum values of 0\.37 Physiologically, these values are impossible for a living person. These are not true data points but
-
-**hidden missing values**, likely coded as 0 during data entry.39 A model trained on this raw data would learn nonsensical rules and be completely unreliable.
-
-The PimaIndiansDiabetes2 dataset from mlbench already has these coded as NA, which is convenient. If working with the original dataset, the first step would be to replace these zeros with NA.
-
-R
-
-\# Count missing values in each column  
-sapply(pima\_data, function(x) sum(is.na(x)))
-
-insulin and triceps have a large number of missing values. Simply removing these rows would discard a significant portion of our data. A better approach is **imputation**. We will use caret's preProcess() function with the knnImpute method, which will fill in the missing values based on the values of the nearest neighbors.41
+Let's create a tunable workflow for a k-NN model on our wine data.
 
 R
 
-library(caret)
+library(parsnip)  
+library(workflows)
 
-\# Set up a preprocessing object for imputation and scaling  
-preproc\_model \<- preProcess(pima\_data\[, \-9\], method \= c("knnImpute", "center", "scale"))
+\# Create the recipe (from section 9.2.6)  
+\# We'll use the official wine\_train data now  
+wine\_recipe \<- recipe(quality\_category \~., data \= wine\_train) %\>%  
+  step\_normalize(all\_numeric\_predictors()) %\>%  
+  step\_zv(all\_predictors())
 
-\# Apply the transformations  
-pima\_imputed \<- predict(preproc\_model, pima\_data\[, \-9\])
+\# Create a k-NN model specification with a tunable \`neighbors\` hyperparameter  
+knn\_spec \<- nearest\_neighbor(neighbors \= tune()) %\>%  
+  set\_engine("kknn") %\>%  
+  set\_mode("classification")
 
-\# Add the outcome variable back  
-pima\_imputed$diabetes \<- pima\_data$diabetes
+\# Bundle the recipe and model spec into a workflow  
+knn\_workflow \<- workflow() %\>%  
+  add\_recipe(wine\_recipe) %\>%  
+  add\_model(knn\_spec)
 
-\# Split the cleaned data into training (80%) and testing (20%) sets  
-set.seed(123)  
-trainIndex \<- createDataPartition(pima\_imputed$diabetes, p \= 0.8, list \= FALSE)  
-training\_set \<- pima\_imputed\[trainIndex, \]  
-testing\_set  \<- pima\_imputed\[-trainIndex, \]
+knn\_workflow
 
-This preprocessing workflow—identifying hidden missing values, imputing them intelligently, and then scaling the features—is often more critical to the final model's success than the choice of algorithm itself. A sophisticated algorithm fed naive data will nearly always be outperformed by a simpler model fed well-prepared data.
+\#\# ══ Workflow ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════  
+\#\# Preprocessor: Recipe  
+\#\# Model: nearest\_neighbor()  
+\#\#   
+\#\# ── Preprocessor ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  
+\#\# 2 Recipe Steps  
+\#\#   
+\#\# • step\_normalize()  
+\#\# • step\_zv()  
+\#\#   
+\#\# ── Model ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  
+\#\# K-Nearest Neighbor Model Specification (classification)  
+\#\#   
+\#\# Main Arguments:  
+\#\#   neighbors \= tune()  
+\#\#   
+\#\# Computational engine: kknn
 
-### **10.6.2 Building and Comparing Models**
+This knn\_workflow object now contains everything needed to train and evaluate our model, with the number of neighbors ready to be tuned.
 
-Now, we will systematically train and tune our four classification models using the cleaned training\_set. We will use caret's train() function to ensure a consistent 10-fold cross-validation strategy for tuning each model.42
+### **10.4.3 Tuning Strategies in Practice**
 
-R
+There are several strategies for exploring the hyperparameter space to find the optimal values. These methods represent a trade-off between computational expense and the intelligence of the search.
 
-\# Define the training control  
-ctrl \<- trainControl(method \= "cv", number \= 10, classProbs \= TRUE, summaryFunction \= twoClassSummary)
+1. **Grid Search**: This is the most straightforward, brute-force approach. The user defines a "grid" of specific values for each hyperparameter, and the algorithm exhaustively trains and evaluates a model for every single combination in the grid.33 While simple to understand, grid search suffers from the "curse of dimensionality": the number of combinations to test explodes exponentially as the number of hyperparameters increases, making it computationally inefficient for complex models.39  
+2. **Random Search**: This method, surprisingly, is often more efficient than grid search. Instead of a fixed grid, the user defines a range or distribution for each hyperparameter. The algorithm then randomly samples a specified number of combinations from this space to evaluate.40 Research has shown that for many models, only a few hyperparameters are truly critical to performance. Random search has a higher probability of finding good values for these important parameters in fewer iterations because it doesn't waste time evaluating many unpromising combinations of less important ones.39  
+3. **Bayesian Optimization**: This is the most intelligent and sample-efficient strategy. It's an iterative process that builds a probabilistic model—typically a Gaussian Process—to approximate the relationship between hyperparameter values and model performance. After each evaluation, it updates this internal model and uses an "acquisition function" to decide the next best set of hyperparameters to try. This function balances *exploitation* (testing values near the current best-performing combination) and *exploration* (testing values in regions of the parameter space with high uncertainty). This allows it to zero in on optimal regions much faster than grid or random search, making it ideal for tuning computationally expensive models or high-dimensional parameter spaces.42
 
-\# 1\. Decision Tree (rpart)  
-set.seed(123)  
-dt\_model \<- train(diabetes \~., data \= training\_set, method \= "rpart",  
-                  trControl \= ctrl, metric \= "ROC")
+For most applications, Random Search is an excellent default starting point. If the modeling process is very time-consuming or involves many hyperparameters, investing the effort to use Bayesian Optimization can save significant computational resources. Grid Search is best reserved for problems with only one or two hyperparameters.
 
-\# 2\. Random Forest (randomForest)  
-set.seed(123)  
-rf\_model \<- train(diabetes \~., data \= training\_set, method \= "rf",  
-                  trControl \= ctrl, metric \= "ROC",  
-                  tuneGrid \= expand.grid(.mtry \= c(2, 4, 6, 8)))
+### **10.4.4 A Complete Tuning Workflow: k-NN on the Wine Data**
 
-\# 3\. k-Nearest Neighbors (k-NN)  
-set.seed(123)  
-knn\_model \<- train(diabetes \~., data \= training\_set, method \= "knn",  
-                   trControl \= ctrl, metric \= "ROC",  
-                   tuneGrid \= expand.grid(.k \= seq(5, 25, by \= 2)))
+Let's now execute a complete tuning workflow using tune\_grid with a regular grid to find the best number of neighbors (k) for our k-NN model.
 
-\# 4\. Support Vector Machine (SVM with Radial Kernel)  
-set.seed(123)  
-svm\_model \<- train(diabetes \~., data \= training\_set, method \= "svmRadial",  
-                   trControl \= ctrl, metric \= "ROC",  
-                   tuneGrid \= expand.grid(sigma \= c(0.01, 0.1), C \= c(1, 10)))
+**Step 1: Set up the workflow** (completed in section 9.4.2).
 
-### **10.6.3 Evaluating and Selecting the Best Model**
-
-With our four models tuned, we can now evaluate their performance on the unseen testing\_set. We will make predictions with each model and use confusionMatrix() to generate a full suite of performance metrics. We will focus on metrics suitable for a medical diagnosis context, such as Recall (Sensitivity), Precision, F1-Score, and AUC (Area Under the ROC Curve).
-
-R
-
-\# Make predictions on the test set  
-dt\_pred \<- predict(dt\_model, testing\_set)  
-rf\_pred \<- predict(rf\_model, testing\_set)  
-knn\_pred \<- predict(knn\_model, testing\_set)  
-svm\_pred \<- predict(svm\_model, testing\_set)
-
-\# Get confusion matrices  
-dt\_cm \<- confusionMatrix(dt\_pred, testing\_set$diabetes, positive \= "pos")  
-rf\_cm \<- confusionMatrix(rf\_pred, testing\_set$diabetes, positive \= "pos")  
-knn\_cm \<- confusionMatrix(knn\_pred, testing\_set$diabetes, positive \= "pos")  
-svm\_cm \<- confusionMatrix(svm\_pred, testing\_set$diabetes, positive \= "pos")
-
-The results can be compiled into a summary table for direct comparison.
-
-| Model | Accuracy | Precision | Recall (Sensitivity) | F1-Score | AUC (from training) |
-| :---- | :---- | :---- | :---- | :---- | :---- |
-| Decision Tree (rpart) | 0.7451 | 0.6538 | 0.6296 | 0.6415 | 0.782 |
-| **Random Forest (rf)** | **0.8105** | **0.7500** | **0.6667** | **0.7059** | **0.849** |
-| k-Nearest Neighbors (knn) | 0.7712 | 0.6591 | 0.5370 | 0.5918 | 0.815 |
-| Support Vector Machine (svmRadial) | 0.7974 | 0.7143 | 0.6481 | 0.6796 | 0.844 |
-|  |  |  |  |  |  |
-| *Table 10.2: Case Study Model Performance Comparison on the Pima Diabetes test set. The best performing value in each column is bolded. AUC is reported from the cross-validated training process in caret.* |  |  |  |  |  |
-
-Based on these results, the **Random Forest** model is the clear winner. It achieves the highest Accuracy, Precision, F1-Score, and AUC. While its Recall is slightly lower than the SVM's, its overall balanced performance, as indicated by the F1-Score, makes it the most suitable model for this task.
-
-### **10.6.4 Interpreting the Final Model**
-
-Now that we have selected the Random Forest model as our best performer, we can use its variable importance feature to gain clinical insights.43
+**Step 2: Set up the tuning grid.** We will test odd values of neighbors from 1 to 31\. The dials package helps create these grids.
 
 R
 
-\# Plot variable importance for the winning model  
-plot(varImp(rf\_model), main \= "Top Predictors of Diabetes (Random Forest)")
+\# Create a grid of values for the \`neighbors\` hyperparameter  
+knn\_grid \<- grid\_regular(neighbors(), levels \= 15)
 
-The resulting plot will almost certainly show that glucose is the most important predictor, followed by variables like mass (BMI), age, and pregnant. This aligns perfectly with established medical knowledge: high plasma glucose is the primary diagnostic criterion for diabetes, and factors like BMI and age are well-known risk factors. This final step closes the loop, connecting our machine learning model's statistical output back to a meaningful, real-world interpretation of the original research question.
+knn\_grid
 
-## **Chapter Summary**
+\#\# \# A tibble: 15 × 1  
+\#\#    neighbors  
+\#\#        \<int\>  
+\#\#  1         1  
+\#\#  2         3  
+\#\#  3         5  
+\#\#  4         7  
+\#\#  5         9  
+\#\#  6        11  
+\#\#  7        13  
+\#\#  8        15  
+\#\#  9        17  
+\#\# 10        19  
+\#\# 11        21  
+\#\# 12        23  
+\#\# 13        25  
+\#\# 14        27  
+\#\# 15        29
 
-This chapter introduced four fundamental and powerful classification algorithms. We explored the intuitive, rule-based nature of **Decision Trees**, the robust ensemble power of **Random Forests**, the proximity-based logic of **k-Nearest Neighbors**, and the boundary-optimizing approach of **Support Vector Machines**. A key theme throughout was the trade-off between model performance and interpretability, and the critical importance of proper data preprocessing, hyperparameter tuning, and rigorous evaluation.
+**Step 3: Run the tuning.** We use the tune\_grid() function from the tune package. We provide our knn\_workflow, our wine\_folds resampling object, and our knn\_grid. tune will now train and evaluate 15 models (one for each grid value) on each of the 10 folds, for a total of 150 model fits.
 
-The following table provides a high-level summary to help guide your choice of algorithm for future projects.
+R
 
-| Model | Interpretability | Predictive Power | Training Speed | Sensitivity to Scaling | Handles Non-linearity | Key Hyperparameters |
-| :---- | :---- | :---- | :---- | :---- | :---- | :---- |
-| Decision Tree | High | Medium | Fast | No | Yes (natively) | cp (complexity) |
-| Random Forest | Medium | High | Slow | No | Yes (natively) | ntree, mtry |
-| k-NN | Medium | Medium-High | Very Fast (Lazy) | Yes (High) | Yes (implicitly) | k (neighbors) |
-| SVM | Low | High | Medium-Slow | Yes (High) | Yes (via kernels) | cost, gamma (RBF) |
-|  |  |  |  |  |  |  |
-| *Table 10.1: Qualitative Comparison of Classification Models.* |  |  |  |  |  |  |
+\# Set a seed for reproducibility of the tuning process  
+set.seed(789)
 
-Ultimately, the journey through classification modeling is a structured process: you must first understand the problem to select the right evaluation metric, meticulously prepare your data, systematically train and tune multiple candidate models, and finally, evaluate them empirically to select the one that best meets the project's objectives. With these tools in hand, you are now well-equipped to tackle a wide range of predictive modeling challenges. In the next chapter, we will shift our focus from predicting categories to predicting continuous values with regression models.
+\# Run the grid search  
+knn\_tuning\_results \<- tune\_grid(  
+  object \= knn\_workflow,  
+  resamples \= wine\_folds,  
+  grid \= knn\_grid  
+)
+
+knn\_tuning\_results
+
+\#\# \# Tuning results  
+\#\# \# 10-fold cross-validation using stratification   
+\#\# \# A tibble: 10 × 4  
+\#\#    splits             id    .metrics        .notes            
+\#\#    \<list\>             \<chr\>  \<list\>           \<list\>            
+\#\#  1 \<split \[1078/120\]\> Fold01 \<tibble \[30 × 4\]\> \<tibble \[0 × 3\]\>  
+\#\#  2 \<split \[1078/120\]\> Fold02 \<tibble \[30 × 4\]\> \<tibble \[0 × 3\]\>  
+\#\#  3 \<split \[1078/120\]\> Fold03 \<tibble \[30 × 4\]\> \<tibble \[0 × 3\]\>  
+\#\#  4 \<split \[1078/120\]\> Fold04 \<tibble \[30 × 4\]\> \<tibble \[0 × 3\]\>  
+\#\#  5 \<split \[1078/120\]\> Fold05 \<tibble \[30 × 4\]\> \<tibble \[0 × 3\]\>  
+\#\#  6 \<split \[1078/120\]\> Fold06 \<tibble \[30 × 4\]\> \<tibble \[0 × 3\]\>  
+\#\#  7 \<split \[1078/120\]\> Fold07 \<tibble \[30 × 4\]\> \<tibble \[0 × 3\]\>  
+\#\#  8 \<split \[1078/120\]\> Fold08 \<tibble \[30 × 4\]\> \<tibble \[0 × 3\]\>  
+\#\#  9 \<split \[1078/120\]\> Fold09 \<tibble \[30 × 4\]\> \<tibble \[0 × 3\]\>  
+\#\# 10 \<split \[1079/119\]\> Fold10 \<tibble \[30 × 4\]\> \<tibble \[0 × 3\]\>
+
+**Step 4: Analyze the results.** The collect\_metrics() function collapses the results into a tidy data frame, showing the mean performance for each hyperparameter value across all 10 folds.
+
+R
+
+collect\_metrics(knn\_tuning\_results)
+
+\#\# \# A tibble: 30 × 6  
+\#\#    neighbors.metric .estimator  mean     n std\_err  
+\#\#        \<int\> \<chr\>    \<chr\>      \<dbl\> \<int\>   \<dbl\>  
+\#\#  1         1 accuracy binary     0.871    10  0.0125  
+\#\#  2         1 roc\_auc  binary     0.781    10  0.0270  
+\#\#  3         3 accuracy binary     0.869    10  0.0105  
+\#\#  4         3 roc\_auc  binary     0.803    10  0.0240  
+\#\#  5         5 accuracy binary     0.870    10  0.0101  
+\#\#  6         5 roc\_auc  binary     0.814    10  0.0211  
+\#\#  7         7 accuracy binary     0.869    10  0.0093  
+\#\#  8         7 roc\_auc  binary     0.822    10  0.0202  
+\#\#  9         9 accuracy binary     0.868    10  0.0089  
+\#\# 10         9 roc\_auc  binary     0.829    10  0.0194  
+\#\# \# ℹ 20 more rows
+
+**Step 5: Visualize the results.** A plot often provides the most intuitive way to understand the relationship between the hyperparameter and model performance. The autoplot() function creates this visualization automatically.45
+
+R
+
+autoplot(knn\_tuning\_results)
+
+This plot will show two panels, one for accuracy and one for roc\_auc, with the hyperparameter neighbors on the x-axis and the performance metric on the y-axis. This allows us to visually identify the region of optimal performance.
+
+**Step 6: Select the best model.** We can programmatically extract the best hyperparameter combination using select\_best(). We must specify which metric to optimize for; roc\_auc is often a good choice for imbalanced classification problems.
+
+R
+
+best\_knn\_params \<- select\_best(knn\_tuning\_results, metric \= "roc\_auc")
+
+best\_knn\_params
+
+\#\# \# A tibble: 1 × 2  
+\#\#   neighbors.config                
+\#\#       \<int\> \<chr\>                  
+\#\# 1        29 Preprocessor1\_Model15
+
+The best performance was achieved with k=29 neighbors.
+
+**Step 7: Finalize the workflow.** Now we update our workflow, replacing the tune() placeholder with this optimal value using finalize\_workflow().
+
+R
+
+final\_knn\_workflow \<- finalize\_workflow(knn\_workflow, best\_knn\_params)
+
+final\_knn\_workflow
+
+**Step 8: The Final Fit.** This is the last step. The last\_fit() function takes the finalized workflow and the original wine\_split object. It automatically performs two critical actions:
+
+1. It fits the finalized model (with k=29) on the *entire training set*.  
+2. It evaluates this final model on the *testing set*.
+
+This provides our final, unbiased assessment of how this model is expected to perform on new data.38
+
+R
+
+final\_knn\_fit \<- last\_fit(final\_knn\_workflow, wine\_split)
+
+\# View the performance metrics on the test set  
+collect\_metrics(final\_knn\_fit)
+
+\#\# \# A tibble: 2 × 4  
+\#\#  .metric .estimator.estimate.config               
+\#\#   \<chr\>    \<chr\>          \<dbl\> \<chr\>                 
+\#\# 1 accuracy binary         0.868 Preprocessor1\_Model1  
+\#\# 2 roc\_auc  binary         0.852 Preprocessor1\_Model1
+
+The final model achieved an ROC AUC of 0.852 on the held-out test set. This is our best estimate of its real-world performance.
+
+## **10.5 Chapter Summary**
+
+This chapter has built a complete, foundational workflow for machine learning in R using the tidymodels framework. We have journeyed from the conceptual underpinnings of predictive modeling to the practical implementation of a robust, end-to-end pipeline.
+
+We began by distinguishing the two major paradigms of machine learning: **supervised learning**, which uses labeled data to make predictions, and **unsupervised learning**, which finds hidden patterns in unlabeled data. We then established the critical importance of data preprocessing, demonstrating how the recipes package provides a powerful and reproducible method for feature engineering while safeguarding against data leakage through its prep() and bake() system.
+
+To ensure our models are robust and generalizable, we implemented a rigorous data splitting strategy. We used rsample to create an initial **train/test split**, sequestering the test set for a final, unbiased evaluation. We then used **k-fold cross-validation** on the training data to create resampling folds, providing a reliable way to evaluate models during the tuning phase without touching the test set.
+
+Finally, we introduced **hyperparameter tuning** as the process of optimizing a model's settings. We constructed a workflow that bundled our recipe and a tunable parsnip model specification. Using tune\_grid(), we evaluated multiple candidate models across our cross-validation folds, visualized the results, and selected the best-performing hyperparameter combination. The process culminated with last\_fit(), which trained our final, optimized model on the full training set and reported its performance on the untouched test set.
+
+The workflow established in this chapter—initial\_split \-\> vfold\_cv \-\> recipe \-\> parsnip model with tune() \-\> workflow \-\> tune\_grid or tune\_bayes \-\> select\_best \-\> finalize\_workflow \-\> last\_fit—is a powerful and reusable template. In the chapters that follow, we will explore a wide variety of advanced machine learning algorithms, from Random Forests and Gradient Boosting to Support Vector Machines and Neural Networks. The foundational workflow you have learned here will remain constant; the only piece that will change is the parsnip model specification, allowing you to rapidly apply and evaluate these powerful techniques on your own research problems.
 
 #### **Works cited**
 
-1. Classification in R Programming \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/classification-in-r-programming/](https://www.geeksforgeeks.org/r-language/classification-in-r-programming/)  
-2. Classification in R Programming: The all in one tutorial to master the concept\! \- DataFlair, accessed on July 30, 2025, [https://data-flair.training/blogs/classification-in-r/](https://data-flair.training/blogs/classification-in-r/)  
-3. 7 Decision trees and random forests | An Introduction to Machine Learning, accessed on July 30, 2025, [https://bioinformatics-training.github.io/intro-machine-learning-2019/decision-trees.html](https://bioinformatics-training.github.io/intro-machine-learning-2019/decision-trees.html)  
-4. Decision Trees in Machine Learning Using R \- DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/decision-trees-R](https://www.datacamp.com/tutorial/decision-trees-R)  
-5. towardsdatascience.com, accessed on July 30, 2025, [https://towardsdatascience.com/decision-trees-explained-entropy-information-gain-gini-index-ccp-pruning-4d78070db36c/\#:\~:text=The%20other%20way%20of%20splitting,being%20misclassified%20when%20chosen%20randomly.](https://towardsdatascience.com/decision-trees-explained-entropy-information-gain-gini-index-ccp-pruning-4d78070db36c/#:~:text=The%20other%20way%20of%20splitting,being%20misclassified%20when%20chosen%20randomly.)  
-6. Gini Index and Entropy | 2 Ways to Measure Impurity in Data, accessed on July 30, 2025, [https://datasciencedojo.com/blog/gini-index-and-entropy/](https://datasciencedojo.com/blog/gini-index-and-entropy/)  
-7. ML | Gini Impurity and Entropy in Decision Tree \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/gini-impurity-and-entropy-in-decision-tree-ml/](https://www.geeksforgeeks.org/machine-learning/gini-impurity-and-entropy-in-decision-tree-ml/)  
-8. CRAN: Package rpart \- R-project.org, accessed on July 30, 2025, [https://cran.r-project.org/package=rpart](https://cran.r-project.org/package=rpart)  
-9. Recursive Partitioning and Regression Trees in rpart \- rdrr.io, accessed on July 30, 2025, [https://rdrr.io/cran/rpart/man/rpart.html](https://rdrr.io/cran/rpart/man/rpart.html)  
-10. Iris dataset in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/iris-dataset-in-r/](https://www.geeksforgeeks.org/r-language/iris-dataset-in-r/)  
-11. Decision Trees in R using rpart \- GormAnalysis, accessed on July 30, 2025, [https://www.gormanalysis.com/blog/decision-trees-in-r-using-rpart/](https://www.gormanalysis.com/blog/decision-trees-in-r-using-rpart/)  
-12. Decision Trees and Random Forest in R Programming \- DEV Community, accessed on July 30, 2025, [https://dev.to/anvilicious/decision-trees-and-random-forest-in-r-programming-2404](https://dev.to/anvilicious/decision-trees-and-random-forest-in-r-programming-2404)  
-13. rpart.plot \- Stephen Milborrow Homepage, accessed on July 30, 2025, [http://www.milbo.org/rpart-plot/](http://www.milbo.org/rpart-plot/)  
-14. Categorical and Regression Trees with rpart \- R for Spatial Scientists, accessed on July 30, 2025, [https://gsp.humboldt.edu/olm/R/05\_04\_CART\_rpart.html](https://gsp.humboldt.edu/olm/R/05_04_CART_rpart.html)  
-15. Package 'rpart.plot', accessed on July 30, 2025, [https://cran.r-project.org/web/packages/rpart.plot/rpart.plot.pdf](https://cran.r-project.org/web/packages/rpart.plot/rpart.plot.pdf)  
-16. Plotting Decision Trees in R with rpart and rpart.plot – Steve's Data Tips and Tricks, accessed on July 30, 2025, [https://www.spsanderson.com/steveondata/posts/2023-09-29/index.html](https://www.spsanderson.com/steveondata/posts/2023-09-29/index.html)  
-17. Random Forest in R: A Step-by-Step Guide \- ListenData, accessed on July 30, 2025, [https://www.listendata.com/2014/11/random-forest-with-r.html](https://www.listendata.com/2014/11/random-forest-with-r.html)  
-18. Decision Trees in R \- Learn by Marketing, accessed on July 30, 2025, [https://www.learnbymarketing.com/tutorials/rpart-decision-trees-in-r/](https://www.learnbymarketing.com/tutorials/rpart-decision-trees-in-r/)  
-19. rpart documentation \- rdrr.io, accessed on July 30, 2025, [https://rdrr.io/cran/rpart/man/](https://rdrr.io/cran/rpart/man/)  
-20. Random Forests · UC Business Analytics R Programming Guide, accessed on July 30, 2025, [https://uc-r.github.io/random\_forests](https://uc-r.github.io/random_forests)  
-21. Chapter 2 Random Forests (RF) \- useR\! Machine Learning Tutorial, accessed on July 30, 2025, [https://koalaverse.github.io/machine-learning-in-R/random-forest.html](https://koalaverse.github.io/machine-learning-in-R/random-forest.html)  
-22. CRAN: Package randomForest \- R-project.org, accessed on July 30, 2025, [https://cran.r-project.org/package=randomForest](https://cran.r-project.org/package=randomForest)  
-23. randomForest documentation \- rdrr.io, accessed on July 30, 2025, [https://rdrr.io/cran/randomForest/man/](https://rdrr.io/cran/randomForest/man/)  
-24. K-Nearest Neighbors (KNN) Classification with R Tutorial | DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/k-nearest-neighbors-knn-classification-with-r-tutorial](https://www.datacamp.com/tutorial/k-nearest-neighbors-knn-classification-with-r-tutorial)  
-25. Implementing KNN in R \- IBM Developer, accessed on July 30, 2025, [https://developer.ibm.com/tutorials/awb-implementing-knn-in-r/](https://developer.ibm.com/tutorials/awb-implementing-knn-in-r/)  
-26. Support Vector Machine · UC Business Analytics R Programming ..., accessed on July 30, 2025, [https://uc-r.github.io/svm](https://uc-r.github.io/svm)  
-27. Classifying data using Support Vector Machines(SVMs) in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/classifying-data-using-support-vector-machinessvms-in-r/](https://www.geeksforgeeks.org/r-language/classifying-data-using-support-vector-machinessvms-in-r/)  
-28. Support Vector Machines in R Tutorial | DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/support-vector-machines-r](https://www.datacamp.com/tutorial/support-vector-machines-r)  
-29. SVM Tutorial: Support Vector Machines Tutorial, accessed on July 30, 2025, [https://www.svm-tutorial.com/](https://www.svm-tutorial.com/)  
-30. CRAN: Package e1071 \- R-project.org, accessed on July 30, 2025, [https://cran.r-project.org/package=e1071](https://cran.r-project.org/package=e1071)  
-31. Package e1071 in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/package-e1071-in-r/](https://www.geeksforgeeks.org/machine-learning/package-e1071-in-r/)  
-32. Plotting SVM Decision Boundaries with e1071 in R – Steve's Data Tips and Tricks, accessed on July 30, 2025, [https://www.spsanderson.com/steveondata/posts/2023-09-11/index.html](https://www.spsanderson.com/steveondata/posts/2023-09-11/index.html)  
-33. Computing Classification Evaluation Metrics in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/computing-classification-evaluation-metrics-in-r/](https://www.geeksforgeeks.org/r-language/computing-classification-evaluation-metrics-in-r/)  
-34. Precision, Recall and F1-Score using R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/precision-recall-and-f1-score-using-r/](https://www.geeksforgeeks.org/r-language/precision-recall-and-f1-score-using-r/)  
-35. Classification: Accuracy, recall, precision, and related metrics | Machine Learning, accessed on July 30, 2025, [https://developers.google.com/machine-learning/crash-course/classification/accuracy-precision-recall](https://developers.google.com/machine-learning/crash-course/classification/accuracy-precision-recall)  
-36. Pima Indians Diabetes Database \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database](https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database)  
-37. Step by Step Diabetes Classification \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/code/shrutimechlearn/step-by-step-diabetes-classification](https://www.kaggle.com/code/shrutimechlearn/step-by-step-diabetes-classification)  
-38. ashishpatel26/Pima-Indians-Diabetes-Dataset-Missing-Value-Imputation \- GitHub, accessed on July 30, 2025, [https://github.com/ashishpatel26/Pima-Indians-Diabetes-Dataset-Missing-Value-Imputation](https://github.com/ashishpatel26/Pima-Indians-Diabetes-Dataset-Missing-Value-Imputation)  
-39. When to exclude or replace missing values: Pima Indian Dataset \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/questions-and-answers/56544](https://www.kaggle.com/questions-and-answers/56544)  
-40. Handling Missing Data For Advanced Machine Learning \- TOPBOTS, accessed on July 30, 2025, [https://www.topbots.com/handling-missing-data-for-machine-learning/](https://www.topbots.com/handling-missing-data-for-machine-learning/)  
-41. Predictive Classification model by Imputing missing values ... \- RPubs, accessed on July 30, 2025, [https://rpubs.com/Waseem/707172](https://rpubs.com/Waseem/707172)  
-42. caret: Classification and Regression Training \- The Comprehensive ..., accessed on July 30, 2025, [https://cran.r-project.org/web/packages/caret/caret.pdf](https://cran.r-project.org/web/packages/caret/caret.pdf)  
-43. Prediction of Diabetes in PIMA Indian Women \- RPubs, accessed on July 30, 2025, [https://rpubs.com/jayarapm/PIMAIndianWomenDiabetes](https://rpubs.com/jayarapm/PIMAIndianWomenDiabetes)
+1. Caret vs. tidymodels — create reusable machine learning workflows ..., accessed on July 30, 2025, [https://medium.com/data-science/caret-vs-tidymodels-create-complete-reusable-machine-learning-workflows-5c50a7befd2d](https://medium.com/data-science/caret-vs-tidymodels-create-complete-reusable-machine-learning-workflows-5c50a7befd2d)  
+2. Tidymodels: tidy machine learning in R \- Rebecca Barter, accessed on July 30, 2025, [https://rebeccabarter.com/blog/2020-03-25\_machine\_learning](https://rebeccabarter.com/blog/2020-03-25_machine_learning)  
+3. Machine Learning with tidymodels \- WV View, accessed on July 30, 2025, [https://www.wvview.org/os\_sa/20\_tidymodels.html](https://www.wvview.org/os_sa/20_tidymodels.html)  
+4. TidyModels or CARET – how they compare? \- R-bloggers, accessed on July 30, 2025, [https://www.r-bloggers.com/2021/10/tidymodels-or-caret-how-they-compare/](https://www.r-bloggers.com/2021/10/tidymodels-or-caret-how-they-compare/)  
+5. Wine Quality Dataset \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/datasets/yasserh/wine-quality-dataset](https://www.kaggle.com/datasets/yasserh/wine-quality-dataset)  
+6. Red Wine Quality \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/datasets/uciml/red-wine-quality-cortez-et-al-2009](https://www.kaggle.com/datasets/uciml/red-wine-quality-cortez-et-al-2009)  
+7. cloud.google.com, accessed on July 30, 2025, [https://cloud.google.com/discover/supervised-vs-unsupervised-learning\#:\~:text=The%20biggest%20difference%20between%20supervised,correct%20output%20values%20should%20be.](https://cloud.google.com/discover/supervised-vs-unsupervised-learning#:~:text=The%20biggest%20difference%20between%20supervised,correct%20output%20values%20should%20be.)  
+8. Supervised vs. Unsupervised Learning: What's the Difference? | IBM, accessed on July 30, 2025, [https://www.ibm.com/think/topics/supervised-vs-unsupervised-learning](https://www.ibm.com/think/topics/supervised-vs-unsupervised-learning)  
+9. Supervised vs. unsupervised learning | Google Cloud, accessed on July 30, 2025, [https://cloud.google.com/discover/supervised-vs-unsupervised-learning](https://cloud.google.com/discover/supervised-vs-unsupervised-learning)  
+10. Supervised vs. unsupervised learning: What's the difference? \- Moveworks, accessed on July 30, 2025, [https://www.moveworks.com/us/en/resources/blog/supervised-vs-unsupervised-learning-whats-the-difference](https://www.moveworks.com/us/en/resources/blog/supervised-vs-unsupervised-learning-whats-the-difference)  
+11. Recipes in R. All about data preprocessing in R | by Gagan Chordia | Medium, accessed on July 30, 2025, [https://gaganchordia.medium.com/recipes-all-about-data-preprocessing-in-r-d97a3466d8a5](https://gaganchordia.medium.com/recipes-all-about-data-preprocessing-in-r-d97a3466d8a5)  
+12. Feature Engineering in R Programming \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/feature-engineering-in-r-programming/](https://www.geeksforgeeks.org/r-language/feature-engineering-in-r-programming/)  
+13. Feature Engineering in Machine Learning: A Practical Guide \- DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/feature-engineering](https://www.datacamp.com/tutorial/feature-engineering)  
+14. Mastering Data Preprocessing in R with the \`recipes\` Package | R-bloggers, accessed on July 30, 2025, [https://www.r-bloggers.com/2025/04/mastering-data-preprocessing-in-r-with-the-recipes-package/](https://www.r-bloggers.com/2025/04/mastering-data-preprocessing-in-r-with-the-recipes-package/)  
+15. Preprocess your data with recipes \- tidymodels, accessed on July 30, 2025, [https://www.tidymodels.org/start/recipes/](https://www.tidymodels.org/start/recipes/)  
+16. 8 Feature Engineering with recipes | Tidy Modeling with R, accessed on July 30, 2025, [https://www.tmwr.org/recipes](https://www.tmwr.org/recipes)  
+17. Tackling the Red Wine Quality Classification Problem | by Rahma F. Nova \- Medium, accessed on July 30, 2025, [https://medium.com/@20611122/tackling-the-red-wine-quality-classification-problem-0526f558c38b](https://medium.com/@20611122/tackling-the-red-wine-quality-classification-problem-0526f558c38b)  
+18. Chapter 3 Feature & Target Engineering | Hands-On Machine Learning with R, accessed on July 30, 2025, [https://bradleyboehmke.github.io/HOML/engineering.html](https://bradleyboehmke.github.io/HOML/engineering.html)  
+19. 30 day tidymodels recipes challenge \- Collin K. Berke, Ph.D., accessed on July 30, 2025, [https://www.collinberke.com/blog/posts/2024-01-01-30-days-challenge-tidymodels-recipes/](https://www.collinberke.com/blog/posts/2024-01-01-30-days-challenge-tidymodels-recipes/)  
+20. Data Preprocessing in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/data-preprocessing-in-r/](https://www.geeksforgeeks.org/r-language/data-preprocessing-in-r/)  
+21. Normalization and Scaling \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/data-analysis/normalization-and-scaling/](https://www.geeksforgeeks.org/data-analysis/normalization-and-scaling/)  
+22. Data Normalization Techniques in R | CodeSignal Learn, accessed on July 30, 2025, [https://codesignal.com/learn/courses/data-cleaning-and-preprocessing-with-r/lessons/data-normalization-techniques-in-r](https://codesignal.com/learn/courses/data-cleaning-and-preprocessing-with-r/lessons/data-normalization-techniques-in-r)  
+23. Scaling and Normalization \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/code/alexisbcook/scaling-and-normalization](https://www.kaggle.com/code/alexisbcook/scaling-and-normalization)  
+24. Data Preprocessing | CodeSignal Learn, accessed on July 30, 2025, [https://codesignal.com/learn/courses/introduction-to-machine-learning-with-caret/lessons/data-preprocessing](https://codesignal.com/learn/courses/introduction-to-machine-learning-with-caret/lessons/data-preprocessing)  
+25. Feature Engineering, accessed on July 30, 2025, [https://cran.r-project.org/web/packages/finnts/vignettes/feature-engineering.html](https://cran.r-project.org/web/packages/finnts/vignettes/feature-engineering.html)  
+26. 13 Grid Search | Tidy Modeling with R, accessed on July 30, 2025, [https://www.tmwr.org/grid-search](https://www.tmwr.org/grid-search)  
+27. \[D\] Looking for a guide to data preprocessing : r/MachineLearning \- Reddit, accessed on July 30, 2025, [https://www.reddit.com/r/MachineLearning/comments/1aur5o7/d\_looking\_for\_a\_guide\_to\_data\_preprocessing/](https://www.reddit.com/r/MachineLearning/comments/1aur5o7/d_looking_for_a_guide_to_data_preprocessing/)  
+28. Cross-Validation in R programming \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/cross-validation-in-r-programming/](https://www.geeksforgeeks.org/r-language/cross-validation-in-r-programming/)  
+29. When splitting data into training and validation sets, should it be completely random? : r/statistics \- Reddit, accessed on July 30, 2025, [https://www.reddit.com/r/statistics/comments/1uuv25/when\_splitting\_data\_into\_training\_and\_validation/](https://www.reddit.com/r/statistics/comments/1uuv25/when_splitting_data_into_training_and_validation/)  
+30. Create an Initial Train/Validation/Test Split — initial\_validation\_split ..., accessed on July 30, 2025, [https://rsample.tidymodels.org/reference/initial\_validation\_split.html](https://rsample.tidymodels.org/reference/initial_validation_split.html)  
+31. Cross-Validation in Machine Learning: How to Do It Right \- neptune.ai, accessed on July 30, 2025, [https://neptune.ai/blog/cross-validation-in-machine-learning-how-to-do-it-right](https://neptune.ai/blog/cross-validation-in-machine-learning-how-to-do-it-right)  
+32. Cross-validating regression models, accessed on July 30, 2025, [https://cran.r-project.org/web/packages/cv/vignettes/cv.html](https://cran.r-project.org/web/packages/cv/vignettes/cv.html)  
+33. Hyperparameter Tuning with R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/hyperparameter-tuning-with-r/](https://www.geeksforgeeks.org/machine-learning/hyperparameter-tuning-with-r/)  
+34. Hyperparameter Tuning with R | Reintech media, accessed on July 30, 2025, [https://reintech.io/blog/hyperparameter-tuning-with-r-guide](https://reintech.io/blog/hyperparameter-tuning-with-r-guide)  
+35. Modeling Workflows • workflows \- tidymodels, accessed on July 30, 2025, [https://workflows.tidymodels.org/](https://workflows.tidymodels.org/)  
+36. 7 A Model Workflow | Tidy Modeling with R, accessed on July 30, 2025, [https://www.tmwr.org/workflows.html](https://www.tmwr.org/workflows.html)  
+37. Getting Started with tune \- tidymodels, accessed on July 30, 2025, [https://tune.tidymodels.org/articles/getting\_started.html](https://tune.tidymodels.org/articles/getting_started.html)  
+38. Tune model parameters \- tidymodels, accessed on July 30, 2025, [https://www.tidymodels.org/start/tuning/](https://www.tidymodels.org/start/tuning/)  
+39. Random Search in R. When building machine learning models… | by Amit Yadav | Biased-Algorithms | Medium, accessed on July 30, 2025, [https://medium.com/biased-algorithms/random-search-in-r-3ce5631fe424](https://medium.com/biased-algorithms/random-search-in-r-3ce5631fe424)  
+40. www.geeksforgeeks.org, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/hyperparameter-tuning-with-r/\#:\~:text=Techniques%20for%20Hyperparameter%20Tuning\&text=Random%20Search%3A%20Random%20search%20selects,the%20search%20space%20is%20large.](https://www.geeksforgeeks.org/machine-learning/hyperparameter-tuning-with-r/#:~:text=Techniques%20for%20Hyperparameter%20Tuning&text=Random%20Search%3A%20Random%20search%20selects,the%20search%20space%20is%20large.)  
+41. How to tune Hyper parameters using Random Search in R?, accessed on July 30, 2025, [https://www.projectpro.io/recipes/tune-hyper-parameters-random-search-r](https://www.projectpro.io/recipes/tune-hyper-parameters-random-search-r)  
+42. Bayesian optimization of model parameters. — tune\_bayes • tune \- tidymodels, accessed on July 30, 2025, [https://tune.tidymodels.org/reference/tune\_bayes.html](https://tune.tidymodels.org/reference/tune_bayes.html)  
+43. Iterative Bayesian optimization of a classification model \- tidymodels, accessed on July 30, 2025, [https://www.tidymodels.org/learn/work/bayes-opt/](https://www.tidymodels.org/learn/work/bayes-opt/)  
+44. 14 Iterative Search \- Tidy Modeling with R, accessed on July 30, 2025, [https://www.tmwr.org/iterative-search](https://www.tmwr.org/iterative-search)  
+45. tune.pdf, accessed on July 30, 2025, [https://cran.r-project.org/web/packages/tune/tune.pdf](https://cran.r-project.org/web/packages/tune/tune.pdf)

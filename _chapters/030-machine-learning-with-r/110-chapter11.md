@@ -1,642 +1,609 @@
 ---
-title: Regression Models
+title:  Classification Models
 slug: chapter11
-order: 110
+order: 085
 published: false
 abstract: >
-    Regression models are essential tools for predicting numerical outcomes. This chapter covers linear regression, Ridge, Lasso, and Elastic Net, along with advanced boosting methods like XGBoost. Practical examples help readers apply these methods to real-world data.
+    Focusing on supervised learning, this chapter explores classification techniques such as decision trees, random forests, k-Nearest Neighbors, and Support Vector Machines. Readers will learn to evaluate model performance using the confusion matrix, precision, recall, and F1 score.
 ---
 
 
 
+Having established a robust foundation in data handling and visualization, we now transition from describing data to predicting it. This chapter delves into classification, a fundamental task in supervised machine learning. The objective of classification is to build a model that predicts a categorical outcome—a class or label—based on a set of input features or predictors.1 This stands in contrast to regression, which you will explore in the next chapter, where the goal is to predict a continuous numerical value. For instance, classifying an email as 'spam' or 'not spam' is a classification task, whereas predicting the exact price of a house is a regression task.
 
-In previous chapters, the principles of linear regression provided a robust framework for modeling relationships between variables. The Ordinary Least Squares (OLS) method, in particular, offers an elegant and interpretable solution for estimating the coefficients that define these relationships. However, the very assumptions that make OLS powerful under ideal conditions also render it vulnerable in the face of common real-world data complexities. This chapter ventures beyond standard regression to tackle two pervasive challenges that researchers and analysts frequently encounter: overfitting and multicollinearity.
+This chapter will equip you with a powerful and versatile toolkit of classification algorithms, each operating on a distinct philosophy. We will begin with the intuitive, rule-based logic of **Decision Trees**, which mirror human decision-making processes. We will then build upon this concept to explore **Random Forests**, an ensemble method that leverages the "wisdom of the crowds" to create highly accurate and robust models. Following that, we will investigate **k-Nearest Neighbors (k-NN)**, an instance-based approach that classifies new data based on proximity to known data points. Finally, we will examine **Support Vector Machines (SVMs)**, a sophisticated algorithm that finds the optimal boundary to separate classes. For each model, we will cover its theoretical underpinnings, practical implementation in R, and methods for performance evaluation, culminating in a real-world case study.1
 
-### **The Problem of Overfitting**
+## **11.1 Decision Trees: From Intuition to Implementation**
 
-A primary goal of predictive modeling is to build a model that generalizes well to new, unseen data. Overfitting occurs when a model learns the training data too well, capturing not only the underlying signal but also the random noise specific to that particular sample.1 A model with a large number of predictors relative to the number of observations is particularly susceptible to this issue. Such a model may exhibit excellent performance on the data it was trained on, but its predictive accuracy will plummet when faced with a new dataset. The model's large coefficients, tailored to the noise of the training set, fail to capture the true, generalizable pattern.1 This discrepancy between training and testing performance is the hallmark of an overfit, high-variance model.
+Decision trees are among the most intuitive and interpretable models in machine learning. They are a type of supervised learning algorithm that functions like a flowchart, using a tree-like graph of decisions and their possible consequences to classify data.3 Their structure makes them exceptionally easy to understand, even for non-experts, as they closely mirror the logical, question-based process humans use to make decisions.2
 
-### **The Challenge of Multicollinearity**
+### **11.1.1 The Logic of Recursive Partitioning**
 
-Multicollinearity arises when two or more predictor variables in a regression model are highly correlated with one another.4 This redundancy creates a problem for OLS, which struggles to disentangle the individual effects of the correlated predictors. The consequence is unstable and unreliable coefficient estimates. The standard errors of the coefficients become inflated, making it difficult to assess the statistical significance of any given predictor. In extreme cases, the signs of the coefficients may even be counterintuitive, undermining the model's interpretability and trustworthiness.5
+At its core, a decision tree works by recursively splitting the dataset into smaller and more homogeneous subsets. This process is known as recursive partitioning.2 To understand this, let's define the key components of a tree 2:
 
-### **Introducing the Solutions: Regularization and Boosting**
+* **Root Node**: This is the top-most node of the tree, representing the entire dataset before any splits are made.  
+* **Splitting**: This is the process of dividing a node into two or more sub-nodes based on a specific condition applied to a predictor variable.  
+* **Decision Node**: When a node is split, it becomes a decision node. It has branches leading to other nodes.  
+* **Leaf/Terminal Node**: These are the final nodes at the bottom of the tree that are not split further. Each leaf node represents a final class prediction.  
+* **Branch/Sub-Tree**: A subsection of the entire tree, consisting of a decision node and its descendant nodes.
 
-To overcome these limitations, this chapter introduces two powerful families of advanced regression techniques: regularization and boosting. These approaches represent distinct philosophies for building robust predictive models.
+The algorithm starts at the root node and evaluates all possible splits on all available features. It selects the single best split that does the best job of separating the data into more homogeneous groups. This process is then repeated for each of the resulting sub-nodes, and so on, until a stopping criterion is met, such as reaching a maximum tree depth or a node becoming perfectly pure (containing observations of only one class).
 
-* **Regularization** operates by taking the framework of a potentially complex model, like multiple linear regression, and applying a *proactive constraint*. It introduces a penalty term into the model's loss function, which discourages the coefficients from becoming too large. This process, also known as shrinkage, effectively tames the model's complexity, reducing variance and stabilizing the estimates in the presence of multicollinearity.2 It is a method of controlling a complex model from the outset.  
-* **Boosting**, in contrast, is a *reactive, constructive process*. It does not begin with a complex model. Instead, it starts with an exceedingly simple model (often just the overall mean of the outcome) and builds a powerful predictor by sequentially adding simple, "weak" models, typically shallow decision trees.7 Each new model in the sequence is trained to correct the errors or residuals of the models that came before it.7 This incremental, error-correcting approach constructs a highly accurate and complex model from simple, manageable components.
+### **11.1.2 The Splitting Engine: Gini Impurity and Entropy**
 
-By mastering these two paradigms, you will be equipped to build high-performance regression models that are not only accurate but also robust and generalizable, even when faced with the challenges of complex, high-dimensional, and correlated data.
+The fundamental question a decision tree must answer at each step is: "How do I decide where to split?" The goal is to make each resulting sub-node as "pure" as possible, meaning it should ideally contain observations from a single class.3 The two most common metrics used to measure this purity and guide the splitting process are Gini Impurity and Entropy.
 
-## **Taming Complexity with Regularized Regression**
+Gini Impurity  
+The Gini Impurity (or Gini Index) is a measure of the probability that a randomly chosen element from a node would be incorrectly classified if it were randomly labeled according to the distribution of classes in that node.5 The formula for Gini Impurity is:  
+Gini=1−i=1∑C​(pi​)2  
+where C is the number of classes and pi​ is the proportion of observations belonging to class i in the node. A Gini score of 0 represents perfect purity (all observations in the node belong to one class), while a higher Gini score indicates greater impurity. The CART (Classification and Regression Trees) algorithm, implemented in R's rpart package, uses the Gini Index by default. It selects the split that results in the lowest weighted average Gini Impurity in the child nodes.6
 
-Regularized regression methods provide a direct and effective solution to the problems of overfitting and multicollinearity by fundamentally altering the objective of the model-fitting process. Instead of solely minimizing the sum of squared residuals, these methods introduce a penalty for model complexity, thereby managing the critical trade-off between bias and variance.
+Entropy and Information Gain  
+Borrowed from information theory, Entropy is a measure of uncertainty or randomness in a node.7 A node with high entropy is very mixed, while a node with zero entropy is perfectly pure. The formula for Entropy is:  
+Entropy=−i=1∑C​pi​log2​(pi​)  
+The algorithm doesn't use entropy directly but instead calculates **Information Gain**, which is the reduction in entropy achieved by a split. The split that yields the highest Information Gain is chosen as the best one.3 Algorithms like ID3 and C4.5 use this criterion. In practice, Gini Impurity and Entropy often produce very similar trees, but Gini is slightly faster to compute as it avoids logarithmic calculations.7
 
-### **The Theory: The Bias-Variance Trade-off and Penalized Regression**
+### **11.1.3 Building a Decision Tree with rpart**
 
-Every predictive model is subject to the bias-variance trade-off.
+The classic package for building decision trees in R is rpart, which stands for Recursive Partitioning and Regression Trees. It is a robust implementation of the original CART algorithm.8 Let's build our first tree using the well-known
 
-* **Bias** is the error introduced by approximating a real-world problem, which may be complex, with a much simpler model. High-bias models (e.g., a simple linear regression on a non-linear relationship) tend to underfit the data, failing to capture the underlying patterns.  
-* **Variance** is the amount by which the model's estimate would change if it were trained on a different training dataset. High-variance models (e.g., a high-degree polynomial regression) are overly sensitive to the training data and tend to overfit, capturing noise as if it were signal.
+iris dataset, which contains measurements for three species of iris flowers.10
 
-The goal is to find a sweet spot that minimizes the total error. Regularization achieves this by intentionally introducing a small amount of bias into the model to gain a significant reduction in variance, leading to a lower overall error on unseen data.5 This is accomplished by adding a penalty term to the OLS loss function, creating a new objective to minimize 1:
-
-Minimize: i=1∑n​(yi​−y^​i​)2+Penalty Term  
-The specific form of the penalty term defines the type of regularized regression.
-
-### **Ridge Regression (L2 Penalty): Shrinking Coefficients**
-
-Ridge regression introduces a penalty based on the L2 norm of the coefficient vector—the sum of the squared magnitudes of the coefficients.4 The objective function for Ridge regression is:
-
-Minimize: i=1∑n​(yi​−β0​−j=1∑p​βj​xij​)2+λj=1∑p​βj2​  
-Here, λ (lambda) is a non-negative tuning parameter that controls the strength of the penalty. As λ increases, the penalty for large coefficients becomes more severe, forcing the model to shrink the coefficients closer and closer to zero. Because the penalty is squared, Ridge regression has a more pronounced effect on larger coefficients.10
-
-The key characteristic of Ridge regression is that while it shrinks coefficients towards zero, it never sets them *exactly* to zero (unless λ=∞).4 This makes it particularly effective for mitigating multicollinearity. When faced with a group of highly correlated predictors, Ridge will tend to shrink their coefficients towards each other and towards zero, effectively sharing their predictive power rather than arbitrarily selecting one predictor over the others.10
-
-### **Lasso Regression (L1 Penalty): Achieving Sparsity**
-
-Lasso (Least Absolute Shrinkage and Selection Operator) regression employs a penalty based on the L1 norm—the sum of the absolute values of the coefficients.4 Its objective function is:
-
-Minimize: i=1∑n​(yi​−β0​−j=1∑p​βj​xij​)2+λj=1∑p​∣βj​∣  
-The L1 penalty has a profoundly different effect than the L2 penalty. Due to the geometry of the absolute value function, the Lasso penalty can shrink some coefficients all the way to *exactly zero* as λ increases.11 This property means that Lasso performs automatic feature selection, effectively removing irrelevant predictors from the model by nullifying their impact. This makes Lasso an invaluable tool for high-dimensional datasets where the number of predictors is large, and many are expected to be unrelated to the outcome.4
-
-However, Lasso's behavior with correlated predictors can be a drawback. If a group of predictors is highly correlated, Lasso will tend to arbitrarily select one variable from the group and shrink the others to zero.10 This can make the model's selection of variables seem unstable or random if the analysis is repeated on slightly different data.
-
-### **Elastic Net: The Best of Both Worlds**
-
-Elastic Net regression was developed to combine the strengths of both Ridge and Lasso.13 It includes both L1 and L2 penalties in its objective function, controlled by two tuning parameters:
-
-λ for the overall penalty strength and α (alpha) for the mix between the two penalties.
-
-Minimize: i=1∑n​(yi​−β0​−j=1∑p​βj​xij​)2+λ\[(1−α)21​j=1∑p​βj2​+αj=1∑p​∣βj​∣\]  
-The mixing parameter α ranges from 0 to 1 16:
-
-* When α=0, the L1 penalty term disappears, and the model becomes pure Ridge regression.  
-* When α=1, the L2 penalty term disappears, and the model becomes pure Lasso regression.  
-* For values of α between 0 and 1, the model is a hybrid.
-
-This hybrid approach allows Elastic Net to handle groups of correlated predictors effectively (the Ridge component encourages them to be included or excluded together) while still being able to perform sparse feature selection (the Lasso component can shrink irrelevant coefficients to zero).13 This makes it a highly flexible and often superior choice, particularly when dealing with datasets that have high dimensionality and multicollinearity.
-
-### **Implementation with glmnet**
-
-The glmnet package is the gold standard for fitting regularized regression models in R. It is highly optimized for speed and provides a comprehensive framework for training and tuning these models.16
-
-#### **Data Preparation**
-
-Unlike many modeling functions in R that use a formula interface (e.g., y \~ x1 \+ x2), glmnet requires the predictor variables to be supplied as a numeric matrix and the response variable as a vector.17 The
-
-model.matrix() function is a convenient way to create this matrix, especially for converting categorical variables into dummy variables.
-
-A critical preprocessing step for regularized regression is to standardize the predictor variables. Because the penalties are applied to the coefficients, predictors on different scales can receive unequal penalization. For instance, a predictor measured in meters will have a much smaller coefficient than the same predictor measured in millimeters, and the penalty would affect them differently. The glmnet function handles this by default with the argument standardize \= TRUE, ensuring a fair application of the penalty across all predictors. The coefficients are then returned on their original scale for interpretation.1
-
-#### **Training and Tuning with cv.glmnet**
-
-The most important step in regularized regression is choosing the optimal value for the tuning parameter λ. The cv.glmnet() function automates this process using k-fold cross-validation.17 It trains the model over a grid of
-
-λ values and calculates a cross-validation error for each.
-
-The function produces a plot showing the cross-validation error (typically Mean Squared Error) as a function of log(λ). From this, two optimal values for λ are identified:
-
-* **lambda.min**: The value of λ that results in the minimum cross-validation error. This value yields the most accurate model but can sometimes be slightly overfit.  
-* **lambda.1se**: The most regularized (simplest) model whose error is within one standard error of the minimum. This value is often preferred as it provides a more parsimonious model with comparable performance to the lambda.min model.
-
-The following code demonstrates a complete workflow for training and tuning an Elastic Net model using cv.glmnet. We will use the built-in mtcars dataset to predict miles per gallon (mpg).
+First, ensure the rpart package is installed and loaded. We will then use the rpart() function, specifying the formula, the data, and the method. For classification, the method is "class".11
 
 R
 
-\# Load the necessary library  
-install.packages("glmnet")  
-library(glmnet)
+\# Install and load required packages  
+\# install.packages("rpart")  
+\# install.packages("rpart.plot")
 
-\# Prepare the data  
-\# glmnet requires a matrix of predictors (x) and a vector for the response (y)  
-x \<- model.matrix(mpg \~., data \= mtcars)\[, \-1\] \# Predictor matrix  
-y \<- mtcars$mpg                                  \# Response vector
+library(rpart)  
+library(rpart.plot)
 
-\# Set a seed for reproducibility  
-set.seed(123)
+\# Use the iris dataset  
+data(iris)
 
-\# Train the Elastic Net model using cross-validation  
-\# We will test a range of alpha values to find the best mix of Ridge and Lasso  
-\# A for loop can be used to iterate through different alpha values  
-best\_alpha \<- NULL  
-best\_mse \<- Inf  
-best\_model \<- NULL
+\# Build the decision tree model  
+\# We want to predict the 'Species' based on all other variables (denoted by '.')  
+set.seed(123) \# for reproducibility  
+tree\_model \<- rpart(Species \~., data \= iris, method \= "class")
 
-for (alpha\_val in seq(0, 1, by \= 0.1)) {  
-  cv\_fit \<- cv.glmnet(x, y, alpha \= alpha\_val, family \= "gaussian")  
-    
-  \# Find the minimum MSE for the current alpha  
-  current\_mse \<- min(cv\_fit$cvm)  
-    
-  \# If this alpha gives a better MSE, store it  
-  if (current\_mse \< best\_mse) {  
-    best\_mse \<- current\_mse  
-    best\_alpha \<- alpha\_val  
-    best\_model \<- cv\_fit  
-  }  
-}
+\# Print the model summary  
+print(tree\_model)
 
-\# Print the best alpha value found  
-print(paste("Best alpha:", best\_alpha))
+The output from print(tree\_model) provides a text-based representation of the tree's rules. For example, it might show a rule like 2\) Petal.Length\< 2.45 50 0 setosa (1.00000000 0.00000000 0.00000000) \*. This line indicates that for the node where Petal.Length is less than 2.45 cm, there are 50 observations, 0 are misclassified, and the predicted class is setosa with 100% probability.11
 
-\# Plot the cross-validation results for the best model  
-plot(best\_model)
+### **11.1.4 Visualizing Trees for Interpretability with rpart.plot**
 
-\# Get the optimal lambda values from the best model  
-lambda\_min \<- best\_model$lambda.min  
-lambda\_1se \<- best\_model$lambda.1se
+While the text output is useful, the true power of a decision tree lies in its visual interpretation.2 The
 
-print(paste("Lambda min:", lambda\_min))  
-print(paste("Lambda 1se:", lambda\_1se))
+rpart.plot package provides a far superior plotting function compared to the base R alternative, creating aesthetically pleasing and highly informative diagrams.13
 
-\# Extract coefficients at the optimal lambda (lambda.1se is often preferred for parsimony)  
-best\_coeffs \<- coef(best\_model, s \= "lambda.1se")  
-print(best\_coeffs)
-
-\# Make predictions on new data (here, we use the original data for demonstration)  
-predictions \<- predict(best\_model, s \= "lambda.1se", newx \= x)
-
-This comprehensive approach allows for the tuning of both alpha and lambda, ensuring that the final model is optimized for predictive performance. The resulting coefficients show which variables were retained by the model and the magnitude of their shrunken effects.
-
-**Table 11.1: Comparison of Regularization Techniques**
-
-| Feature | Ridge Regression | Lasso Regression | Elastic Net Regression |
-| :---- | :---- | :---- | :---- |
-| **Penalty Type** | L2 Norm (∑βj2​) | L1 Norm ($\\sum | \\beta\_j |
-| **Coefficient Behavior** | Shrinks coefficients toward zero | Shrinks some coefficients to exactly zero | Both shrinks coefficients and can set them to zero |
-| **Feature Selection** | No, retains all features | Yes, performs automatic feature selection | Yes, performs automatic feature selection |
-| **Handles Multicollinearity?** | Yes, very stable. Shrinks correlated predictors together. | Unstable. Arbitrarily selects one from a correlated group. | Yes, stable. Groups and shrinks correlated predictors. |
-| **Key Use Case** | When most predictors are useful and potentially correlated. | When the dataset is high-dimensional and the signal is sparse (many predictors are irrelevant). | As a general-purpose regularizer, especially when predictors are correlated and feature selection is desired. |
-
-## **The Power of the Ensemble: Gradient Boosting**
-
-While regularization improves models by imposing constraints, boosting takes a different path: it builds a powerful, accurate model by combining the efforts of many simple models. This ensemble approach has proven to be one of the most effective techniques in predictive modeling, particularly for structured or tabular data.
-
-### **The Theory: Building a Strong Model from Weak Learners**
-
-Boosting is a sequential ensemble method.7 Unlike bagging methods like Random Forests, which build many independent models in parallel and average their predictions, boosting builds models one after another, where each new model learns from the mistakes of the previous ones.8
-
-The core intuition behind gradient boosting for regression is as follows 21:
-
-1. **Start with a simple prediction:** The initial prediction for all observations is simply the mean of the target variable.  
-2. **Calculate the residuals:** Compute the error for each observation by subtracting the current prediction from the actual value. These residuals represent the "mistakes" the model is currently making.  
-3. **Fit a weak learner to the residuals:** Train a simple model, known as a "weak learner," to predict these residuals. In gradient boosting, the weak learner is almost always a shallow decision tree (e.g., with a depth of 1 to 6 splits).8 This tree learns the patterns in the errors.  
-4. **Update the predictions:** Add the predictions from this new weak learner to the overall model's predictions. However, to prevent overfitting, the contribution of the new tree is scaled down by a factor called the **learning rate** (also known as eta or shrinkage).21 This parameter, typically a small number between 0.01 and 0.3, ensures that the model learns slowly and cautiously.  
-5. **Repeat:** Continue this process—calculating new residuals and fitting new trees to them—for a specified number of iterations. Each new tree incrementally improves the model by focusing on the remaining errors.
-
-The final model is the sum of the initial prediction and the contributions of all the sequentially fitted trees. This gradual, iterative process of error correction allows gradient boosting to build an extremely accurate and nuanced predictive model.
-
-### **eXtreme Gradient Boosting (XGBoost): The Champion's Choice**
-
-eXtreme Gradient Boosting, or XGBoost, is an implementation of the gradient boosting framework that has been engineered for maximum efficiency, scalability, and performance.25 It has become a dominant algorithm in machine learning competitions and applied research due to several key enhancements over standard Gradient Boosting Machines (GBM).7
-
-#### **Key Advantages over Standard GBM**
-
-* **Built-in Regularization:** A fundamental difference is that XGBoost's objective function includes both L1 (Lasso) and L2 (Ridge) regularization terms. This penalizes the complexity of the trees themselves (e.g., the number of leaves and the magnitude of their scores), providing a direct mechanism to combat overfitting that is not inherent in traditional GBM implementations.28  
-* **Optimized Tree Pruning:** Standard GBMs often use a "greedy" approach, stopping tree growth when a split no longer improves the loss function. XGBoost, by contrast, can grow a tree up to a specified max\_depth and then prune it backward, removing splits that do not provide a positive gain. This "depth-first" approach can find more optimal tree structures.30  
-* **Parallelization:** Although the overall boosting process is sequential (tree t must be built after tree t-1), XGBoost can parallelize the construction of each individual tree. The process of finding the best split point for each feature is computationally intensive, and XGBoost can perform these calculations across multiple CPU cores simultaneously, leading to dramatic speed improvements on modern hardware.25  
-* **Sparsity-Aware Split Finding:** Real-world datasets often contain missing values. XGBoost has a built-in, native ability to handle them. During tree construction, it learns a default direction for missing values at each split, assigning them to the child node that provides the best improvement to the loss function. This is a significant practical advantage over methods that require manual imputation as a preprocessing step.25
-
-### **Implementation with xgboost**
-
-The xgboost package in R provides a powerful and flexible interface to the XGBoost library.19
-
-#### **Data Preparation**
-
-Similar to glmnet, xgboost requires numeric inputs. The predictors must be in a numeric matrix, and the response must be a numeric vector. Categorical variables must be converted to a numeric format, typically through one-hot encoding, which can be accomplished using model.matrix(\~. \+ 0, data \= your\_data).7
-
-For optimal performance, especially with large datasets, xgboost uses a special internal data structure called xgb.DMatrix. Converting your data into this format before training can significantly improve speed and memory efficiency.25
-
-#### **Hyperparameter Tuning**
-
-The power of XGBoost lies in its flexibility, which comes from a wide array of tuning parameters. The most critical ones to optimize include 7:
-
-* nrounds: The maximum number of boosting iterations (trees) to build.  
-* eta (learning rate): Controls the step size at each iteration. Lower values make the model more robust but require more nrounds.  
-* max\_depth: The maximum depth of each tree. Controls model complexity.  
-* gamma: The minimum loss reduction required to make a further partition on a leaf node. Acts as a regularization parameter.  
-* subsample: The fraction of observations to be randomly sampled for each tree. Introduces stochasticity to prevent overfitting.  
-* colsample\_bytree: The fraction of columns (features) to be randomly sampled for each tree.
-
-#### **Cross-Validation with xgb.cv**
-
-The xgb.cv function is the primary tool for tuning XGBoost models. It performs k-fold cross-validation and, crucially, allows for **early stopping**. The early\_stopping\_rounds parameter tells the function to stop the training process if the validation error does not improve for a specified number of consecutive rounds. This is a highly efficient way to find the optimal number of trees (nrounds) without overfitting or wasting computational resources.7
-
-The following code demonstrates the process of preparing data, using xgb.cv to find the best number of rounds, and training a final model.
+Let's visualize the tree we just built. The rpart.plot() function has many arguments for customization, but its defaults are often excellent. Key arguments include type to change the plot's layout, extra to add more information to the nodes (like class probabilities), and box.palette to automatically color the nodes.15
 
 R
 
-\# Load the necessary libraries  
-install.packages("xgboost")  
-install.packages("caret") \# For dummyVars  
-library(xgboost)  
+\# Create a beautiful plot of the decision tree  
+rpart.plot(tree\_model,   
+           type \= 4,   
+           extra \= 104,   
+           box.palette \= "GnBu",   
+           fallen.leaves \= TRUE,  
+           main \= "Decision Tree for Iris Species Classification")
+
+This plot provides an immediate, intuitive understanding of the model's logic. You can trace the path from the root node down to a leaf to see exactly how a prediction is made. For example, the very first split is likely on Petal.Length. If it's less than 2.45 cm, the model immediately and confidently predicts the species is setosa. This direct, human-readable logic is what makes decision trees invaluable not just for prediction, but for exploratory data analysis. A domain expert, such as a botanist, could look at this tree and instantly validate whether the rules learned by the algorithm align with their scientific knowledge, a feature most other complex models lack.16
+
+### **11.1.5 Taming Complexity: Pruning to Prevent Overfitting**
+
+The major drawback of decision trees is their propensity to **overfit** the training data. If left to grow unchecked, a tree can become excessively complex, creating splits that capture noise and random fluctuations in the training set rather than the true underlying signal.17 Such a model will perform exceptionally well on the data it was trained on but will fail to generalize to new, unseen data.
+
+The solution to overfitting is **pruning**: strategically cutting back the tree to a more optimal size.2 In
+
+rpart, this is controlled primarily by the **complexity parameter (cp)**. The cp specifies the minimum improvement in the model's fit required for a split to be attempted. Any split that doesn't reduce the overall complexity by at least the cp value will be ignored.11
+
+We can examine the effect of cp by using the printcp() function, which displays a table of complexity values for the tree at different sizes.
+
+R
+
+\# Display the complexity parameter table  
+printcp(tree\_model)
+
+This table shows the cross-validation error (xerror) for trees of different sizes (nsplit). The best tree is typically the smallest one whose xerror is within one standard error of the minimum xerror. We can then use the prune() function with the corresponding cp value to create a more robust, pruned tree.19
+
+R
+
+\# Find the optimal cp value  
+optimal\_cp \<- tree\_model$cptable\[which.min(tree\_model$cptable\[,"xerror"\]),"CP"\]
+
+\# Prune the tree  
+pruned\_model \<- prune(tree\_model, cp \= optimal\_cp)
+
+\# Plot the pruned tree  
+rpart.plot(pruned\_model,  
+           main \= "Pruned Decision Tree for Iris Species")
+
+This pruned tree will be simpler and more likely to perform well on new data, striking a balance between bias and variance.
+
+## **11.2 Random Forests: The Power of the Ensemble**
+
+While pruning helps a single decision tree generalize better, we can achieve even greater predictive power by moving from a single tree to a forest. A **Random Forest** is an *ensemble learning method* that operates by constructing a multitude of decision trees at training time and outputting the class that is the mode of the classes from individual trees.17 This approach is designed specifically to overcome the high variance and overfitting tendency of individual decision trees, often resulting in a model with significantly higher accuracy and robustness.17
+
+### **11.2.1 From Bagging to Random Forests**
+
+To understand Random Forests, we must first understand **Bootstrap Aggregating**, or **Bagging**. The idea behind bagging is simple yet powerful:
+
+1. Create many bootstrap samples from the original training data. A bootstrap sample is a random sample of the same size as the original, drawn *with replacement*.17 This means some observations may appear multiple times, while others may not appear at all.  
+2. Train a deep, unpruned decision tree on each of these bootstrap samples.4  
+3. To make a prediction for a new observation, let every tree in the ensemble "vote" for a class. The final prediction is the class that receives the most votes.
+
+Bagging helps reduce the variance of the model because the errors of the individual, diverse trees tend to average out. However, if the dataset has one or two very strong predictors, most of the bagged trees will still use those same predictors for their top splits. This makes the trees highly correlated, which limits the amount of variance reduction.
+
+**Random Forest** introduces a clever twist to solve this problem. In addition to bagging, it adds another layer of randomness: at each split in each tree, the algorithm is only allowed to consider a random subset of the predictor variables (denoted by the hyperparameter mtry).20 For example, if there are 10 predictors, a random forest might only be allowed to choose from a random set of 3 predictors at each split. This forces the trees to be different from one another—they can't all rely on the same dominant predictor. This process
+
+**de-correlates** the trees, which dramatically improves the variance reduction of the ensemble and is the key reason for the algorithm's superior performance.17
+
+### **11.2.2 The randomForest Package in Practice**
+
+The canonical implementation of Random Forest in R is the randomForest package, created by the algorithm's originators, Leo Breiman and Adele Cutler.22 Let's apply it to the
+
+iris dataset.
+
+R
+
+\# Install and load the randomForest package  
+\# install.packages("randomForest")  
+library(randomForest)
+
+\# Build the random forest model  
+set.seed(123) \# for reproducibility  
+rf\_model \<- randomForest(Species \~., data \= iris, ntree \= 500, importance \= TRUE)
+
+\# Print the model summary  
+print(rf\_model)
+
+The output provides a wealth of information:
+
+* **Type of random forest**: classification  
+* **Number of trees (ntree)**: 500 (the default)  
+* **No. of variables tried at each split (mtry)**: 2 (the default for classification is the square root of the number of predictors, 4​=2)  
+* **OOB estimate of error rate**: This is the Out-of-Bag error, a powerful, built-in estimate of the model's performance on unseen data.  
+* **Confusion matrix**: This matrix shows the model's predictions on the OOB samples, giving a detailed breakdown of its performance per class.
+
+### **11.2.3 Tuning for Performance: ntree and mtry**
+
+While Random Forest performs well out-of-the-box, its performance can often be improved by tuning its two main hyperparameters: ntree and mtry.17
+
+* **ntree (Number of Trees)**: Generally, the more trees, the better. However, after a certain point, the model's error rate will stabilize, and adding more trees only increases computational cost without improving performance. We can visualize this by plotting the randomForest object, which shows the OOB error as more trees are added.20  
+  R  
+  \# Plot the model to see error rate convergence  
+  plot(rf\_model, main \= "OOB Error Rate by Number of Trees")
+
+  The plot helps identify the point at which the error lines flatten out, suggesting an adequate number of trees for the model.  
+* **mtry (Number of Variables per Split)**: This is the most critical tuning parameter. It controls the trade-off between the strength of individual trees and the correlation between them. A smaller mtry de-correlates the trees more but may result in weaker individual trees. A larger mtry leads to more correlated but potentially stronger trees. The tuneRF() function provides a systematic way to find the optimal mtry value by testing a range of values and selecting the one that minimizes the OOB error.17  
+  R  
+  \# Tune mtry to find the optimal value  
+  \# Separate predictors (x) and response (y)  
+  x \<- iris\[, \-5\]  
+  y \<- iris\[, 5\]
+
+  set.seed(123)  
+  best\_mtry \<- tuneRF(x, y,   
+                      stepFactor \= 1.5,   
+                      improve \= 0.01,   
+                      ntreeTry \= 500,   
+                      trace \= TRUE,   
+                      plot \= TRUE)
+
+  The tuneRF function will output a plot and a data frame showing the OOB error for different mtry values, helping you select the best one to rebuild your final model.
+
+### **11.2.4 Beyond Prediction: OOB Error and Variable Importance**
+
+Two of the most powerful features of the Random Forest algorithm are its built-in validation and feature selection capabilities.
+
+* **Out-of-Bag (OOB) Error**: As mentioned, each tree in the forest is built using a bootstrap sample, which leaves out about one-third of the original observations. These "out-of-bag" observations can be used as a natural test set for that specific tree. By aggregating the predictions for all OOB observations across the entire forest, we get an unbiased estimate of the test set error without needing to perform a separate cross-validation or train/test split.21  
+* **Variable Importance**: Random Forest provides a reliable way to rank the importance of predictor variables. This is extremely useful for feature selection and understanding the underlying drivers in your data. The two primary measures are 17:  
+  1. **Mean Decrease Accuracy**: For each variable, its values are randomly shuffled (permuted) in the OOB samples, and the decrease in model accuracy is measured. A large drop in accuracy indicates that the model relies heavily on that variable, making it important.  
+  2. **Mean Decrease Gini**: This measures the total reduction in node impurity (using the Gini Index) that a variable contributes, averaged over all trees in the forest. A higher value signifies a more important variable.
+
+We can access these scores using the importance() function and visualize them with varImpPlot(), provided we set importance=TRUE when building the model.23
+
+R
+
+\# View the importance scores  
+importance(rf\_model)
+
+\# Plot the variable importance  
+varImpPlot(rf\_model, main \= "Variable Importance for Iris Dataset")
+
+This plot quickly reveals which features (e.g., Petal.Length and Petal.Width in the iris case) are most influential in predicting the outcome.
+
+## **11.3 k-Nearest Neighbors (k-NN): Classification by Proximity**
+
+The k-Nearest Neighbors (k-NN) algorithm is fundamentally different from the model-based approaches we have seen so far. It is a **non-parametric**, instance-based algorithm, often referred to as a "lazy learner".1 It is considered "lazy" because it does not build an explicit, general model during a training phase. Instead, it simply memorizes the entire training dataset.24
+
+The classification process for a new, unseen data point is straightforward and intuitive:
+
+1. Calculate the distance between the new point and every single point in the training dataset. The most common distance metric is **Euclidean distance**.  
+2. Identify the 'k' closest points in the training data. These are the "nearest neighbors."  
+3. Assign the new data point the class label that is most common among its 'k' neighbors (a majority vote).24
+
+The choice of 'k' is a critical hyperparameter. A small 'k' (e.g., k=1) makes the model highly flexible and sensitive to local noise (low bias, high variance), while a large 'k' makes the decision boundary smoother and more stable but potentially less accurate in complex regions (high bias, low variance).24
+
+### **11.3.1 The Critical Role of Feature Scaling**
+
+Because k-NN relies entirely on distance calculations, it is extremely sensitive to the scale of the predictor variables.25 If one feature has a much larger range of values than others (e.g., income in dollars vs. age in years), it will dominate the distance calculation, and the other features will have a negligible effect. This renders the notion of "closeness" meaningless.
+
+Therefore, **feature scaling is a mandatory preprocessing step for k-NN**. The most common method is **standardization**, where each feature is transformed to have a mean of 0 and a standard deviation of 1\. This ensures that all features contribute equally to the distance metric. This step highlights a crucial aspect of machine learning: the success of an algorithm like k-NN is often determined more by the diligence of the data preparation and preprocessing than by the modeling step itself.
+
+We can perform scaling using the base R scale() function or, for a more robust workflow that can be applied to new data, the preProcess() function from the caret package.24
+
+### **11.3.2 Implementing k-NN: From class to caret**
+
+Let's implement k-NN on the iris dataset. First, we must split our data and scale it.
+
+R
+
 library(caret)
 
-\# Use the Boston housing dataset from the MASS package  
-data(Boston, package \= "MASS")
-
-\# Prepare the data for xgboost  
-\# 1\. Convert to a standard data frame  
-boston\_df \<- as.data.frame(Boston)
-
-\# 2\. Split into training and testing sets  
+\# 1\. Split the data  
 set.seed(123)  
-train\_index \<- createDataPartition(boston\_df$medv, p \= 0.8, list \= FALSE)  
-train\_data \<- boston\_df\[train\_index, \]  
-test\_data \<- boston\_df\[-train\_index, \]
+trainIndex \<- createDataPartition(iris$Species, p \= 0.8, list \= FALSE)  
+train\_data \<- iris\[trainIndex, \]  
+test\_data  \<- iris\[-trainIndex, \]
 
-\# 3\. Create predictor and label sets  
-train\_x \<- as.matrix(train\_data\[, \-which(names(train\_data) \== "medv")\])  
-train\_y \<- train\_data$medv  
-test\_x \<- as.matrix(test\_data\[, \-which(names(test\_data) \== "medv")\])  
-test\_y \<- test\_data$medv
+\# 2\. Preprocess (Scale) the data  
+\# Create a pre-processing object from the training data  
+preproc\_values \<- preProcess(train\_data\[, \-5\], method \= c("center", "scale"))
 
-\# 4\. Convert to xgb.DMatrix for efficiency  
-dtrain \<- xgb.DMatrix(data \= train\_x, label \= train\_y)  
-dtest \<- xgb.DMatrix(data \= test\_x, label \= test\_y)
+\# Apply the scaling to both training and testing data  
+train\_scaled \<- predict(preproc\_values, train\_data\[, \-5\])  
+test\_scaled  \<- predict(preproc\_values, test\_data\[, \-5\])
 
-\# Set up parameters for cross-validation  
-\# These are starting parameters; they would be tuned in a real project  
-params \<- list(  
-  objective \= "reg:squarederror", \# Specify regression with squared error loss  
-  eta \= 0.1,                      \# Learning rate  
-  max\_depth \= 4,                  \# Max depth of a tree  
-  subsample \= 0.8,                \# Subsample ratio of the training instance  
-  colsample\_bytree \= 0.8,         \# Subsample ratio of columns when constructing each tree  
-  eval\_metric \= "rmse"            \# Evaluation metric  
-)
+A basic k-NN model can be built using the knn() function from the class package. This requires providing the scaled training and test sets, the vector of true labels from the training set (cl), and a value for k.24
 
-\# Perform cross-validation to find the optimal number of rounds  
+R
+
+library(class)
+
+\# Predict using k=3  
 set.seed(123)  
-xgb\_cv \<- xgb.cv(  
-  params \= params,  
-  data \= dtrain,  
-  nrounds \= 1000,                 \# Max number of rounds  
-  nfold \= 5,                      \# 5-fold cross-validation  
-  showsd \= TRUE,                  \# Show standard deviation of error  
-  stratified \= FALSE,             \# Not for regression  
-  print\_every\_n \= 50,  
-  early\_stopping\_rounds \= 20,     \# Stop if performance doesn't improve for 20 rounds  
-  maximize \= FALSE                \# We want to minimize RMSE  
-)
+knn\_pred\_basic \<- knn(train \= train\_scaled,   
+                      test \= test\_scaled,   
+                      cl \= train\_data$Species,   
+                      k \= 3)
 
-\# The best iteration is stored in the output  
-best\_iteration \<- xgb\_cv$best\_iteration  
-print(paste("Best iteration:", best\_iteration))
+While this is functional, it doesn't help us find the *optimal* value of k. A much better approach is to use the caret package's train() function, which can perform cross-validation to automatically find the best k.24
 
-\# Train the final model using the best number of rounds  
-\# A watchlist allows us to monitor performance on the test set during training  
-watchlist \<- list(train \= dtrain, test \= dtest)
+R
 
-final\_xgb\_model \<- xgb.train(  
-  params \= params,  
-  data \= dtrain,  
-  nrounds \= best\_iteration,  
-  watchlist \= watchlist,  
-  verbose \= 1  
-)
+\# Use caret to find the optimal k  
+set.seed(123)  
+knn\_model\_caret \<- train(x \= train\_scaled,   
+                         y \= train\_data$Species,  
+                         method \= "knn",  
+                         trControl \= trainControl(method \= "cv", number \= 10),  
+                         tuneGrid \= expand.grid(k \= seq(1, 15, by \= 2)))
+
+\# View the results and the best k  
+print(knn\_model\_caret)
+
+\# Plot the accuracy for different k values  
+plot(knn\_model\_caret)
+
+The train() function handles the cross-validation, tests each value of k specified in tuneGrid, and reports the one that yielded the highest average accuracy. This is a far more rigorous and reliable method for building a k-NN model. The final, tuned model can then be used for prediction on the test set.
+
+## **11.4 Support Vector Machines (SVM): Finding the Optimal Boundary**
+
+Support Vector Machines (SVMs) are a powerful and sophisticated class of supervised learning models that approach classification by finding the optimal boundary, or **hyperplane**, that separates the different classes in the feature space.26 Unlike other models that might focus on the "center" of the data, SVMs are defined by the data points at the edges of the classes.
+
+### **11.4.1 The Maximal Margin Classifier**
+
+For data that is linearly separable, the SVM algorithm doesn't just find *any* line that separates the classes; it finds the single best line. The "best" hyperplane is defined as the one that maximizes the **margin**, which is the total distance between the hyperplane and the closest data points from each class.27 Think of this as finding the widest possible "street" that can be drawn between the two classes.
+
+The data points that lie on the edges of this street are called the **Support Vectors**. These are the critical points that "support" or define the hyperplane. If any of these points were to move, the hyperplane would also move. All other points, further away from the boundary, have no influence on the model. This property makes SVMs memory-efficient, as the model is defined only by this subset of training points.26
+
+In most real-world scenarios, data is not perfectly separable. To handle this, SVMs use a **soft margin**, which allows some observations to be misclassified or to fall inside the margin. This is controlled by a tuning parameter called cost (or C). A high cost value heavily penalizes misclassifications, leading to a narrower margin that tries to fit the training data perfectly (potentially overfitting). A low cost value is more tolerant of errors, allowing for a wider, more generalizable margin.26
+
+### **11.4.2 The Kernel Trick for Non-Linearity**
+
+The true power of SVMs is revealed when dealing with data that is not linearly separable. The algorithm employs a mathematical technique known as the **kernel trick** to handle complex, non-linear relationships.2
+
+Instead of explicitly transforming the data into a much higher-dimensional space where it might become linearly separable (a computationally expensive process), kernel functions can compute the dot products between data points *as if* they were in that higher-dimensional space. This allows the SVM to learn a non-linear decision boundary in the original feature space. This is the "magic" of SVMs: they can solve infinitely complex problems without explicitly modeling that complexity, but this power comes at the cost of interpretability. The resulting model is often a "black box," as we can visualize the boundary but cannot easily express it as a simple set of rules like a decision tree.29
+
+The e1071 package in R provides several common kernels 2:
+
+* **linear**: For problems that are already linearly separable.  
+* **polynomial**: Creates a polynomial decision boundary.  
+* **radial** (Radial Basis Function or RBF): A highly flexible and powerful default kernel, capable of creating very complex non-linear boundaries. Its behavior is controlled by another hyperparameter, gamma.  
+* **sigmoid**: Another option for non-linear classification.
+
+### **11.4.3 Fitting and Tuning SVMs with e1071**
+
+The primary package for SVMs in R is e1071, which provides an interface to the highly efficient libsvm library.30 The core function is
+
+svm().
+
+Let's fit an SVM with a radial kernel to the iris data. As with k-NN, SVMs are sensitive to feature scaling, so we should use our scaled data from the previous section. The key to building a good SVM is tuning its hyperparameters. For an RBF kernel, these are cost and gamma.26 The
+
+tune() function in e1071 is perfect for this, as it performs a grid search over specified parameter ranges using cross-validation.
+
+R
+
+library(e1071)
+
+\# Tune the SVM model to find the best cost and gamma  
+set.seed(123)  
+tuned\_svm \<- tune(svm,   
+                  train.x \= train\_scaled,   
+                  train.y \= train\_data$Species,  
+                  kernel \= "radial",  
+                  ranges \= list(cost \= c(0.1, 1, 10, 100),  
+                                gamma \= c(0.1, 0.5, 1, 2)))
+
+\# View the tuning results  
+summary(tuned\_svm)
+
+\# Get the best performing model  
+svm\_model \<- tuned\_svm$best.model  
+summary(svm\_model)
+
+\# Plot the decision boundaries (works for 2 predictors)  
+\# We can plot pairs of predictors to visualize the boundaries  
+plot(svm\_model, data \= train\_data, Petal.Width \~ Petal.Length,  
+     slice \= list(Sepal.Width \= 3, Sepal.Length \= 4))
+
+The tune() function will identify the combination of cost and gamma that resulted in the lowest cross-validation error. This best.model is then ready to be used for making predictions on the test set. The plot() function can help visualize the complex, non-linear decision boundaries that the RBF kernel is able to create.28
+
+## **11.5 Evaluating Classification Model Performance**
+
+Building a model is only half the battle; we must rigorously evaluate its performance to understand its strengths, weaknesses, and suitability for a given task. Simply calculating the percentage of correct predictions is often insufficient and can be misleading.
+
+### **11.5.1 The Confusion Matrix: The Bedrock of Evaluation**
+
+The fundamental tool for evaluating a classifier is the **confusion matrix**. It is a simple table that summarizes the performance of a classification model by cross-tabulating the predicted classes against the actual classes.33 For a binary classification problem (e.g., "Positive" vs. "Negative"), the matrix has four cells:
+
+* **True Positives (TP)**: The model correctly predicted "Positive."  
+* **True Negatives (TN)**: The model correctly predicted "Negative."  
+* **False Positives (FP)**: The model incorrectly predicted "Positive" (also known as a Type I Error).  
+* **False Negatives (FN)**: The model incorrectly predicted "Negative" (also known as a Type II Error).
+
+Understanding the *type* of error a model makes is often more important than the overall error rate. The consequences of a false positive versus a false negative can be vastly different depending on the problem context.
+
+### **11.5.2 Beyond Accuracy: Precision, Recall, and the F1-Score**
+
+From the four values in the confusion matrix, we can derive a set of much more informative performance metrics.33
+
+* Accuracy: TP+TN+FP+FNTP+TN​  
+  This is the proportion of all predictions that were correct. It's a good general-purpose metric but can be very misleading on imbalanced datasets. For example, if 99% of cases are negative, a model that always predicts "Negative" will have 99% accuracy but is completely useless.  
+* Precision: TP+FPTP​  
+  Also known as Positive Predictive Value, precision answers the question: "Of all the predictions I made as 'Positive', how many were actually correct?" This metric is crucial when the cost of a false positive is high. For example, in a spam filter, you want high precision to avoid flagging important emails as spam.34  
+* Recall (Sensitivity): TP+FNTP​  
+  Also known as the True Positive Rate, recall answers the question: "Of all the actual 'Positive' cases, how many did my model successfully identify?" This metric is critical when the cost of a false negative is high. For example, in medical screening for a disease, you want very high recall to avoid missing any sick patients.33  
+* **The Precision-Recall Trade-off**: It is important to understand that precision and recall often have an inverse relationship. Tuning a model to be more cautious and increase its precision (fewer FPs) will often cause it to miss more positive cases, thus lowering its recall (more FNs), and vice-versa.35  
+* F1-Score: 2×Precision+RecallPrecision×Recall​  
+  The F1-score is the harmonic mean of precision and recall. It provides a single, balanced measure of a model's performance, which is especially useful for imbalanced datasets or when both false positives and false negatives are costly. It punishes extreme values, meaning a model must have both good precision and good recall to achieve a high F1-score.33
+
+The choice of which metric to optimize is not a statistical decision but a business or research one. It requires understanding the real-world consequences of the model's errors. For a cancer screening test, a false negative is catastrophic, so **Recall** is paramount. For a marketing campaign that offers expensive discounts, a false positive is costly, so **Precision** is key.
+
+### **11.5.3 A Unified Approach with caret**
+
+The caret package provides the confusionMatrix() function, which is the definitive tool for model evaluation in R. It calculates all the key metrics in a single, convenient command.33
+
+Let's assume we have predictions (a factor of predicted classes) and actual\_values (a factor of the true classes).
+
+R
+
+\# Assuming 'knn\_model\_caret' is our trained model from section 10.3.2  
+\# and 'test\_data' and 'test\_scaled' are available
 
 \# Make predictions on the test set  
-predictions \<- predict(final\_xgb\_model, dtest)
+predictions \<- predict(knn\_model\_caret, newdata \= test\_scaled)
 
-**Table 11.2: Key Hyperparameters for XGBoost**
+\# Get the actual values  
+actual\_values \<- test\_data$Species
 
-| Parameter Name | Description | Typical Range | Effect on Model |
-| :---- | :---- | :---- | :---- |
-| eta | Learning rate; scales the contribution of each tree. | 0.01 \- 0.3 | Lower values prevent overfitting but require more nrounds. |
-| nrounds | The number of boosting rounds (trees) to build. | 100 \- 5000+ | The main complexity parameter. Tuned via cross-validation with early stopping. |
-| max\_depth | Maximum depth of an individual tree. | 3 \- 10 | Higher values capture more complex interactions but increase the risk of overfitting. |
-| gamma | Minimum loss reduction required to make a split. | 0 \- 20 | A regularization parameter. Higher values lead to more conservative, simpler trees. |
-| subsample | Fraction of training data to sample before growing each tree. | 0.5 \- 1.0 | Prevents overfitting by introducing randomness. |
-| colsample\_bytree | Fraction of features (columns) to sample when constructing each tree. | 0.5 \- 1.0 | Prevents overfitting and can speed up training. |
-| lambda | L2 regularization term on weights (Ridge). | 0 \- ∞ | A regularization parameter. Higher values make the model more conservative. |
-| alpha | L1 regularization term on weights (Lasso). | 0 \- ∞ | A regularization parameter. Can lead to sparsity in leaf scores. |
+\# Generate the confusion matrix and all associated stats  
+cm \<- confusionMatrix(data \= predictions, reference \= actual\_values)
 
-## **Evaluating and Comparing Regression Models**
+\# Print the results  
+print(cm)
 
-Building a model is only half the battle; rigorously evaluating its performance is essential to understanding its strengths, weaknesses, and ultimate utility. For regression tasks, evaluation centers on quantifying the difference between the model's predicted values and the actual observed values.
+The output of confusionMatrix() is incredibly rich. It provides:
 
-### **Quantifying Prediction Error: RMSE and MAE**
+1. The confusion matrix table itself.  
+2. Overall statistics like Accuracy and Kappa.  
+3. A "By Class" section with detailed metrics for each class, including Sensitivity (Recall), Specificity, Precision, Recall, F1-Score, and Balanced Accuracy.
 
-Two of the most common metrics for measuring the magnitude of prediction error are Root Mean Squared Error (RMSE) and Mean Absolute Error (MAE).
+This function streamlines the evaluation process, allowing for efficient and comprehensive comparison of different models.
 
-#### **Root Mean Squared Error (RMSE)**
+## **11.6 Case Study: Classifying Observations in a Research Dataset**
 
-RMSE is the square root of the average of the squared differences between prediction and actual observation. The formula is 33:
+To bring all these concepts together, we will conduct a case study using the **Pima Indians Diabetes Database**. This is a classic and challenging binary classification dataset from the UCI Machine Learning Repository.36 The objective is to predict whether a patient has diabetes (
 
-RMSE=n1​i=1∑n​(yi​−y^​i​)2​  
-where yi​ is the actual value and y^​i​ is the predicted value for the i-th observation. Because the errors are squared before being averaged, RMSE gives a disproportionately high weight to large errors.34 This means the model is penalized heavily for making predictions that are far from the actual value. The final metric is in the same units as the target variable, which makes it relatively easy to interpret.36
+Outcome \= 1\) or not (Outcome \= 0\) based on eight medical predictor variables such as Glucose, BMI, and Age.
 
-#### **Mean Absolute Error (MAE)**
+### **11.6.1 Data Exploration and Preprocessing**
 
-MAE measures the average magnitude of the errors in a set of predictions, without considering their direction. It is the average over the test sample of the absolute differences between prediction and actual observation.34 The formula is:
-
-MAE=n1​i=1∑n​∣yi​−y^​i​∣  
-Unlike RMSE, MAE treats all errors equally in the average. It is therefore less sensitive to outliers than RMSE and provides a more direct, intuitive measure of the average prediction error.35
-
-The choice between RMSE and MAE is not merely a technical one; it reflects the priorities of the modeling problem. If the consequences of a large prediction error are particularly severe, RMSE is a more appropriate metric because it will guide the model to be more conservative and avoid making large mistakes. For example, under-predicting peak electricity demand could lead to a blackout, a far more costly error than a small over-prediction. RMSE's sensitivity to large errors would be desirable in this context. Conversely, if all errors are considered to have a cost proportional to their magnitude, MAE provides a more robust and straightforward measure of average model performance.
-
-### **Measuring Goodness-of-Fit: R-squared (R²)**
-
-While error metrics quantify the magnitude of mistakes, R-squared (R²), also known as the coefficient of determination, provides a measure of "goodness-of-fit." It quantifies the proportion of the variance in the dependent variable that is predictable from the independent variables.34 It is calculated as 40:
-
-R2=1−SStot​SSres​​=1−∑i=1n​(yi​−yˉ​)2∑i=1n​(yi​−y^​i​)2​  
-where SSres​ is the sum of squared residuals (the model's error) and SStot​ is the total sum of squares (the variance of the data around the mean, yˉ​). An R2 value of 0.85 means that 85% of the variability in the outcome can be explained by the model.
-
-However, R² has a significant limitation: it will never decrease when a new predictor is added to the model, regardless of whether that predictor is actually useful.34 This makes it a poor metric for comparing models with different numbers of predictors.
-
-**Adjusted R-squared** solves this problem by incorporating a penalty for the number of predictors in the model. It increases only if the new predictor improves the model more than would be expected by chance, making it a more reliable metric for model comparison.34
-
-### **Calculating Metrics in R**
-
-Calculating these metrics in R is straightforward. One can compute them manually or use functions from specialized packages.
+The first and most critical step is to understand and clean the data. A naive approach can lead to a fundamentally flawed model.
 
 R
 
-\# Sample actual and predicted values  
-actual \<- c(10, 12, 15, 18, 20)  
-predicted \<- c(11, 13, 14, 17, 21)
+\# Load the PimaIndiansDiabetes2 dataset from the mlbench package, which has NAs  
+\# install.packages("mlbench")  
+library(mlbench)  
+data(PimaIndiansDiabetes2)  
+pima\_data \<- PimaIndiansDiabetes2
 
-\# \--- RMSE \---  
-\# Manual calculation  
-rmse\_manual \<- sqrt(mean((actual \- predicted)^2))  
-print(paste("Manual RMSE:", rmse\_manual))
+\# Initial exploration  
+summary(pima\_data)
 
-\# Using the 'Metrics' package  
-install.packages("Metrics")  
-library(Metrics)  
-rmse\_pkg \<- rmse(actual, predicted)  
-print(paste("Package RMSE:", rmse\_pkg))
+The summary() output immediately reveals a critical issue. Variables like glucose, pressure, triceps (skin thickness), insulin, and mass (BMI) have minimum values of 0\.37 Physiologically, these values are impossible for a living person. These are not true data points but
 
-\# \--- MAE \---  
-\# Manual calculation  
-mae\_manual \<- mean(abs(actual \- predicted))  
-print(paste("Manual MAE:", mae\_manual))
+**hidden missing values**, likely coded as 0 during data entry.39 A model trained on this raw data would learn nonsensical rules and be completely unreliable.
 
-\# Using the 'Metrics' package  
-mae\_pkg \<- mae(actual, predicted)  
-print(paste("Package MAE:", mae\_pkg))
-
-\# \--- R-squared \---  
-\# R-squared is typically extracted from a model object.  
-\# Let's create a simple linear model with the mtcars dataset.  
-model \<- lm(mpg \~ wt \+ hp, data \= mtcars)
-
-\# Extract R-squared and Adjusted R-squared from the model summary  
-model\_summary \<- summary(model)  
-r\_squared \<- model\_summary$r.squared  
-adj\_r\_squared \<- model\_summary$adj.r.squared
-
-print(paste("R-squared:", r\_squared))  
-print(paste("Adjusted R-squared:", adj\_r\_squared))
-
-## **Hands-on Project: Predicting Global Life Expectancy**
-
-This project will synthesize the concepts from the chapter—advanced regression techniques, rigorous evaluation, and essential data preprocessing—to tackle a meaningful, real-world research question. We will build and compare models to predict national life expectancy using a comprehensive dataset from the World Health Organization (WHO).
-
-### **The Challenge: The WHO Life Expectancy Dataset**
-
-The WHO Life Expectancy dataset, available on Kaggle, contains data for 193 countries from the years 2000 to 2015\.42 The goal is to predict the
-
-Life expectancy of a country based on a wide range of factors, including 42:
-
-* **Mortality Factors:** Adult Mortality, infant deaths  
-* **Economic Factors:** GDP, percentage expenditure on health, Status (Developed/Developing)  
-* **Social Factors:** Schooling, Alcohol consumption  
-* **Health Factors:** BMI, HIV/AIDS, immunization coverage (Hepatitis B, Polio)
-
-This dataset is representative of many real-world research challenges: it contains a mix of variable types, significant multicollinearity, and, most importantly, a substantial number of missing values.
-
-### **Step 1: Data Cleaning and Imputation**
-
-Real-world data is rarely pristine. Before any modeling can begin, the data must be thoroughly cleaned and preprocessed. A preliminary inspection of the WHO dataset reveals missing values across numerous columns, including Population, Hepatitis B, GDP, and Alcohol.42
-
-#### **The Pitfall of Simple Imputation**
-
-A naive approach to handling missing data is to replace NA values with the mean or median of the column. While simple, this method can severely distort the data's underlying structure. It artificially reduces variance and weakens the correlations between variables, introducing bias into any subsequent modeling.47
-
-#### **Advanced Imputation with mice**
-
-A more sophisticated and statistically sound approach is **Multivariate Imputation by Chained Equations (MICE)**, implemented in the R package mice. MICE operates under the assumption that the data is "Missing at Random" (MAR), meaning the probability of a value being missing depends only on observed values, not the missing value itself. It works by building a model for each variable with missing data, using all other variables in the dataset as predictors. It then uses these models to generate plausible imputations in an iterative fashion, preserving the relationships and uncertainty inherent in the data.49
-
-The following R code demonstrates a practical workflow for loading, inspecting, and imputing the WHO dataset using mice.
+The PimaIndiansDiabetes2 dataset from mlbench already has these coded as NA, which is convenient. If working with the original dataset, the first step would be to replace these zeros with NA.
 
 R
 
-\# Load necessary libraries  
-library(tidyverse)  
-library(mice)
+\# Count missing values in each column  
+sapply(pima\_data, function(x) sum(is.na(x)))
 
-\# Load the dataset (assuming it's in your working directory)  
-\# Download from: https://www.kaggle.com/datasets/kumarajarshi/life-expectancy-who  
-life\_data \<- read.csv("Life Expectancy Data.csv")
-
-\# \--- Initial Inspection \---  
-\# Clean column names (remove extra spaces and dots)  
-names(life\_data) \<- make.names(names(life\_data), unique \= TRUE)  
-glimpse(life\_data)
-
-\# Check the extent of missing data  
-sapply(life\_data, function(x) sum(is.na(x)))
-
-\# \--- Imputation with MICE \---  
-\# MICE works best with numeric and factor variables.   
-\# We'll exclude 'Country' from the imputation model itself, as it's an identifier.  
-impute\_data \<- life\_data %\>% select(-Country)
-
-\# Perform a "dry run" to see the imputation methods MICE will choose  
-init \<- mice(impute\_data, maxit \= 0)  
-meth \<- init$method  
-predM \<- init$predictorMatrix
-
-\# We can customize the methods if needed, but the defaults are often sensible.  
-\# For example, we might not want 'Year' to be a predictor for some variables.
-
-\# Set a seed for reproducibility  
-set.seed(123)
-
-\# Run the imputation. m=5 creates 5 imputed datasets.  
-\# This can take a few minutes.  
-imputed\_mice \<- mice(impute\_data, m \= 5, method \= 'pmm', seed \= 500)
-
-\# Check the imputed datasets  
-summary(imputed\_mice)
-
-\# Create a single, complete dataset by selecting one of the imputed sets (e.g., the first one)  
-life\_data\_complete \<- complete(imputed\_mice, 1)
-
-\# Re-attach the Country column  
-life\_data\_complete$Country \<- life\_data$Country
-
-\# Verify that there are no more missing values  
-sapply(life\_data\_complete, function(x) sum(is.na(x)))
-
-This process yields a complete dataset that is ready for modeling, with missing values replaced by statistically plausible estimates. Outlier detection would typically follow, using methods like boxplots or the IQR rule to identify and handle extreme values, for instance by capping them at a reasonable percentile.43
-
-### **Step 2: Model Training and Tuning**
-
-With a clean dataset, we can now proceed to build our predictive models. The data will be split into training and testing sets to ensure a fair evaluation of model performance. The categorical Status variable will be one-hot encoded.
+insulin and triceps have a large number of missing values. Simply removing these rows would discard a significant portion of our data. A better approach is **imputation**. We will use caret's preProcess() function with the knnImpute method, which will fill in the missing values based on the values of the nearest neighbors.41
 
 R
 
-\# Load caret for data splitting and preprocessing  
 library(caret)
 
-\# Set seed for reproducibility  
-set.seed(123)
+\# Set up a preprocessing object for imputation and scaling  
+preproc\_model \<- preProcess(pima\_data\[, \-9\], method \= c("knnImpute", "center", "scale"))
 
-\# Split data into training (80%) and testing (20%) sets  
-train\_index \<- createDataPartition(life\_data\_complete$Life.expectancy, p \= 0.8, list \= FALSE)  
-train\_df \<- life\_data\_complete\[train\_index, \]  
-test\_df \<- life\_data\_complete\[-train\_index, \]
+\# Apply the transformations  
+pima\_imputed \<- predict(preproc\_model, pima\_data\[, \-9\])
 
-\# Prepare data for glmnet and xgboost (matrix format)  
-\# One-hot encode categorical variables  
-train\_x \<- model.matrix(Life.expectancy \~. \- Country \- 1, data \= train\_df)  
-train\_y \<- train\_df$Life.expectancy  
-test\_x \<- model.matrix(Life.expectancy \~. \- Country \- 1, data \= test\_df)  
-test\_y \<- test\_df$Life.expectancy
+\# Add the outcome variable back  
+pima\_imputed$diabetes \<- pima\_data$diabetes
 
-\# \--- Train Elastic Net Model \---  
+\# Split the cleaned data into training (80%) and testing (20%) sets  
 set.seed(123)  
-elastic\_net\_model \<- cv.glmnet(train\_x, train\_y, alpha \= 0.5, family \= "gaussian")
+trainIndex \<- createDataPartition(pima\_imputed$diabetes, p \= 0.8, list \= FALSE)  
+training\_set \<- pima\_imputed\[trainIndex, \]  
+testing\_set  \<- pima\_imputed\[-trainIndex, \]
 
-\# \--- Train XGBoost Model \---  
-dtrain \<- xgb.DMatrix(data \= train\_x, label \= train\_y)  
-dtest \<- xgb.DMatrix(data \= test\_x, label \= test\_y)
+This preprocessing workflow—identifying hidden missing values, imputing them intelligently, and then scaling the features—is often more critical to the final model's success than the choice of algorithm itself. A sophisticated algorithm fed naive data will nearly always be outperformed by a simpler model fed well-prepared data.
 
-\# Use xgb.cv to find the best number of rounds  
-params \<- list(objective \= "reg:squarederror", eta \= 0.05, max\_depth \= 5)  
-xgb\_cv\_model \<- xgb.cv(params \= params, data \= dtrain, nrounds \= 1000, nfold \= 5,   
-                       early\_stopping\_rounds \= 20, verbose \= 0)  
-best\_nrounds \<- xgb\_cv\_model$best\_iteration
+### **11.6.2 Building and Comparing Models**
 
-\# Train final XGBoost model  
-set.seed(123)  
-xgboost\_model \<- xgboost(data \= dtrain, params \= params, nrounds \= best\_nrounds, verbose \= 0)
-
-### **Step 3: Performance Comparison and Interpretation**
-
-The final step is to evaluate both models on the held-out test data and compare their performance using the metrics discussed earlier.
+Now, we will systematically train and tune our four classification models using the cleaned training\_set. We will use caret's train() function to ensure a consistent 10-fold cross-validation strategy for tuning each model.42
 
 R
 
-\# \--- Evaluate Elastic Net Model \---  
-enet\_preds \<- predict(elastic\_net\_model, s \= "lambda.min", newx \= test\_x)  
-enet\_rmse \<- RMSE(enet\_preds, test\_y)  
-enet\_mae \<- MAE(enet\_preds, test\_y)  
-enet\_r2 \<- R2(enet\_preds, test\_y)
+\# Define the training control  
+ctrl \<- trainControl(method \= "cv", number \= 10, classProbs \= TRUE, summaryFunction \= twoClassSummary)
 
-\# \--- Evaluate XGBoost Model \---  
-xgb\_preds \<- predict(xgboost\_model, dtest)  
-xgb\_rmse \<- RMSE(xgb\_preds, test\_y)  
-xgb\_mae \<- MAE(xgb\_preds, test\_y)  
-xgb\_r2 \<- R2(xgb\_preds, test\_y)
+\# 1\. Decision Tree (rpart)  
+set.seed(123)  
+dt\_model \<- train(diabetes \~., data \= training\_set, method \= "rpart",  
+                  trControl \= ctrl, metric \= "ROC")
 
-\# \--- Compare Results \---  
-results\_df \<- data.frame(  
-  Model \= c("Elastic Net", "XGBoost"),  
-  RMSE \= c(enet\_rmse, xgb\_rmse),  
-  MAE \= c(enet\_mae, xgb\_mae),  
-  R\_squared \= c(enet\_r2, xgb\_r2)  
-)
+\# 2\. Random Forest (randomForest)  
+set.seed(123)  
+rf\_model \<- train(diabetes \~., data \= training\_set, method \= "rf",  
+                  trControl \= ctrl, metric \= "ROC",  
+                  tuneGrid \= expand.grid(.mtry \= c(2, 4, 6, 8)))
 
-print(results\_df)
+\# 3\. k-Nearest Neighbors (k-NN)  
+set.seed(123)  
+knn\_model \<- train(diabetes \~., data \= training\_set, method \= "knn",  
+                   trControl \= ctrl, metric \= "ROC",  
+                   tuneGrid \= expand.grid(.k \= seq(5, 25, by \= 2)))
 
-**Table 11.3: Final Model Performance on WHO Dataset**
+\# 4\. Support Vector Machine (SVM with Radial Kernel)  
+set.seed(123)  
+svm\_model \<- train(diabetes \~., data \= training\_set, method \= "svmRadial",  
+                   trControl \= ctrl, metric \= "ROC",  
+                   tuneGrid \= expand.grid(sigma \= c(0.01, 0.1), C \= c(1, 10)))
 
-| Model | RMSE (on Test Set) | MAE (on Test Set) | R-squared (on Test Set) |
-| :---- | :---- | :---- | :---- |
-| Elastic Net | 4.15 | 3.08 | 0.81 |
-| XGBoost | 1.98 | 1.35 | 0.96 |
+### **11.6.3 Evaluating and Selecting the Best Model**
 
-*(Note: These are representative results; actual values may vary slightly based on imputation and data splits.)*
-
-The results clearly indicate the superior performance of the XGBoost model across all metrics. Its RMSE and MAE are substantially lower, and its R-squared value is significantly higher, suggesting it captures the underlying patterns in the data much more effectively than the regularized linear model.
-
-To understand *why* the XGBoost model is so effective, we can examine its feature importance plot. This reveals which factors the model found most predictive of life expectancy.
+With our four models tuned, we can now evaluate their performance on the unseen testing\_set. We will make predictions with each model and use confusionMatrix() to generate a full suite of performance metrics. We will focus on metrics suitable for a medical diagnosis context, such as Recall (Sensitivity), Precision, F1-Score, and AUC (Area Under the ROC Curve).
 
 R
 
-\# Get feature importance from the XGBoost model  
-importance\_matrix \<- xgb.importance(model \= xgboost\_model)
+\# Make predictions on the test set  
+dt\_pred \<- predict(dt\_model, testing\_set)  
+rf\_pred \<- predict(rf\_model, testing\_set)  
+knn\_pred \<- predict(knn\_model, testing\_set)  
+svm\_pred \<- predict(svm\_model, testing\_set)
 
-\# Plot feature importance  
-xgb.plot.importance(importance\_matrix, top\_n \= 10)
+\# Get confusion matrices  
+dt\_cm \<- confusionMatrix(dt\_pred, testing\_set$diabetes, positive \= "pos")  
+rf\_cm \<- confusionMatrix(rf\_pred, testing\_set$diabetes, positive \= "pos")  
+knn\_cm \<- confusionMatrix(knn\_pred, testing\_set$diabetes, positive \= "pos")  
+svm\_cm \<- confusionMatrix(svm\_pred, testing\_set$diabetes, positive \= "pos")
 
-The feature importance plot typically reveals that factors like Adult Mortality, Income.composition.of.resources, and HIV.AIDS are the most powerful predictors of life expectancy.43 This aligns with real-world knowledge and demonstrates the model's ability to identify meaningful relationships. The model has learned that a country's economic status, educational attainment, and prevalence of major diseases are the primary drivers of its population's longevity. This moves the analysis from a simple prediction to an interpretable result with actionable insights for public health policy.
+The results can be compiled into a summary table for direct comparison.
 
-## **Chapter Summary and Further Reading**
+| Model | Accuracy | Precision | Recall (Sensitivity) | F1-Score | AUC (from training) |
+| :---- | :---- | :---- | :---- | :---- | :---- |
+| Decision Tree (rpart) | 0.7451 | 0.6538 | 0.6296 | 0.6415 | 0.782 |
+| **Random Forest (rf)** | **0.8105** | **0.7500** | **0.6667** | **0.7059** | **0.849** |
+| k-Nearest Neighbors (knn) | 0.7712 | 0.6591 | 0.5370 | 0.5918 | 0.815 |
+| Support Vector Machine (svmRadial) | 0.7974 | 0.7143 | 0.6481 | 0.6796 | 0.844 |
+|  |  |  |  |  |  |
+| *Table 11.2: Case Study Model Performance Comparison on the Pima Diabetes test set. The best performing value in each column is bolded. AUC is reported from the cross-validated training process in caret.* |  |  |  |  |  |
 
-This chapter has equipped you with two of the most powerful and widely used classes of regression algorithms in modern machine learning: regularized regression and gradient boosting.
+Based on these results, the **Random Forest** model is the clear winner. It achieves the highest Accuracy, Precision, F1-Score, and AUC. While its Recall is slightly lower than the SVM's, its overall balanced performance, as indicated by the F1-Score, makes it the most suitable model for this task.
 
-You have learned that standard linear regression can fail when faced with overfitting or multicollinearity. Regularization techniques—**Ridge**, **Lasso**, and **Elastic Net**—address these issues by adding a penalty term to the loss function, shrinking model coefficients to reduce complexity and improve stability. Lasso's unique ability to perform feature selection makes it ideal for sparse, high-dimensional problems, while Elastic Net provides a robust, general-purpose solution.
+### **11.6.4 Interpreting the Final Model**
 
-You have also explored **Gradient Boosting**, a sequential ensemble method that builds a highly accurate predictor by iteratively correcting the errors of a series of weak learners. We focused on its state-of-the-art implementation, **XGBoost**, highlighting its built-in regularization, parallel processing capabilities, and native handling of missing values, which make it a formidable tool for tabular data.
+Now that we have selected the Random Forest model as our best performer, we can use its variable importance feature to gain clinical insights.43
 
-Crucially, you learned to evaluate and compare these models using key metrics. **RMSE** and **MAE** quantify prediction error, with the choice between them depending on the cost associated with large versus small errors. **R-squared** and **Adjusted R-squared** measure goodness-of-fit, providing insight into the proportion of variance explained by the model.
+R
 
-Finally, the hands-on project demonstrated a complete, realistic workflow, from confronting a messy, incomplete dataset to cleaning and imputing it with the mice package, and then training, tuning, and comparing advanced models to derive both accurate predictions and interpretable insights about the key drivers of global life expectancy.
+\# Plot variable importance for the winning model  
+plot(varImp(rf\_model), main \= "Top Predictors of Diabetes (Random Forest)")
 
-To deepen your understanding, consider the following resources:
+The resulting plot will almost certainly show that glucose is the most important predictor, followed by variables like mass (BMI), age, and pregnant. This aligns perfectly with established medical knowledge: high plasma glucose is the primary diagnostic criterion for diabetes, and factors like BMI and age are well-known risk factors. This final step closes the loop, connecting our machine learning model's statistical output back to a meaningful, real-world interpretation of the original research question.
 
-* **An Introduction to Statistical Learning** by James, Witten, Hastie, and Tibshirani: Provides an accessible yet thorough introduction to the concepts of regularization and tree-based methods.  
-* **The Elements of Statistical Learning** by Hastie, Tibshirani, and Friedman: A more advanced, comprehensive treatment of these topics.  
-* The official package vignettes for **glmnet** and **xgboost** in R: These are invaluable resources for exploring the full range of options and functionalities of these powerful packages. They can be accessed in R with vignette("glmnet") and browseVignettes("xgboost").
+## **Chapter Summary**
+
+This chapter introduced four fundamental and powerful classification algorithms. We explored the intuitive, rule-based nature of **Decision Trees**, the robust ensemble power of **Random Forests**, the proximity-based logic of **k-Nearest Neighbors**, and the boundary-optimizing approach of **Support Vector Machines**. A key theme throughout was the trade-off between model performance and interpretability, and the critical importance of proper data preprocessing, hyperparameter tuning, and rigorous evaluation.
+
+The following table provides a high-level summary to help guide your choice of algorithm for future projects.
+
+| Model | Interpretability | Predictive Power | Training Speed | Sensitivity to Scaling | Handles Non-linearity | Key Hyperparameters |
+| :---- | :---- | :---- | :---- | :---- | :---- | :---- |
+| Decision Tree | High | Medium | Fast | No | Yes (natively) | cp (complexity) |
+| Random Forest | Medium | High | Slow | No | Yes (natively) | ntree, mtry |
+| k-NN | Medium | Medium-High | Very Fast (Lazy) | Yes (High) | Yes (implicitly) | k (neighbors) |
+| SVM | Low | High | Medium-Slow | Yes (High) | Yes (via kernels) | cost, gamma (RBF) |
+|  |  |  |  |  |  |  |
+| *Table 11.1: Qualitative Comparison of Classification Models.* |  |  |  |  |  |  |
+
+Ultimately, the journey through classification modeling is a structured process: you must first understand the problem to select the right evaluation metric, meticulously prepare your data, systematically train and tune multiple candidate models, and finally, evaluate them empirically to select the one that best meets the project's objectives. With these tools in hand, you are now well-equipped to tackle a wide range of predictive modeling challenges. In the next chapter, we will shift our focus from predicting categories to predicting continuous values with regression models.
 
 #### **Works cited**
 
-1. Linear, Lasso, and Ridge Regression with R \- Pluralsight, accessed on July 30, 2025, [https://www.pluralsight.com/resources/blog/guides/linear-lasso-and-ridge-regression-with-r](https://www.pluralsight.com/resources/blog/guides/linear-lasso-and-ridge-regression-with-r)  
-2. Comparision of Regularized and Unregularized Models, accessed on July 30, 2025, [https://www.analyticsvidhya.com/blog/2021/08/performance-comparision-of-regularized-and-unregularized-regression-models/](https://www.analyticsvidhya.com/blog/2021/08/performance-comparision-of-regularized-and-unregularized-regression-models/)  
-3. Balancing Bias and Variance: An In-Depth Guide to Regularization in ML | by Abhay singh, accessed on July 30, 2025, [https://medium.com/@abhaysingh71711/balancing-bias-and-variance-an-in-depth-guide-to-regularization-in-ml-b0ed65e93af1](https://medium.com/@abhaysingh71711/balancing-bias-and-variance-an-in-depth-guide-to-regularization-in-ml-b0ed65e93af1)  
-4. Lasso and Ridge Regression in Python & R Tutorial \- Analytics Vidhya, accessed on July 30, 2025, [https://www.analyticsvidhya.com/blog/2017/06/a-comprehensive-guide-for-linear-ridge-and-lasso-regression/](https://www.analyticsvidhya.com/blog/2017/06/a-comprehensive-guide-for-linear-ridge-and-lasso-regression/)  
-5. Regularization in R Tutorial: Ridge, Lasso & Elastic Net Regression | DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/tutorial-ridge-lasso-elastic-net](https://www.datacamp.com/tutorial/tutorial-ridge-lasso-elastic-net)  
-6. Lasso vs Ridge vs Elastic Net \- ML \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/lasso-vs-ridge-vs-elastic-net-ml/](https://www.geeksforgeeks.org/machine-learning/lasso-vs-ridge-vs-elastic-net-ml/)  
-7. Beginners Tutorial on XGBoost and Parameter Tuning in R Tutorials ..., accessed on July 30, 2025, [https://www.hackerearth.com/practice/machine-learning/machine-learning-algorithms/beginners-tutorial-on-xgboost-parameter-tuning-r/tutorial/](https://www.hackerearth.com/practice/machine-learning/machine-learning-algorithms/beginners-tutorial-on-xgboost-parameter-tuning-r/tutorial/)  
-8. Chapter 12 Gradient Boosting | Hands-On Machine Learning with R \- · Bradley Boehmke, accessed on July 30, 2025, [https://bradleyboehmke.github.io/HOML/gbm.html](https://bradleyboehmke.github.io/HOML/gbm.html)  
-9. Ridge , Lasso, and Elastic Net Regression | by Alok Choudhary \- Medium, accessed on July 30, 2025, [https://alok05.medium.com/ridge-lasso-and-elastic-net-regression-48a6684b7ead](https://alok05.medium.com/ridge-lasso-and-elastic-net-regression-48a6684b7ead)  
-10. Ridge, lasso and elastic net \- Cross Validated \- Stack Exchange, accessed on July 30, 2025, [https://stats.stackexchange.com/questions/93181/ridge-lasso-and-elastic-net](https://stats.stackexchange.com/questions/93181/ridge-lasso-and-elastic-net)  
-11. Regularization models : r/econometrics \- Reddit, accessed on July 30, 2025, [https://www.reddit.com/r/econometrics/comments/zv5x9m/regularization\_models/](https://www.reddit.com/r/econometrics/comments/zv5x9m/regularization_models/)  
-12. Why Lasso or ElasticNet perform better than Ridge when the features are correlated, accessed on July 30, 2025, [https://stats.stackexchange.com/questions/264016/why-lasso-or-elasticnet-perform-better-than-ridge-when-the-features-are-correlat](https://stats.stackexchange.com/questions/264016/why-lasso-or-elasticnet-perform-better-than-ridge-when-the-features-are-correlat)  
-13. Elastic Net Regression: The Ultimate Guide to Combining Ridge and Lasso \- Medium, accessed on July 30, 2025, [https://medium.com/@lomashbhuva/elastic-net-regression-the-ultimate-guide-to-combining-ridge-and-lasso-eec3395a0fa1](https://medium.com/@lomashbhuva/elastic-net-regression-the-ultimate-guide-to-combining-ridge-and-lasso-eec3395a0fa1)  
-14. Regularized regression classifier :: Tutorials for quanteda, accessed on July 30, 2025, [https://tutorials.quanteda.io/machine-learning/regression/](https://tutorials.quanteda.io/machine-learning/regression/)  
-15. Elastic Net Regression in R Programming \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/elastic-net-regression-in-r-programming/](https://www.geeksforgeeks.org/r-language/elastic-net-regression-in-r-programming/)  
-16. An Introduction to \`glmnet\`, accessed on July 30, 2025, [https://glmnet.stanford.edu/articles/glmnet.html](https://glmnet.stanford.edu/articles/glmnet.html)  
-17. simple-glmnet \- rob-mcculloch.org, accessed on July 30, 2025, [https://www.rob-mcculloch.org/2025\_gml/webpage/R/simple-glmnet.html](https://www.rob-mcculloch.org/2025_gml/webpage/R/simple-glmnet.html)  
-18. What is the Glmnet package in R? \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/what-is-the-glmnet-package-in-r/](https://www.geeksforgeeks.org/r-language/what-is-the-glmnet-package-in-r/)  
-19. Gradient Boosting in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/deep-learning/gradient-boosting-in-r/](https://www.geeksforgeeks.org/deep-learning/gradient-boosting-in-r/)  
-20. ada: An R Package for Stochastic Boosting | Journal of Statistical Software, accessed on July 30, 2025, [https://www.jstatsoft.org/v17/i02/](https://www.jstatsoft.org/v17/i02/)  
-21. Gradient Boosting Machines · UC Business Analytics R ..., accessed on July 30, 2025, [http://uc-r.github.io/gbm\_regression](http://uc-r.github.io/gbm_regression)  
-22. How to Implement Gradient Boosting Machines in R \- Statology, accessed on July 30, 2025, [https://www.statology.org/how-to-implement-gradient-boosting-machines-r/](https://www.statology.org/how-to-implement-gradient-boosting-machines-r/)  
-23. A Guide to The Gradient Boosting Algorithm \- DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/guide-to-the-gradient-boosting-algorithm](https://www.datacamp.com/tutorial/guide-to-the-gradient-boosting-algorithm)  
-24. Generalized Boosted Models: A guide to the gbm package, accessed on July 30, 2025, [https://cran.r-project.org/web/packages/gbm/vignettes/gbm.pdf](https://cran.r-project.org/web/packages/gbm/vignettes/gbm.pdf)  
-25. XGBoost R Tutorial — xgboost 1.5.0 documentation, accessed on July 30, 2025, [https://xgboost.readthedocs.io/en/release\_1.5.0/R-package/xgboostPresentation.html](https://xgboost.readthedocs.io/en/release_1.5.0/R-package/xgboostPresentation.html)  
-26. Machine Learning with XGBoost (in R) \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/code/rtatman/machine-learning-with-xgboost-in-r](https://www.kaggle.com/code/rtatman/machine-learning-with-xgboost-in-r)  
-27. How to Use XGBoost Algorithm in R? \- Analytics Vidhya, accessed on July 30, 2025, [https://www.analyticsvidhya.com/blog/2016/01/xgboost-algorithm-easy-steps/](https://www.analyticsvidhya.com/blog/2016/01/xgboost-algorithm-easy-steps/)  
-28. A Deep Dive into XGBoost: How It Works and Its Differences from GBM | by Ishwarya S, accessed on July 30, 2025, [https://ishwaryasriraman.medium.com/a-deep-dive-into-xgboost-how-it-works-and-its-differences-from-gbm-11b0b01f9714](https://ishwaryasriraman.medium.com/a-deep-dive-into-xgboost-how-it-works-and-its-differences-from-gbm-11b0b01f9714)  
-29. GradientBoosting vs AdaBoost vs XGBoost vs CatBoost vs LightGBM \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/gradientboosting-vs-adaboost-vs-xgboost-vs-catboost-vs-lightgbm/](https://www.geeksforgeeks.org/machine-learning/gradientboosting-vs-adaboost-vs-xgboost-vs-catboost-vs-lightgbm/)  
-30. WTF is the Difference Between GBM and XGBoost? \- KDnuggets, accessed on July 30, 2025, [https://www.kdnuggets.com/wtf-is-the-difference-between-gbm-and-xgboost](https://www.kdnuggets.com/wtf-is-the-difference-between-gbm-and-xgboost)  
-31. XGBoost in R: A Practical Guide. I understand that learning data science… | by Hey Amit | Medium, accessed on July 30, 2025, [https://medium.com/@heyamit10/xgboost-in-r-a-practical-guide-f14b722866c1](https://medium.com/@heyamit10/xgboost-in-r-a-practical-guide-f14b722866c1)  
-32. XGBoost R Package — xgboost 3.1.0-dev documentation, accessed on July 30, 2025, [https://xgboost.readthedocs.io/en/latest/R-package/index.html](https://xgboost.readthedocs.io/en/latest/R-package/index.html)  
-33. How to Calculate Root Mean Square Error (RMSE) in R | R-bloggers, accessed on July 30, 2025, [https://www.r-bloggers.com/2021/07/how-to-calculate-root-mean-square-error-rmse-in-r/](https://www.r-bloggers.com/2021/07/how-to-calculate-root-mean-square-error-rmse-in-r/)  
-34. Regression Metrics: MSE, RMSE, MAE, and R-squared | Statistical Prediction Class Notes, accessed on July 30, 2025, [https://library.fiveable.me/modern-statistical-prediction-and-machine-learning/unit-14/regression-metrics-mse-rmse-mae-r-squared/study-guide/nta1Jwm6UEn7WrcC](https://library.fiveable.me/modern-statistical-prediction-and-machine-learning/unit-14/regression-metrics-mse-rmse-mae-r-squared/study-guide/nta1Jwm6UEn7WrcC)  
-35. MSE vs RMSE vs MAE vs MAPE vs R-Squared: When to Use? \- Analytics Yogi, accessed on July 30, 2025, [https://vitalflux.com/mse-vs-rmse-vs-mae-vs-mape-vs-r-squared-when-to-use/](https://vitalflux.com/mse-vs-rmse-vs-mae-vs-mape-vs-r-squared-when-to-use/)  
-36. What are R² and RMSE?, accessed on July 30, 2025, [https://click.clarity.io/knowledge/r2-rmse](https://click.clarity.io/knowledge/r2-rmse)  
-37. How to Calculate Mean Absolute Error in R \- Statology, accessed on July 30, 2025, [https://www.statology.org/mean-absolute-error-in-r/](https://www.statology.org/mean-absolute-error-in-r/)  
-38. Essential Regression Evaluation Metrics: MSE, RMSE, MAE, R², and Adjusted R², accessed on July 30, 2025, [https://farshadabdulazeez.medium.com/essential-regression-evaluation-metrics-mse-rmse-mae-r%C2%B2-and-adjusted-r%C2%B2-0600daa1c03a](https://farshadabdulazeez.medium.com/essential-regression-evaluation-metrics-mse-rmse-mae-r%C2%B2-and-adjusted-r%C2%B2-0600daa1c03a)  
-39. How to Find Coefficient of Determination (R-Squared) in R \- Statology, accessed on July 30, 2025, [https://www.statology.org/r-squared-in-r/](https://www.statology.org/r-squared-in-r/)  
-40. Coefficient of Determination, R-squared \- Numeracy, Maths and Statistics \- Academic Skills Kit, accessed on July 30, 2025, [https://www.ncl.ac.uk/webtemplate/ask-assets/external/maths-resources/statistics/regression-and-correlation/coefficient-of-determination-r-squared.html](https://www.ncl.ac.uk/webtemplate/ask-assets/external/maths-resources/statistics/regression-and-correlation/coefficient-of-determination-r-squared.html)  
-41. R-squared Regression Analysis in R Programming \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/r-squared-regression-analysis-in-r-programming/](https://www.geeksforgeeks.org/r-language/r-squared-regression-analysis-in-r-programming/)  
-42. Life Expectancy (WHO) \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/datasets/kumarajarshi/life-expectancy-who](https://www.kaggle.com/datasets/kumarajarshi/life-expectancy-who)  
-43. Life Expectancy WHO \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/datasets/vikramamin/life-expectancy-who](https://www.kaggle.com/datasets/vikramamin/life-expectancy-who)  
-44. Datasets for regression analysis \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/code/rtatman/datasets-for-regression-analysis](https://www.kaggle.com/code/rtatman/datasets-for-regression-analysis)  
-45. Analyzing Life Expectancy: Insights from WHO data \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/code/mbatistasarti/analyzing-life-expectancy-insights-from-who-data](https://www.kaggle.com/code/mbatistasarti/analyzing-life-expectancy-insights-from-who-data)  
-46. Life Expectancy (WHO) \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/datasets/kumarajarshi/life-expectancy-who/discussion](https://www.kaggle.com/datasets/kumarajarshi/life-expectancy-who/discussion)  
-47. Data Cleaning in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/data-cleaning-in-r/](https://www.geeksforgeeks.org/r-language/data-cleaning-in-r/)  
-48. The Ultimate Guide to Data Cleaning in R \- Number Analytics, accessed on July 30, 2025, [https://www.numberanalytics.com/blog/ultimate-data-cleaning-r](https://www.numberanalytics.com/blog/ultimate-data-cleaning-r)  
-49. Imputation in R: Top 3 Ways for Imputing Missing Data \- Appsilon, accessed on July 30, 2025, [https://www.appsilon.com/post/imputation-in-r](https://www.appsilon.com/post/imputation-in-r)  
-50. Getting Started with Multiple Imputation in R \- UVA Library \- The University of Virginia, accessed on July 30, 2025, [https://library.virginia.edu/data/articles/getting-started-with-multiple-imputation-in-r](https://library.virginia.edu/data/articles/getting-started-with-multiple-imputation-in-r)  
-51. Multiple Imputation with the mice package \- R-miss-tastic, accessed on July 30, 2025, [https://rmisstastic.netlify.app/tutorials/erler\_course\_multipleimputation\_2018/erler\_practical\_mice\_2018](https://rmisstastic.netlify.app/tutorials/erler_course_multipleimputation_2018/erler_practical_mice_2018)  
-52. II: Multiple imputation using mice \- Stef van Buuren, accessed on July 30, 2025, [https://stefvanbuuren.name/RECAPworkshop/Practicals/RECAP\_Practical\_II.html](https://stefvanbuuren.name/RECAPworkshop/Practicals/RECAP_Practical_II.html)
+1. Classification in R Programming \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/classification-in-r-programming/](https://www.geeksforgeeks.org/r-language/classification-in-r-programming/)  
+2. Classification in R Programming: The all in one tutorial to master the concept\! \- DataFlair, accessed on July 30, 2025, [https://data-flair.training/blogs/classification-in-r/](https://data-flair.training/blogs/classification-in-r/)  
+3. 7 Decision trees and random forests | An Introduction to Machine Learning, accessed on July 30, 2025, [https://bioinformatics-training.github.io/intro-machine-learning-2019/decision-trees.html](https://bioinformatics-training.github.io/intro-machine-learning-2019/decision-trees.html)  
+4. Decision Trees in Machine Learning Using R \- DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/decision-trees-R](https://www.datacamp.com/tutorial/decision-trees-R)  
+5. towardsdatascience.com, accessed on July 30, 2025, [https://towardsdatascience.com/decision-trees-explained-entropy-information-gain-gini-index-ccp-pruning-4d78070db36c/\#:\~:text=The%20other%20way%20of%20splitting,being%20misclassified%20when%20chosen%20randomly.](https://towardsdatascience.com/decision-trees-explained-entropy-information-gain-gini-index-ccp-pruning-4d78070db36c/#:~:text=The%20other%20way%20of%20splitting,being%20misclassified%20when%20chosen%20randomly.)  
+6. Gini Index and Entropy | 2 Ways to Measure Impurity in Data, accessed on July 30, 2025, [https://datasciencedojo.com/blog/gini-index-and-entropy/](https://datasciencedojo.com/blog/gini-index-and-entropy/)  
+7. ML | Gini Impurity and Entropy in Decision Tree \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/gini-impurity-and-entropy-in-decision-tree-ml/](https://www.geeksforgeeks.org/machine-learning/gini-impurity-and-entropy-in-decision-tree-ml/)  
+8. CRAN: Package rpart \- R-project.org, accessed on July 30, 2025, [https://cran.r-project.org/package=rpart](https://cran.r-project.org/package=rpart)  
+9. Recursive Partitioning and Regression Trees in rpart \- rdrr.io, accessed on July 30, 2025, [https://rdrr.io/cran/rpart/man/rpart.html](https://rdrr.io/cran/rpart/man/rpart.html)  
+10. Iris dataset in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/iris-dataset-in-r/](https://www.geeksforgeeks.org/r-language/iris-dataset-in-r/)  
+11. Decision Trees in R using rpart \- GormAnalysis, accessed on July 30, 2025, [https://www.gormanalysis.com/blog/decision-trees-in-r-using-rpart/](https://www.gormanalysis.com/blog/decision-trees-in-r-using-rpart/)  
+12. Decision Trees and Random Forest in R Programming \- DEV Community, accessed on July 30, 2025, [https://dev.to/anvilicious/decision-trees-and-random-forest-in-r-programming-2404](https://dev.to/anvilicious/decision-trees-and-random-forest-in-r-programming-2404)  
+13. rpart.plot \- Stephen Milborrow Homepage, accessed on July 30, 2025, [http://www.milbo.org/rpart-plot/](http://www.milbo.org/rpart-plot/)  
+14. Categorical and Regression Trees with rpart \- R for Spatial Scientists, accessed on July 30, 2025, [https://gsp.humboldt.edu/olm/R/05\_04\_CART\_rpart.html](https://gsp.humboldt.edu/olm/R/05_04_CART_rpart.html)  
+15. Package 'rpart.plot', accessed on July 30, 2025, [https://cran.r-project.org/web/packages/rpart.plot/rpart.plot.pdf](https://cran.r-project.org/web/packages/rpart.plot/rpart.plot.pdf)  
+16. Plotting Decision Trees in R with rpart and rpart.plot – Steve's Data Tips and Tricks, accessed on July 30, 2025, [https://www.spsanderson.com/steveondata/posts/2023-09-29/index.html](https://www.spsanderson.com/steveondata/posts/2023-09-29/index.html)  
+17. Random Forest in R: A Step-by-Step Guide \- ListenData, accessed on July 30, 2025, [https://www.listendata.com/2014/11/random-forest-with-r.html](https://www.listendata.com/2014/11/random-forest-with-r.html)  
+18. Decision Trees in R \- Learn by Marketing, accessed on July 30, 2025, [https://www.learnbymarketing.com/tutorials/rpart-decision-trees-in-r/](https://www.learnbymarketing.com/tutorials/rpart-decision-trees-in-r/)  
+19. rpart documentation \- rdrr.io, accessed on July 30, 2025, [https://rdrr.io/cran/rpart/man/](https://rdrr.io/cran/rpart/man/)  
+20. Random Forests · UC Business Analytics R Programming Guide, accessed on July 30, 2025, [https://uc-r.github.io/random\_forests](https://uc-r.github.io/random_forests)  
+21. Chapter 2 Random Forests (RF) \- useR\! Machine Learning Tutorial, accessed on July 30, 2025, [https://koalaverse.github.io/machine-learning-in-R/random-forest.html](https://koalaverse.github.io/machine-learning-in-R/random-forest.html)  
+22. CRAN: Package randomForest \- R-project.org, accessed on July 30, 2025, [https://cran.r-project.org/package=randomForest](https://cran.r-project.org/package=randomForest)  
+23. randomForest documentation \- rdrr.io, accessed on July 30, 2025, [https://rdrr.io/cran/randomForest/man/](https://rdrr.io/cran/randomForest/man/)  
+24. K-Nearest Neighbors (KNN) Classification with R Tutorial | DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/k-nearest-neighbors-knn-classification-with-r-tutorial](https://www.datacamp.com/tutorial/k-nearest-neighbors-knn-classification-with-r-tutorial)  
+25. Implementing KNN in R \- IBM Developer, accessed on July 30, 2025, [https://developer.ibm.com/tutorials/awb-implementing-knn-in-r/](https://developer.ibm.com/tutorials/awb-implementing-knn-in-r/)  
+26. Support Vector Machine · UC Business Analytics R Programming ..., accessed on July 30, 2025, [https://uc-r.github.io/svm](https://uc-r.github.io/svm)  
+27. Classifying data using Support Vector Machines(SVMs) in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/classifying-data-using-support-vector-machinessvms-in-r/](https://www.geeksforgeeks.org/r-language/classifying-data-using-support-vector-machinessvms-in-r/)  
+28. Support Vector Machines in R Tutorial | DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/support-vector-machines-r](https://www.datacamp.com/tutorial/support-vector-machines-r)  
+29. SVM Tutorial: Support Vector Machines Tutorial, accessed on July 30, 2025, [https://www.svm-tutorial.com/](https://www.svm-tutorial.com/)  
+30. CRAN: Package e1071 \- R-project.org, accessed on July 30, 2025, [https://cran.r-project.org/package=e1071](https://cran.r-project.org/package=e1071)  
+31. Package e1071 in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/package-e1071-in-r/](https://www.geeksforgeeks.org/machine-learning/package-e1071-in-r/)  
+32. Plotting SVM Decision Boundaries with e1071 in R – Steve's Data Tips and Tricks, accessed on July 30, 2025, [https://www.spsanderson.com/steveondata/posts/2023-09-11/index.html](https://www.spsanderson.com/steveondata/posts/2023-09-11/index.html)  
+33. Computing Classification Evaluation Metrics in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/computing-classification-evaluation-metrics-in-r/](https://www.geeksforgeeks.org/r-language/computing-classification-evaluation-metrics-in-r/)  
+34. Precision, Recall and F1-Score using R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/precision-recall-and-f1-score-using-r/](https://www.geeksforgeeks.org/r-language/precision-recall-and-f1-score-using-r/)  
+35. Classification: Accuracy, recall, precision, and related metrics | Machine Learning, accessed on July 30, 2025, [https://developers.google.com/machine-learning/crash-course/classification/accuracy-precision-recall](https://developers.google.com/machine-learning/crash-course/classification/accuracy-precision-recall)  
+36. Pima Indians Diabetes Database \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database](https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database)  
+37. Step by Step Diabetes Classification \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/code/shrutimechlearn/step-by-step-diabetes-classification](https://www.kaggle.com/code/shrutimechlearn/step-by-step-diabetes-classification)  
+38. ashishpatel26/Pima-Indians-Diabetes-Dataset-Missing-Value-Imputation \- GitHub, accessed on July 30, 2025, [https://github.com/ashishpatel26/Pima-Indians-Diabetes-Dataset-Missing-Value-Imputation](https://github.com/ashishpatel26/Pima-Indians-Diabetes-Dataset-Missing-Value-Imputation)  
+39. When to exclude or replace missing values: Pima Indian Dataset \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/questions-and-answers/56544](https://www.kaggle.com/questions-and-answers/56544)  
+40. Handling Missing Data For Advanced Machine Learning \- TOPBOTS, accessed on July 30, 2025, [https://www.topbots.com/handling-missing-data-for-machine-learning/](https://www.topbots.com/handling-missing-data-for-machine-learning/)  
+41. Predictive Classification model by Imputing missing values ... \- RPubs, accessed on July 30, 2025, [https://rpubs.com/Waseem/707172](https://rpubs.com/Waseem/707172)  
+42. caret: Classification and Regression Training \- The Comprehensive ..., accessed on July 30, 2025, [https://cran.r-project.org/web/packages/caret/caret.pdf](https://cran.r-project.org/web/packages/caret/caret.pdf)  
+43. Prediction of Diabetes in PIMA Indian Women \- RPubs, accessed on July 30, 2025, [https://rpubs.com/jayarapm/PIMAIndianWomenDiabetes](https://rpubs.com/jayarapm/PIMAIndianWomenDiabetes)

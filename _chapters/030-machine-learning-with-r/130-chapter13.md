@@ -1,749 +1,499 @@
 ---
-title: Advanced Machine Learning Techniques
+title: Advanced Clustering
 slug: chapter13
-order: 130
+order: 120
 published: false
 abstract: >
-    Expanding the machine learning toolkit, this chapter introduces ensemble methods, neural networks, and time series forecasting. Readers will gain insights into tackling complex research problems using advanced modeling techniques.
+    Building on the k-means and hierarchical clustering of Chapter 8, this chapter introduces two more flexible methods: density-based clustering with DBSCAN and probabilistic clustering with Gaussian Mixture Models. Readers will learn to evaluate clustering performance and apply these techniques to discover hidden patterns in their research data.
 ---
 
 
 
-The preceding chapters have established a robust foundation in statistical analysis, focusing on building models to understand and explain relationships within data. We have explored techniques from descriptive statistics to hypothesis testing and regression, all of which are cornerstones of quantitative research. This chapter marks a pivotal transition from explanatory modeling to the domain of high-performance predictive modeling. Here, the primary objective shifts from interpreting coefficients to maximizing predictive accuracy.
 
-We will venture into three of the most powerful and widely used areas of modern machine learning. First, we will explore **Ensemble Methods**, a class of algorithms built on the principle that a "committee" of models often makes better predictions than any single expert. We will dissect the two dominant philosophies: Bagging and Boosting. Second, we will demystify **Artificial Neural Networks**, drawing inspiration from the human brain to build deep learning models capable of capturing extraordinarily complex patterns, using the powerful keras and tensorflow libraries in R. Third, we will address the unique challenge of **Time Series Forecasting**, examining both the classical statistical approach of ARIMA and a modern, flexible alternative in Facebook's Prophet.
+This chapter marks a significant step forward in our journey through unsupervised learning. Having explored partitioning methods like k-means and hierarchical clustering in previous chapters, we now venture into more sophisticated techniques capable of handling the complex, "messy" data often encountered in real-world research. We will uncover how to find clusters that are not simple spheres and how to think about cluster membership not as a certainty, but as a probability. Crucially, we will also equip ourselves with the tools to rigorously evaluate our results, answering the critical question: "How good is my clustering?" This chapter will empower you to move beyond basic methods and select the most appropriate clustering algorithm for the unique structure of your data.
 
-The chapter culminates in a comprehensive hands-on project that synthesizes these techniques. By applying these advanced methods to a real-world retail sales forecasting problem, we will not only see them in action but also compare their performance, providing a practical framework for model selection in complex research applications.
+## **Beyond Spheres and Symmetries: The Need for Advanced Clustering**
 
-## **13.1 The Power of the Collective: Ensemble Methods**
+The clustering algorithms discussed so far, k-means and hierarchical clustering, are foundational and powerful in many contexts. However, their effectiveness is built upon a set of assumptions about the data's structure. When these assumptions are violated, the performance of these methods can degrade significantly, leading to misleading or incorrect conclusions. Understanding these limitations is the first step toward selecting more advanced and appropriate tools.
 
-Ensemble methods are meta-algorithms that combine the predictions from multiple machine learning models to produce a single, superior predictive model. The underlying principle is intuitive and powerful: by aggregating the "votes" or predictions of several models, the final prediction is often more accurate, stable, and robust than that of any individual model.
+The limitations of an algorithm are not merely technical weaknesses; they represent a fundamental mismatch between the algorithm's assumptions and the natural structure of a given dataset. In machine learning, there is no universally superior algorithm—a concept often referred to as the "No Free Lunch" theorem. The failure of a basic algorithm can therefore be a powerful diagnostic signal, revealing the inherent complexity of the data itself. This reframes the goal from finding the "best" algorithm to finding the algorithm best suited for the data's specific structure.
 
-### **13.1.1 The Wisdom of Crowds in Machine learning**
+### **Recap of K-Means Limitations**
 
-The success of ensemble learning is rooted in the statistical concept of the bias-variance tradeoff. A single, complex model, such as a large decision tree, might fit the training data perfectly but fail to generalize to new, unseen data—a condition known as high variance. Conversely, a simple model might be too rigid to capture the underlying patterns in the data, leading to high bias. Ensemble methods provide a systematic framework for managing this tradeoff.1
+K-means is celebrated for its computational efficiency and its effectiveness in identifying well-separated, globular (or spherical) clusters.1 However, its simplicity comes with several critical constraints:
 
-The core idea is that if you build a committee of "weak learners"—models that are only slightly better than random guessing—their collective decision can be transformed into that of a "strong learner" with high predictive accuracy.1 This works because different models are likely to make different types of errors. When their predictions are combined, these individual errors tend to cancel each other out. The key to a successful ensemble is not just the quantity of models but their
+* **Pre-specification of Cluster Count (k):** The algorithm requires the user to specify the number of clusters, k, in advance. In exploratory data analysis, this number is often unknown. While methods like the elbow plot or silhouette analysis can help estimate an optimal k, they can often be ambiguous and require interpretation.1  
+* **Sensitivity to Initialization:** K-means is sensitive to the initial random placement of cluster centroids. A poor initialization can lead the algorithm to converge to a local optimum, rather than the true global optimum. The standard practice of running the algorithm multiple times with different starting points (using the nstart argument in R's kmeans function) mitigates but does not eliminate this risk.1  
+* **Assumption of Spherical and Evenly Sized Clusters:** The most significant limitation is that k-means implicitly assumes that all clusters are spherical, have similar variances, and contain a roughly equal number of observations. It defines clusters based on minimizing the distance to a central mean, a process that naturally carves out sphere-like regions in the feature space. When faced with elongated, non-convex, or arbitrarily shaped clusters, k-means will often fail by incorrectly partitioning these natural groups.1
 
-**diversity**. The more varied the models in their structure and the errors they make, the more powerful the ensemble becomes. This principle explains why the two primary ensemble strategies, Bagging and Boosting, are so effective: they employ distinct mechanisms to foster this crucial model diversity.
+### **Recap of Hierarchical Clustering Limitations**
 
-### **13.1.2 Bagging: Reducing Variance with Bootstrap Aggregation**
+Hierarchical clustering offers a different approach, building a tree-like structure of nested clusters known as a dendrogram. This method does not require pre-specifying k and can reveal hierarchical relationships in the data.1 Yet, it has its own set of drawbacks:
 
-**Bootstrap Aggregating**, or **Bagging**, is an ensemble technique designed primarily to reduce the variance of a predictive model.2 It is particularly effective for high-variance, low-bias models, with the canonical example being fully grown decision trees.
+* **Computational Complexity:** The primary disadvantage of hierarchical clustering is its computational and memory cost. The algorithm typically requires the computation and storage of a distance matrix of size n×n, where n is the number of observations. This results in a time complexity of at least O(n2), making it impractical for large datasets.1  
+* **Greedy and Irreversible Decisions:** Hierarchical clustering algorithms make greedy decisions. In an agglomerative (bottom-up) approach, once two clusters are merged, the merge cannot be undone. An early, suboptimal merge can propagate through the hierarchy, leading to a flawed final clustering structure.1
 
-The process is conceptually straightforward and highly parallelizable 2:
-
-1. **Bootstrap Sampling:** From the original training dataset of size N, B new training sets are created by sampling N observations *with replacement*. This process, known as bootstrapping, results in multiple, slightly different datasets. On average, each bootstrap sample will contain about 63.2% of the unique original observations, with the remaining 36.8% being left out.5 These left-out data points are referred to as the  
-   **Out-of-Bag (OOB)** sample.  
-2. **Independent Model Training:** A base model (e.g., a decision tree) is trained independently on each of the B bootstrap samples. Because each model sees a slightly different subset of the data, each learns a slightly different representation of the underlying patterns.  
-3. **Aggregation:** To make a prediction for a new observation, the predictions from all B models are aggregated. For regression tasks, this is typically done by averaging the predictions. For classification tasks, a majority vote is used.2
-
-This process of averaging over many decorrelated models effectively smooths out the predictions and reduces the overall variance, making the final model more stable and less prone to overfitting.6
-
-**Random Forest: The Premier Bagging Algorithm**
-
-The most popular and powerful implementation of bagging is the **Random Forest** algorithm.2 A Random Forest is an ensemble of decision trees that introduces an additional layer of randomness to the bagging process to further decorrelate the individual trees. In addition to training each tree on a different bootstrap sample of the data, a Random Forest also samples a random subset of the predictor variables at each split point in the tree. This prevents a few dominant predictors from consistently appearing at the top of all the trees, thereby increasing the diversity of the ensemble and generally improving its predictive performance.
-
-**Implementation in R**
-
-In R, bagging and random forests can be implemented using several packages. The ipred package provides a general bagging() function, while the randomForest package is the standard for fitting random forest models. The caret package also offers a unified interface for both.
-
-Let's demonstrate using the randomForest package with the built-in iris dataset.
-
-R
-
-\# Install and load necessary packages  
-\# install.packages("randomForest")  
-\# install.packages("caret")  
-\# install.packages("dplyr")  
-library(randomForest)  
-library(caret)  
-library(dplyr)
-
-\# Prepare the data  
-data(iris)  
-set.seed(123) \# for reproducibility  
-trainIndex \<- createDataPartition(iris$Species, p \= 0.8, list \= FALSE)  
-train\_data \<- iris\[trainIndex,\]  
-test\_data  \<- iris\[-trainIndex,\]
-
-\# Fit a Random Forest model  
-\# ntree: number of trees to grow  
-\# mtry: number of variables randomly sampled as candidates at each split  
-rf\_model \<- randomForest(Species \~., data \= train\_data, ntree \= 500, mtry \= 2, importance \= TRUE)
-
-\# Print the model summary  
-print(rf\_model)
-
-The output of print(rf\_model) shows the model call, the type of forest (classification), the number of trees, and the number of variables tried at each split (mtry). Critically, it also displays the **Out-of-Bag (OOB) estimate of error rate**. This error is calculated using the OOB samples for each tree, providing an unbiased estimate of the model's performance without the need for a separate validation set.7
-
-One of the key advantages of Random Forest is its ability to calculate variable importance scores, which measure the contribution of each predictor to the model's accuracy.8
-
-R
-
-\# View variable importance  
-importance(rf\_model)
-
-\# Plot variable importance  
-varImpPlot(rf\_model)
-
-The importance() function returns a table showing the Mean Decrease in Accuracy and Mean Decrease in Gini for each predictor. These metrics help identify which variables are most influential in predicting the outcome.
-
-Finally, we can use the trained model to make predictions on the test set.
-
-R
-
-\# Make predictions on the test data  
-predictions \<- predict(rf\_model, test\_data)
-
-\# Evaluate the model using a confusion matrix  
-confusionMatrix(predictions, test\_data$Species)
-
-### **13.1.3 Boosting: Learning from Mistakes Sequentially**
-
-Boosting represents a fundamentally different philosophy from bagging. Instead of building models independently in parallel, boosting algorithms build models **sequentially**, where each new model is trained to correct the errors made by its predecessors.1 The primary goal of boosting is to reduce the model's
-
-**bias**, combining many weak learners into a single, highly accurate strong learner.2
-
-The general process works as follows:
-
-1. A simple base model (a "weak learner," often a very shallow decision tree called a "stump") is trained on the data.  
-2. The model's predictions are evaluated, and the errors (or residuals) are identified.  
-3. A second model is then trained, with a specific focus on the instances where the first model performed poorly.  
-4. This process is repeated for a specified number of iterations, with each successive model building upon the previous ones to incrementally improve the overall performance of the ensemble.  
-5. The final prediction is a weighted combination of the predictions from all the models in the sequence.
-
-**Gradient Boosting Machine (GBM)**
-
-While early algorithms like AdaBoost focused on re-weighting misclassified instances 2, the
-
-**Gradient Boosting Machine (GBM)** provides a more generalized framework. GBM frames the problem as an optimization task where the goal is to minimize a loss function. In each iteration, a new weak learner is trained to predict the **negative gradient** of the loss function with respect to the previous model's predictions. For regression with a squared error loss, this simplifies to fitting each new tree to the *residual errors* of the preceding ensemble.9
-
-**XGBoost: Extreme Gradient Boosting**
-
-**XGBoost (Extreme Gradient Boosting)** is an implementation of gradient boosting that has become dominant in applied machine learning and data science competitions due to its exceptional performance and efficiency.11 It builds upon the GBM framework with several key innovations, including:
-
-* **Regularization:** It incorporates both L1 (Lasso) and L2 (Ridge) regularization terms into the objective function, which helps prevent overfitting.11  
-* **Optimized Performance:** It is engineered for speed and efficiency, with features like parallelized tree construction and cache-aware access.11  
-* **Built-in Handling of Missing Values:** XGBoost can automatically learn how to handle missing data.11
-
-**Implementation in R**
-
-The gbm package is the classic implementation for gradient boosting, while the xgboost package provides the more advanced algorithm.
-
-Let's demonstrate fitting an XGBoost model for the iris classification task. XGBoost requires the data to be in a specific format called xgb.DMatrix and the class labels to be numeric, starting from 0\.
-
-R
-
-\# Install and load necessary packages  
-\# install.packages("xgboost")  
-\# install.packages("caTools")  
-library(xgboost)  
-library(caTools)
-
-\# Prepare data for XGBoost  
-\# Convert Species factor to numeric (0, 1, 2\)  
-iris\_xgb \<- iris  
-iris\_xgb$Species \<- as.numeric(iris\_xgb$Species) \- 1
-
-\# Split data  
-set.seed(123)  
-split \<- sample.split(iris\_xgb$Species, SplitRatio \= 0.8)  
-train\_xgb \<- subset(iris\_xgb, split \== TRUE)  
-test\_xgb  \<- subset(iris\_xgb, split \== FALSE)
-
-\# Create xgb.DMatrix  
-train\_matrix \<- xgb.DMatrix(data \= as.matrix(train\_xgb\[, \-5\]), label \= train\_xgb$Species)  
-test\_matrix  \<- xgb.DMatrix(data \= as.matrix(test\_xgb\[, \-5\]), label \= test\_xgb$Species)
-
-\# Set XGBoost parameters  
-\# For multiclass classification, we need to specify the objective and the number of classes  
-params \<- list(  
-  booster \= "gbtree",  
-  objective \= "multi:softmax",  
-  num\_class \= 3,  
-  eta \= 0.1, \# learning rate  
-  max\_depth \= 3  
-)
-
-\# Train the XGBoost model  
-xgb\_model \<- xgb.train(  
-  params \= params,  
-  data \= train\_matrix,  
-  nrounds \= 100, \# number of boosting rounds  
-  watchlist \= list(train \= train\_matrix, test \= test\_matrix),  
-  print\_every\_n \= 10,  
-  early\_stopping\_rounds \= 10 \# Stop if performance doesn't improve for 10 rounds  
-)
-
-Tuning an XGBoost model involves finding the optimal combination of hyperparameters. The most critical are eta (the learning rate) and nrounds (the number of boosting iterations). A lower learning rate generally requires more rounds to achieve optimal performance but can lead to a more robust model.10
-
-R
-
-\# Make predictions  
-predictions\_xgb \<- predict(xgb\_model, test\_matrix)
-
-\# Evaluate the model  
-\# The predictions are numeric class labels (0, 1, 2\)  
-\# We can compare them directly to the test labels  
-accuracy \<- sum(predictions\_xgb \== test\_xgb$Species) / length(test\_xgb$Species)  
-print(paste("Accuracy:", accuracy))
-
-| Feature | Bagging (e.g., Random Forest) | Boosting (e.g., XGBoost) |
-| :---- | :---- | :---- |
-| **Core Idea** | Train many independent models and average their predictions. | Train models sequentially, with each one correcting its predecessor's errors. |
-| **Model Training** | Parallel; models are trained independently on bootstrap samples. | Sequential; each model is trained based on the performance of the previous ones. |
-| **Primary Goal** | Reduce variance and improve model stability. | Reduce bias and build a highly accurate model. |
-| **Base Learners** | Typically uses deep, complex models (e.g., fully grown decision trees). | Uses simple, "weak" models (e.g., shallow decision trees or "stumps"). |
-| **Key Strength** | Highly robust to overfitting and requires less hyperparameter tuning. | Can achieve state-of-the-art performance on a wide range of tasks. |
-| **Main Weakness** | May not be as accurate as a well-tuned boosting model if bias is the main issue. | More sensitive to noise and outliers; can overfit if not carefully tuned. |
-| **Key R Packages** | randomForest, ipred, caret | gbm, xgboost, adabag, caret |
-
-## **13.2 Emulating the Brain: An Introduction to Neural Networks with Keras**
-
-Artificial Neural Networks (ANNs), often simply called neural networks, are a class of machine learning models inspired by the structure and function of the human brain.12 They are composed of interconnected nodes, or "neurons," organized in layers. By learning from data, these networks can identify intricate patterns and model highly complex, non-linear relationships, forming the foundation of modern deep learning.
-
-### **13.2.1 From Biology to Algorithms: The Modern Neural Network**
-
-At its core, a neural network is a computational model that processes information through a series of transformations. Its fundamental components are designed to work in concert to learn from data.14
-
-* **The Neuron (Node):** This is the basic building block. A neuron receives one or more inputs, each multiplied by a **weight** that signifies its importance. The weighted inputs are summed together, and a **bias** term is added. This result is then passed through an **activation function**, which determines the neuron's final output.14 The weights and biases are the parameters that the network learns during the training process.  
-* **Layers:** Neurons are organized into layers. A typical feedforward network has three types of layers 12:  
-  1. **Input Layer:** This layer receives the raw data. Each neuron in the input layer corresponds to a single feature (or predictor variable) in the dataset.  
-  2. **Hidden Layers:** These are the layers between the input and output layers where the majority of computation occurs. A network can have one or many hidden layers. Networks with multiple hidden layers are referred to as "deep" neural networks.  
-  3. **Output Layer:** This is the final layer that produces the model's prediction. The structure of the output layer depends on the task (e.g., a single neuron for regression, or multiple neurons for multi-class classification).  
-* **Activation Functions:** These functions are critical for introducing non-linearity into the network.17 Without them, a multi-layered network would be mathematically equivalent to a simple linear model, regardless of its depth. Common activation functions include:  
-  * **ReLU (Rectified Linear Unit):** Outputs the input directly if it is positive, and zero otherwise. It is the most common choice for hidden layers due to its computational efficiency.19  
-  * **Sigmoid:** Squeezes the output into a range between 0 and 1, making it suitable for the output layer in binary classification problems, where the output can be interpreted as a probability.17  
-  * **Softmax:** Used in the output layer for multi-class classification. It transforms the outputs for each class into a probability distribution, where the probabilities sum to 1\.17
-
-The power of deep learning arises from the hierarchical nature of these layers. The first hidden layer might learn to recognize simple, low-level features from the raw data. Each subsequent layer then combines the features from the previous layer to learn progressively more complex and abstract representations. For example, in image recognition, initial layers might detect edges, which are then combined by later layers to form shapes, then object parts, and finally, complete objects.21 This automatic, hierarchical feature extraction is what enables deep neural networks to achieve remarkable performance on complex tasks.
-
-### **13.2.2 Setting Up Your Deep Learning Environment in R**
-
-To build neural networks in R, we will use the keras package, which provides a high-level, user-friendly interface to the powerful **TensorFlow** backend developed by Google.22 A unique aspect of using these tools in R is that they are interfaces to the underlying Python libraries. Therefore, the setup involves installing both the R packages and their Python dependencies.
-
-The keras R package simplifies this process significantly.
-
-1. **Install the R Packages:** First, install the keras and tensorflow packages from CRAN.  
-   R  
-   install.packages("keras")  
-   install.packages("tensorflow")
-
-2. **Install Python Dependencies:** After installing the R packages, load the keras library and use the install\_keras() function. This function will automatically handle the installation of TensorFlow and other required Python libraries into an isolated Python environment called r-tensorflow.24 Using an isolated environment is highly recommended as it prevents conflicts with any other Python installations you may have on your system.25  
-   R  
-   library(keras)  
-   install\_keras()
-
-   This command may take several minutes to complete as it downloads and installs the necessary components.  
-3. **Verify the Installation:** Once the installation is finished, you can verify that everything is working correctly by running a simple TensorFlow command in your R console.  
-   R  
-   library(tensorflow)  
-   tf$constant("Hello TensorFlow\!")
-
-   If the setup was successful, this will return a TensorFlow tensor object, confirming that R can communicate with the Python backend.
-
-### **13.2.3 Building and Training a Neural Network in R**
-
-Let's walk through the complete workflow of building, compiling, and training a neural network for a multi-class classification task using the iris dataset.
-
-**1\. Data Preparation**
-
-Neural networks require input data to be numeric and, for best performance, scaled. The target variable for classification should be one-hot encoded.
-
-R
-
-\# Load libraries  
-library(keras)  
-library(dplyr)  
-library(tensorflow)
-
-\# Prepare the data  
-data \<- iris  
-\# Features (predictors) must be a matrix  
-x\_train \<- as.matrix(data\[, 1:4\])
-
-\# Target variable must be numeric and one-hot encoded  
-\# Convert factor to numeric (0, 1, 2\)  
-y\_train\_labels \<- as.numeric(data$Species) \- 1  
-\# One-hot encode the labels  
-y\_train \<- to\_categorical(y\_train\_labels, num\_classes \= 3)
-
-\# Scale the features (important for neural networks)  
-x\_train \<- scale(x\_train)
-
-**2\. Model Definition**
-
-We will build a simple sequential model, which is a linear stack of layers.
-
-R
-
-\# Define the model architecture  
-model \<- keras\_model\_sequential() %\>%  
-  \# First hidden layer: 8 neurons, ReLU activation  
-  \# input\_shape is required for the first layer  
-  layer\_dense(units \= 8, activation \= 'relu', input\_shape \= c(4)) %\>%  
-  \# Second hidden layer  
-  layer\_dense(units \= 8, activation \= 'relu') %\>%  
-  \# Output layer: 3 neurons (one for each class), softmax activation  
-  layer\_dense(units \= 3, activation \= 'softmax')
-
-\# Print a summary of the model  
-summary(model)
-
-The summary() provides a clear overview of the model's architecture, including the layers, their output shapes, and the number of trainable parameters (weights and biases) in each layer.
-
-**3\. Model Compilation**
-
-Before training, the model must be compiled. This step configures the learning process by specifying an optimizer, a loss function, and evaluation metrics.26
-
-R
-
-\# Compile the model  
-model %\>% compile(  
-  loss \= 'categorical\_crossentropy', \# For multi-class classification  
-  optimizer \= optimizer\_adam(),      \# A popular and effective optimizer  
-  metrics \= c('accuracy')            \# Metric to monitor during training  
-)
-
-* **Optimizer:** The algorithm used to update the network's weights based on the calculated error (e.g., optimizer\_adam()).  
-* **Loss Function:** The function that the model will try to minimize during training (e.g., 'categorical\_crossentropy' is standard for multi-class classification).  
-* **Metrics:** Used to monitor the training and testing steps (e.g., 'accuracy').
-
-**4\. Model Training**
-
-Now we train the model using the fit() function.
-
-R
-
-\# Train the model  
-history \<- model %\>% fit(  
-  x \= x\_train,  
-  y \= y\_train,  
-  epochs \= 50,          \# Number of passes through the entire dataset  
-  batch\_size \= 5,       \# Number of samples per gradient update  
-  validation\_split \= 0.2, \# Fraction of data to use for validation  
-  verbose \= 1           \# Set to 0 for silent training  
-)
-
-\# Plot the training history  
-plot(history)
-
-The fit() function returns a history object that contains a record of the loss and metrics for both the training and validation sets at each epoch. Plotting this object is an essential diagnostic step to check for signs of overfitting (where training accuracy improves but validation accuracy stagnates or worsens).
-
-**5\. Evaluation and Prediction**
-
-Finally, you can evaluate the model's performance on new data and use it to make predictions.
-
-R
-
-\# In a real scenario, you would have a separate test set.  
-\# Here we just demonstrate the functions.
-
-\# Evaluate the model (returns loss and accuracy)  
-model %\>% evaluate(x\_train, y\_train)
-
-\# Make predictions (returns class probabilities)  
-predictions\_prob \<- model %\>% predict(x\_train)
-
-\# Get the predicted class label (the one with the highest probability)  
-predictions\_class \<- model %\>% predict\_classes(x\_train)
-
-| Component | R Function/Argument | Description | Common Use Case |
-| :---- | :---- | :---- | :---- |
-| **Layers** |  |  |  |
-| Dense Layer | layer\_dense() | A standard, fully-connected neural network layer. | Core building block for most network architectures. |
-| Dropout Layer | layer\_dropout() | Randomly sets a fraction of input units to 0 during training to prevent overfitting. | Regularization technique, often used between dense layers. |
-| Flatten Layer | layer\_flatten() | Flattens a multi-dimensional input (e.g., an image) into a one-dimensional vector. | Used to transition from convolutional layers to dense layers in image models. |
-| **Activation Functions** |  |  |  |
-| ReLU | activation \= 'relu' | Rectified Linear Unit. Outputs max(0, x). | Default choice for hidden layers. Computationally efficient. |
-| Sigmoid | activation \= 'sigmoid' | Outputs a value between 0 and 1\. | Output layer for binary classification (probability of the positive class). |
-| Softmax | activation \= 'softmax' | Converts a vector of values into a probability distribution. | Output layer for multi-class classification. |
-| Tanh | activation \= 'tanh' | Hyperbolic Tangent. Outputs a value between \-1 and 1\. | Can be used in hidden layers, especially in recurrent neural networks. |
-
-## **13.3 Predicting the Future: Time Series Forecasting**
-
-Time series forecasting is a specialized area of machine learning focused on predicting future values based on previously observed data points collected in chronological order. This section explores two distinct yet powerful approaches: the classical statistical method of ARIMA and the modern, flexible framework of Facebook's Prophet.
-
-### **13.3.1 The Classic Approach: ARIMA Models**
-
-The **AutoRegressive Integrated Moving Average (ARIMA)** model is a cornerstone of time series forecasting, providing a robust framework for modeling temporal structures in data.27 An ARIMA model is described by the notation
-
-ARIMA(p, d, q), where each component addresses a different aspect of the time series structure.29
-
-* **AR(p): Autoregressive Component:** This component models the relationship between an observation and a number (p) of its own lagged (i.e., previous) observations. It assumes that past values have a linear effect on the current value.  
-* **I(d): Integrated Component:** This component relates to the differencing required to make the time series **stationary**. Stationarity is a critical assumption for ARIMA models, meaning that the statistical properties of the series—such as its mean, variance, and autocorrelation—are constant over time.31 Differencing, which involves subtracting the previous value from the current value, is a common technique to remove trends and stabilize the mean.30 The parameter  
-  d represents the number of times the data needs to be differenced to achieve stationarity.  
-* **MA(q): Moving Average Component:** This component models the relationship between an observation and the residual errors from a moving average model applied to q lagged observations. It helps the model account for random shocks or unexpected fluctuations from previous time points.
-
-**Model Identification with ACF and PACF**
-
-Before the advent of automated tools, identifying the appropriate p and q parameters for a stationary time series involved a manual inspection of the **Autocorrelation Function (ACF)** and **Partial Autocorrelation Function (PACF)** plots.34
-
-* **ACF Plot:** Shows the correlation of the time series with its own lags.  
-* **PACF Plot:** Shows the partial correlation of the time series with its own lags, after removing the effects of the intervening lags.
-
-The patterns in these plots can suggest the order of the AR and MA components 35:
-
-* **AR(p) Signature:** An AR process is typically characterized by an ACF plot that tails off gradually and a PACF plot that cuts off sharply after lag p.  
-* **MA(q) Signature:** An MA process is characterized by a PACF plot that tails off and an ACF plot that cuts off sharply after lag q.
-
-**Implementation in R with forecast**
-
-The forecast package in R provides a comprehensive suite of tools for time series analysis, including a function that automates the challenging process of model selection.
-
-Let's use the built-in AirPassengers dataset to demonstrate the workflow.
-
-R
-
-\# Install and load necessary packages  
-\# install.packages("forecast")  
-\# install.packages("tseries")  
-library(forecast)  
-library(tseries)
-
-\# Load and plot the data  
-data(AirPassengers)  
-ts\_data \<- AirPassengers  
-plot(ts\_data, main \= "Monthly Airline Passengers 1949-1960")
-
-The plot clearly shows a trend and seasonality, indicating the series is non-stationary. We can confirm this with a statistical test like the Augmented Dickey-Fuller (ADF) test. The null hypothesis for the ADF test is that the series is non-stationary.35
-
-R
-
-\# Test for stationarity  
-adf.test(ts\_data)  
-\# A high p-value suggests we cannot reject the null hypothesis; the series is non-stationary.
-
-While we could manually difference the data and analyze ACF/PACF plots, the auto.arima() function provides a much more efficient approach. It systematically searches through different combinations of p, d, and q (and their seasonal counterparts) and selects the model with the lowest Akaike Information Criterion (AICc), a measure of model fit that penalizes complexity.37
-
-R
-
-\# Fit an ARIMA model automatically  
-fit\_arima \<- auto.arima(ts\_data)
-
-\# Print the model summary  
-summary(fit\_arima)
-
-The summary() output reveals the chosen ARIMA model order and the estimated coefficients. A crucial next step is to check the model's residuals. If the model has captured the underlying structure of the data, the residuals should resemble white noise—that is, they should be uncorrelated with a mean of zero.37
-
-R
-
-\# Check residuals  
-checkresiduals(fit\_arima)
-
-The checkresiduals() function produces a time plot of the residuals, their ACF plot, and the results of a Ljung-Box test. A high p-value for the Ljung-Box test suggests that the residuals are independently distributed, indicating a good model fit.
-
-Finally, we can use the fitted model to forecast future values.
-
-R
-
-\# Generate forecasts for the next 24 months  
-forecast\_arima \<- forecast(fit\_arima, h \= 24)
-
-\# Plot the forecast  
-plot(forecast\_arima)
-
-### **13.3.2 A Modern Approach: Facebook's Prophet**
-
-**Prophet** is an open-source forecasting procedure developed by Facebook's Core Data Science team.39 It was specifically designed to handle the common features of business time series, such as multiple strong seasonalities, holiday effects, missing data, and trend changes, with intuitive and easily tunable parameters.40
-
-Prophet is based on a **decomposable additive model** with three main components 42:
-
-y(t)=g(t)+s(t)+h(t)+ϵ(t)
-
-* **g(t) (Trend):** Prophet models the overall trend using either a piecewise linear or a logistic growth model. It automatically detects "changepoints" where the trend rate changes, providing significant flexibility.  
-* **s(t) (Seasonality):** Periodic changes, such as yearly, weekly, and daily seasonality, are modeled using Fourier series. This allows Prophet to flexibly fit seasonal patterns of varying shapes.  
-* **h(t) (Holidays):** The model can incorporate the impact of irregular events like holidays, which can be specified by the user.  
-* **ϵ(t) (Error):** The error term represents any idiosyncratic changes not accommodated by the model.
-
-One of Prophet's key advantages is its accessibility. It does not require the data to be stationary and automates many of the difficult aspects of forecasting, making it a powerful tool for both experts and non-experts.44
-
-**Implementation in R with prophet**
-
-Using Prophet in R is remarkably straightforward. The primary data requirement is a data frame with two specific columns: ds for the datestamp and y for the numeric value we want to forecast.45
-
-Let's re-forecast the AirPassengers data using Prophet.
-
-R
-
-\# Install and load the prophet package  
-\# install.packages("prophet")  
-library(prophet)  
-library(dplyr)
-
-\# Prepare data for Prophet  
-\# The data frame must have 'ds' and 'y' columns  
-df \<- data.frame(  
-  ds \= seq(as.Date('1949-01-01'), as.Date('1960-12-01'), by \= 'month'),  
-  y \= as.vector(AirPassengers)  
-)
-
-\# The original data shows multiplicative seasonality (the seasonal swings grow with the trend).  
-\# We can model this by first log-transforming the data.  
-df$y \<- log(df$y)
-
-\# Fit the Prophet model  
-m \<- prophet(df)
-
-\# Create a future dataframe for predictions  
-future \<- make\_future\_dataframe(m, periods \= 24, freq \= 'month')
-
-\# Generate the forecast  
-forecast\_prophet \<- predict(m, future)
-
-\# Plot the forecast  
-plot(m, forecast\_prophet)
-
-The resulting plot shows the historical data points, the forecast (yhat), and the uncertainty interval.
-
-A powerful feature of Prophet is its ability to decompose the forecast and visualize the individual components.
-
-R
-
-\# Plot the forecast components  
-prophet\_plot\_components(m, forecast\_prophet)
-
-This command generates plots for the trend, yearly seasonality, and weekly seasonality (if applicable), providing clear insights into the patterns learned by the model.
-
-To incorporate holidays, one simply creates a data frame with holiday and ds columns and passes it to the holidays argument in the prophet() function.47 This makes modeling the impact of special events straightforward.
-
-| Feature | ARIMA | Prophet |
-| :---- | :---- | :---- |
-| **Underlying Philosophy** | Statistical model based on autocorrelation in a stationary series. | Decomposable time series model (trend \+ seasonality \+ holidays). |
-| **Data Requirements** | Requires a stationary (or differenced to be stationary) univariate time series. | Requires a data frame with ds (date) and y (value) columns. Handles non-stationarity automatically. |
-| **Handling of Seasonality** | Handles seasonality through seasonal differencing and seasonal AR/MA terms (SARIMA). | Models multiple seasonalities (e.g., weekly, yearly) explicitly using Fourier series. |
-| **Handling of Holidays** | Requires manual creation of dummy variables as external regressors. | Built-in functionality to incorporate custom holiday and event lists. |
-| **Interpretability** | Coefficients can be statistically interpreted, but the overall model can be abstract. | Highly interpretable through component plots (trend, seasonality, holidays). |
-| **Automation** | auto.arima() provides excellent automation for model selection. | Designed for high automation and ease of use with intuitive parameters. |
-| **Best Suited For** | Univariate time series with clear autocorrelation structure, stable data, and where statistical rigor is paramount. | Business forecasting with multiple strong seasonalities, holiday effects, missing data, and where ease of use and interpretability are key.44 |
-
-## **13.4 Hands-On Project: Forecasting Retail Store Sales**
-
-This project serves as a capstone for the chapter, applying the advanced techniques we have learned—ensemble methods and time series forecasting—to a complex, real-world challenge. By tackling the same problem with different models, we can directly compare their strengths, weaknesses, and practical utility.
-
-### **13.4.1 The Challenge and the Dataset**
-
-**Problem Statement:** The goal is to accurately forecast the daily sales for thousands of items sold at a large Ecuadorian grocery retailer, Corporación Favorita. Accurate sales forecasting is critical for businesses to manage inventory, reduce waste, and ensure customer satisfaction.49
-
-**Dataset:** We will use the "Store Sales \- Time Series Forecasting" dataset from Kaggle.49 This rich dataset is ideal for our purposes as it includes multiple time series, promotional information, and holiday effects. The main files are:
-
-* train.csv: Contains the core training data, including date, store number, item family (category), sales, and promotion information.  
-* holidays\_events.csv: Provides details on local, regional, and national holidays and events.  
-* stores.csv: Contains metadata about the stores, such as city, state, and type.
-
-For this project, we will focus on forecasting the total sales for a single store (Store \#1) to demonstrate the complete workflow.
-
-### **13.4.2 Data Exploration and Feature Engineering**
-
-First, we load and merge the relevant datasets into a single, analysis-ready data frame.
+To illustrate these limitations, consider the synthetic datasets below, generated using the mlbench package. On the left, two intertwined spirals are a classic example of non-convex clusters. On the right, the "Cassini" dataset contains two crescent shapes and a central circle.
 
 R
 
 \# Load necessary libraries  
-library(dplyr)  
-library(lubridate)  
+library(mlbench)  
+library(ggplot2)
+
+\# Generate and plot spiral data  
+set.seed(123)  
+spirals \<- mlbench.spirals(n \= 300, cycles \= 1.5, sd \= 0.05)  
+df\_spirals \<- as.data.frame(spirals$x)  
+ggplot(df\_spirals, aes(x \= V1, y \= V2)) \+  
+  geom\_point(color \= spirals$classes) \+  
+  theme\_classic() \+  
+  ggtitle("Spiral Dataset")
+
+\# Generate and plot Cassini data  
+set.seed(123)  
+cassini \<- mlbench.cassini(n \= 500)  
+df\_cassini \<- as.data.frame(cassini$x)  
+ggplot(df\_cassini, aes(x \= V1, y \= V2)) \+  
+  geom\_point(color \= cassini$classes) \+  
+  theme\_classic() \+  
+  ggtitle("Cassini Dataset")
+
+A k-means algorithm applied to these datasets would fail, as it would attempt to find spherical centers and partition the data accordingly, breaking the natural spiral and crescent shapes. While hierarchical clustering might perform better, it would still struggle with the connectivity and proximity of points between the different true clusters. These challenges create a clear need for algorithms built on different principles—principles of density and probability.
+
+## **Density-Based Clustering: Finding Structure in the Noise with DBSCAN**
+
+Density-Based Spatial Clustering of Applications with Noise (DBSCAN) offers a powerful alternative to centroid-based methods. It fundamentally redefines a cluster not as a group of points around a center, but as a continuous region of high point density, separated from other such regions by areas of low point density.1 This conceptual shift from a center-based view to a density-based one is what allows DBSCAN to identify clusters of arbitrary shapes and sizes, and to effectively handle noise.
+
+### **The Intuition of Density**
+
+The core idea of DBSCAN is intuitive. Imagine looking at a scatter plot and seeing dense clouds of points. These clouds are the clusters. The sparse areas in between are just noise. DBSCAN formalizes this intuition by classifying every point in the dataset into one of three types, based on its local density 6:
+
+1. **Core Point:** A point that has a sufficient number of neighbors within a specified radius. These points are in the interior of a dense cluster.  
+2. **Border Point:** A point that is not a core point itself (it has too few neighbors) but falls within the neighborhood of a core point. These points lie on the edge of a cluster.  
+3. **Noise Point (Outlier):** A point that is neither a core point nor a border point. These points are in low-density regions and do not belong to any cluster.
+
+This ability to explicitly identify and isolate noise is a major advantage of DBSCAN, making it particularly robust for real-world datasets that often contain outliers or measurement errors.6
+
+### **The DBSCAN Algorithm and its Parameters**
+
+The DBSCAN algorithm operates based on two simple but critical user-defined parameters that together define "density" for the dataset 6:
+
+* **eps (ϵ):** The radius of the neighborhood to consider around each point. It defines the maximum distance at which two points can be considered neighbors.  
+* **MinPts:** The minimum number of points (including the point itself) required to be within the eps radius for that point to be considered a **core point**.
+
+The algorithm proceeds as follows 6:
+
+1. Arbitrarily select an unvisited point in the dataset.  
+2. Retrieve all points within its eps neighborhood (its neighbors).  
+3. If the number of neighbors is greater than or equal to MinPts, the point is labeled a **core point**, and a new cluster is initiated. This core point and all its neighbors are added to this new cluster. The algorithm then recursively expands the cluster by checking the neighbors of all newly added core points.  
+4. If the number of neighbors is less than MinPts, the point is temporarily labeled as **noise**. It may later be re-labeled as a **border point** if it is found to be in the neighborhood of a core point from another cluster.  
+5. Repeat this process until all points in the dataset have been visited.
+
+This local, connectivity-based definition allows clusters to "grow" along any path of high density, naturally forming the arbitrary shapes that confound centroid-based methods. The parameters eps and MinPts are not just tuning knobs; they are the user's way of providing a precise mathematical definition of what constitutes a "dense region" worthy of being called a cluster.
+
+### **Implementation in R with the dbscan Package**
+
+While the fpc package also provides an implementation, the dbscan package is specialized and highly optimized for this task.6
+
+#### **Parameter Estimation**
+
+The performance of DBSCAN is highly sensitive to the choice of eps and MinPts.6 While
+
+MinPts can often be set using a heuristic, choosing eps requires a more data-driven approach. A common and effective technique is to use a **k-distance plot**. This involves calculating the distance of every point to its k-th nearest neighbor (where k=MinPts) and plotting these distances in ascending order.6 The "elbow" or "knee" in this plot—the point of maximum curvature—indicates a threshold where the distances start to increase sharply. This point represents a natural separation between the dense regions (where k-th neighbor distances are small) and the sparse, noisy regions (where they are large), making it a good candidate for the
+
+eps value.
+
+For MinPts, a common rule of thumb is to set it to 2 \* number\_of\_dimensions.9 For a 2D dataset, this would suggest
+
+MinPts \= 4\. It is often beneficial to choose a slightly larger value to ensure that clusters are robust.
+
+#### **Fitting the Model**
+
+Let's apply DBSCAN to the spirals dataset, which is designed to defeat spherical clustering algorithms.
+
+R
+
+\# Ensure necessary packages are loaded  
+library(dbscan)  
+library(mlbench)  
 library(ggplot2)  
-library(xgboost)  
-library(prophet)  
-library(forecast)
+library(factoextra)
 
-\# Load data  
-train \<- read.csv("train.csv")  
-holidays \<- read.csv("holidays\_events.csv")  
-stores \<- read.csv("stores.csv")
+\# Generate spiral data  
+set.seed(123)  
+spirals \<- mlbench.spirals(n \= 300, cycles \= 1.5, sd \= 0.05)  
+df \<- as.data.frame(spirals$x)  
+names(df) \<- c("X1", "X2")
 
-\# Convert date columns to Date type  
-train$date \<- as.Date(train$date)  
-holidays$date \<- as.Date(holidays$date)
+\# \--- Step 1: Determine parameters \---  
+\# For MinPts, a rule of thumb is 2 \* dim. Here dim=2, so MinPts=4.  
+\# Let's use a slightly more robust value of 5\.  
+\# Now, find a good eps using a k-distance plot for k=5.  
+kNNdistplot(df, k \= 5)  
+\# The plot shows an "elbow" around a distance of 0.2.  
+\# We will draw a line to mark this value.  
+abline(h \= 0.2, lty \= 2, col \= "red")
 
-\# Filter for a single store (e.g., Store \#1) and aggregate sales across all families  
-store1\_sales \<- train %\>%  
-  filter(store\_nbr \== 1) %\>%  
-  group\_by(date) %\>%  
-  summarise(sales \= sum(sales))
+\# \--- Step 2: Run DBSCAN \---  
+\# Use the parameters identified above.  
+db\_result \<- dbscan(df, eps \= 0.2, minPts \= 5)
 
-\# Visualize the time series for Store \#1  
-ggplot(store1\_sales, aes(x \= date, y \= sales)) \+  
-  geom\_line() \+  
-  labs(title \= "Daily Sales for Store \#1", x \= "Date", y \= "Total Sales") \+  
-  theme\_minimal()
+\# Print the result object to see a summary  
+print(db\_result)  
+\# DBSCAN clustering for 300 objects.  
+\# Parameters: eps \= 0.2, minPts \= 5  
+\# The clustering contains 2 cluster(s) and 4 noise points.
 
-The plot reveals strong weekly seasonality (spikes and dips within each month) and a slight upward trend over time. There are also noticeable dips, likely corresponding to holidays.
+\# \--- Step 3: Visualize results \---  
+\# The fviz\_cluster function can visualize the dbscan object.  
+\# Cluster 0 represents noise points, which fviz\_cluster handles automatically.  
+fviz\_cluster(db\_result, data \= df, stand \= FALSE,  
+             ellipse \= FALSE, show.clust.cent \= FALSE,  
+             geom \= "point", palette \= "jco", ggtheme \= theme\_classic(),  
+             main \= "DBSCAN Clustering of Spiral Data")
 
-For our tree-based model (XGBoost), we will engineer several time-based features from the date.
+The output and the resulting plot clearly show DBSCAN's strength. It has successfully identified the two spiral clusters and correctly labeled a few points that fall between them as noise (cluster 0).6 A k-means algorithm would have failed, likely splitting each spiral into multiple parts.
 
-R
+### **Pros and Cons of DBSCAN**
 
-\# Feature Engineering  
-store1\_sales \<- store1\_sales %\>%  
-  mutate(  
-    day\_of\_week \= wday(date, label \= TRUE),  
-    month \= month(date, label \= TRUE),  
-    year \= year(date),  
-    day\_of\_year \= yday(date),  
-    week\_of\_year \= week(date)  
-  )
+DBSCAN is a powerful tool, but it's important to understand its trade-offs.
 
-### **13.4.3 Modeling and Comparison**
+**Advantages:**
 
-We will now build and compare three different models to forecast sales. We will use data up to July 31, 2017, for training and reserve the final 16 days of the dataset for testing.
+* **No need to specify the number of clusters:** The number of clusters is determined automatically by the algorithm based on the data's density.6  
+* **Can find arbitrarily shaped clusters:** Its density-based approach is not constrained by assumptions of cluster shape.6  
+* **Robust to outliers:** It has a built-in mechanism for identifying and handling noise points.6
 
-R
+**Disadvantages:**
 
-\# Split into training and test sets  
-train\_set \<- store1\_sales %\>% filter(date \<= as.Date("2017-07-31"))  
-test\_set \<- store1\_sales %\>% filter(date \> as.Date("2017-07-31"))
+* **Parameter sensitivity:** The algorithm's success is highly dependent on the user's choice of eps and MinPts.6  
+* **Struggles with varying densities:** DBSCAN uses a single global density threshold (eps and MinPts). It cannot effectively identify clusters if they have significantly different internal densities, as a single eps value will not be appropriate for all clusters.6  
+* **Curse of dimensionality:** In very high-dimensional spaces, the concept of distance becomes less meaningful, and all points can appear equidistant from each other, making density estimation difficult.
 
-**Model 1: XGBoost**
+## **Probabilistic Clustering: Gaussian Mixture Models (GMM)**
 
-We treat this as a standard regression problem, using our engineered features to predict sales.
+Gaussian Mixture Models (GMMs) provide another sophisticated alternative to traditional clustering, shifting the paradigm from "hard" to "soft" cluster assignments. Where k-means and DBSCAN assign each point to exactly one cluster, GMMs operate on a probabilistic framework, providing a more nuanced and flexible approach to uncovering latent structures in data.
 
-R
+### **From Hard to Soft Assignments**
 
-\# Prepare data for XGBoost  
-train\_features \<- as.matrix(select(train\_set, \-date, \-sales))  
-train\_labels \<- train\_set$sales  
-test\_features \<- as.matrix(select(test\_set, \-date, \-sales))
+Most clustering algorithms perform **hard clustering**, where each data point is definitively assigned to a single cluster.13 GMM, in contrast, performs
 
-dtrain \<- xgb.DMatrix(data \= train\_features, label \= train\_labels)
+**soft clustering** (also known as fuzzy clustering). It calculates the *probability* that each data point belongs to each of the clusters.14 This is immensely powerful for several reasons:
 
-\# Train XGBoost model  
-xgb\_fit \<- xgboost(data \= dtrain, nrounds \= 100, objective \= "reg:squarederror", verbose \= 0)  
-pred\_xgb \<- predict(xgb\_fit, test\_features)
+* It provides a measure of uncertainty for each assignment. A point with a 99% probability of belonging to Cluster 1 is a confident assignment, whereas a point with a 55% probability for Cluster 1 and a 45% probability for Cluster 2 is clearly an ambiguous case lying on the boundary.  
+* It more accurately reflects the reality of many datasets, where cluster boundaries are not sharp, and some observations genuinely share characteristics of multiple groups.
 
-**Model 2: ARIMA**
+### **The Theory of Gaussian Mixtures**
 
-We use auto.arima on the univariate sales time series.
+The central assumption of GMM is that the observed data is generated from a *mixture* of a finite number of Gaussian (or normal) distributions.15 Each of these underlying Gaussian distributions represents a single cluster.
 
-R
+Each component Gaussian is defined by its own set of parameters 14:
 
-\# Create time series object for training  
-sales\_ts \<- ts(train\_set$sales, frequency \= 7) \# Weekly seasonality
+1. **Mean (μ):** A vector representing the center of the cluster.  
+2. **Covariance (Σ):** A matrix that defines the shape, size, and orientation of the cluster. This is a key advantage over k-means, which implicitly assumes a spherical covariance (equal variance in all directions). GMMs can model clusters that are spherical, diagonal (ellipsoidal but aligned with the axes), or fully ellipsoidal (oriented in any direction).  
+3. **Mixing Weight (π):** A scalar representing the proportion or "importance" of that Gaussian component in the overall mixture. It is the prior probability that a randomly selected data point was generated by that component. The sum of all mixing weights must be 1\.16
 
-\# Fit auto.arima model  
-arima\_fit \<- auto.arima(sales\_ts)  
-forecast\_arima\_obj \<- forecast(arima\_fit, h \= nrow(test\_set))  
-pred\_arima \<- as.vector(forecast\_arima\_obj$mean)
+The probability density of a data point x is a weighted sum of these component densities:
 
-**Model 3: Prophet**
+p(x∣λ)=i=1∑M​wi​g(x∣μi​,Σi​)
 
-We leverage Prophet's ability to handle seasonality and holidays directly.
+where M is the number of clusters, wi​ is the mixing weight for cluster i, and g(x∣μi​,Σi​) is the multivariate Gaussian probability density function for cluster i.16  
+This framework reveals a profound connection: **k-means is a simplified, special case of a Gaussian Mixture Model**. K-means is mathematically equivalent to a GMM where all clusters are forced to have the same spherical covariance matrix and the same mixing weights.4 GMM generalizes this by relaxing these restrictive assumptions, allowing it to fit a much wider variety of data structures. It is a natural "upgrade" from k-means; if the data is simple and spherical, k-means is a fast approximation. If the data has more complex shapes, sizes, or densities, GMM provides the necessary flexibility.
 
-R
+### **Parameter Estimation with Expectation-Maximization (EM)**
 
-\# Prepare data for Prophet  
-prophet\_train \<- train\_set %\>%  
-  select(date, sales) %\>%  
-  rename(ds \= date, y \= sales)
+Given a dataset, the goal of GMM is to find the parameters (μi​, Σi​, wi​ for each cluster i) that maximize the likelihood of observing that data. A direct analytical solution for this is intractable because the cluster assignments are unknown.16 Instead, GMMs are trained using an iterative algorithm called
 
-\# Prepare holidays data frame  
-prophet\_holidays \<- holidays %\>%  
-  filter(type\!= "Work Day") %\>% \# Exclude work days  
-  select(date, holiday) %\>%  
-  rename(ds \= date)
+**Expectation-Maximization (EM)**.14
 
-\# Fit Prophet model  
-prophet\_fit \<- prophet(prophet\_train, holidays \= prophet\_holidays)  
-future \<- make\_future\_dataframe(prophet\_fit, periods \= nrow(test\_set))  
-forecast\_prophet\_obj \<- predict(prophet\_fit, future)
+The EM algorithm alternates between two steps until the parameters converge 20:
 
-\# Extract predictions for the test period  
-pred\_prophet \<- tail(forecast\_prophet\_obj$yhat, nrow(test\_set))
+1. **E-Step (Expectation):** Given the current estimates of the model parameters (means, covariances, weights), this step calculates the *posterior probability* (also called the "responsibility") that each data point belongs to each cluster. This is the "soft assignment."  
+2. **M-Step (Maximization):** Using the responsibilities calculated in the E-step as soft weights, this step updates the model parameters to maximize the likelihood of the data. For example, the new mean for a cluster is a weighted average of all data points, where the weights are the responsibilities.
 
-### **13.4.4 Evaluation and Final Insights**
+This two-step process is guaranteed to increase the data's likelihood at each iteration, eventually converging to a (potentially local) maximum.16
 
-We now evaluate all three models on the hold-out test set using Root Mean Squared Error (RMSE).
+### **Implementation in R with mclust**
+
+The mclust package is the gold standard for fitting Gaussian Mixture Models in R.20 One of its most powerful features is its ability to perform automatic model selection. It can test a range of cluster numbers (
+
+G) and various covariance structures, then use the **Bayesian Information Criterion (BIC)** to identify the best-fitting model. The BIC is a goodness-of-fit measure that penalizes model complexity, helping to avoid overfitting and providing a principled way to answer the "how many clusters?" question.15
+
+Let's apply GMM to the classic iris dataset, whose clusters are known to be roughly elliptical.
 
 R
 
-\# Calculate RMSE for each model  
-rmse\_xgb \<- sqrt(mean((pred\_xgb \- test\_set$sales)^2))  
-rmse\_arima \<- sqrt(mean((pred\_arima \- test\_set$sales)^2))  
-rmse\_prophet \<- sqrt(mean((pred\_prophet \- test\_set$sales)^2))
+\# Load necessary libraries  
+library(mclust)  
+library(ggplot2)
 
-\# Print results  
-cat("XGBoost RMSE:", rmse\_xgb, "\\n")  
-cat("ARIMA RMSE:", rmse\_arima, "\\n")  
-cat("Prophet RMSE:", rmse\_prophet, "\\n")
+\# Use only the numeric feature data from the iris dataset  
+iris\_data \<- iris\[, 1:4\]
 
-| Model | Root Mean Squared Error (RMSE) | Implementation Complexity | Key Strengths in this Project |
+\# \--- Step 1: Fit the GMM \---  
+\# By default, Mclust() tests for G \= 1 to 9 clusters and 14 different  
+\# covariance models. It selects the best model based on the BIC.  
+gmm\_result \<- Mclust(iris\_data)
+
+\# \--- Step 2: Examine the results \---  
+\# The summary provides details on the best model selected.  
+summary(gmm\_result)  
+\# The output will indicate the best model (e.g., "VEV") and the optimal  
+\# number of clusters (G) found. For the iris dataset, it often finds G=2,  
+\# as two of the species are not linearly separable.
+
+\# \--- Step 3: Visualize the model selection process \---  
+\# We can plot the BIC values for all tested models. The model with the  
+\# highest BIC is the one selected.  
+plot(gmm\_result, what \= "BIC")
+
+\# \--- Step 4: Visualize the clustering results \---  
+\# The plot function provides several useful visualizations.  
+\# 'classification' shows the final hard-clustered data points.  
+plot(gmm\_result, what \= "classification")  
+\# 'uncertainty' highlights points with low confidence in their assignment.  
+plot(gmm\_result, what \= "uncertainty")
+
+\# \--- Step 5: Access the soft cluster probabilities \---  
+\# The 'z' component of the result object contains the matrix of  
+\# posterior probabilities (responsibilities) for each point.  
+\# Each row is a data point, each column is a cluster.  
+head(gmm\_result$z)
+
+The output from summary(gmm\_result) reveals the best model chosen. For instance, a "VEV" model indicates that the clusters have varying volume, ellipsoidal shape, and varying orientation. The plot of BIC values provides clear, quantitative evidence for why a particular number of clusters and covariance structure was chosen. Finally, inspecting the gmm\_result$z matrix allows access to the soft assignments, providing a richer understanding of the cluster structure than a simple hard assignment vector.
+
+## **How Good is My Clustering? Evaluating Performance**
+
+After applying a clustering algorithm, a critical question remains: how good is the result? Cluster validation is the process of quantitatively evaluating the quality of the generated clusters. This is not an optional step; it is essential for comparing different algorithms, tuning parameters, and ensuring that the discovered patterns are meaningful and not just artifacts of the algorithm.
+
+There are two primary scenarios for cluster validation, each with its own set of metrics 22:
+
+1. **Internal Validation:** This is used in the most common, truly unsupervised scenario where no ground truth labels exist. Internal metrics assess the quality of the clustering based solely on the inherent properties of the data and the cluster assignments. They typically measure a combination of **compactness** (how close points are within a cluster) and **separation** (how far apart different clusters are).  
+2. **External Validation:** This is used when external, ground-truth labels are available for the data (e.g., when applying clustering to a known classification dataset for exploratory purposes). External metrics measure how well the clustering results match the true, pre-existing categories.
+
+### **Internal Validation (When Ground Truth is Unknown)**
+
+#### **Silhouette Analysis**
+
+The Silhouette score is one of the most popular and intuitive internal validation metrics. It measures how well each individual data point fits into its assigned cluster.22 For each point, the silhouette width is calculated based on two values:
+
+* **Cohesion (a(i)):** The average distance from point i to all other points *in the same cluster*. A small value indicates high cohesion.  
+* **Separation (b(i)):** The average distance from point i to all points in the *nearest neighboring cluster*. A large value indicates high separation.
+
+The silhouette width for point i is then:
+
+S(i)=max(a(i),b(i))b(i)−a(i)​  
+The score ranges from \-1 to \+1 22:
+
+* **\+1:** Indicates the point is very well-clustered, being far from the neighboring cluster.  
+* **0:** Indicates the point lies on or very close to the decision boundary between two clusters.  
+* **\-1:** Indicates the point is likely misclassified and is closer to the neighboring cluster than its own.
+
+The **Silhouette Plot** is a powerful visualization that displays the silhouette width for every observation, sorted and grouped by cluster. This allows for a visual assessment of each cluster's quality and the overall validity of the clustering solution.24 In R, the
+
+silhouette() function from the cluster package calculates the scores, and fviz\_silhouette() from factoextra creates an elegant visualization.25
+
+#### **Davies-Bouldin Index (DBI)**
+
+The Davies-Bouldin Index (DBI) formalizes the idea of finding clusters that are compact and well-separated. For each cluster, it finds the "most similar" other cluster, where similarity is defined as the ratio of the sum of their within-cluster dispersions to the distance between their centroids.27 The final DBI score is the average of these values across all clusters.
+
+A **lower DBI value indicates a better clustering**, as it implies that clusters are, on average, more compact (low intra-cluster distance) and more distinct (high inter-cluster distance).22 The
+
+clusterSim package provides the index.DB() function for this calculation in R.29
+
+### **External Validation (Comparing to True Labels)**
+
+When true class labels are known, we can directly measure how well our algorithm has recovered this structure.
+
+#### **Adjusted Rand Index (ARI)**
+
+The Adjusted Rand Index (ARI) is a measure of similarity between two data partitions (e.g., the predicted cluster labels and the true class labels).31 It considers all pairs of data points and counts the pairs that are either in the same group in both partitions or in different groups in both partitions.
+
+Crucially, the ARI **corrects for chance agreement**. The standard Rand Index can be misleadingly high for random clusterings, especially with a large number of clusters. The ARI adjusts this score, ensuring that a random assignment will have an ARI close to 0\.32
+
+The ARI score ranges from a theoretical minimum of \-0.5 to a maximum of 1 33:
+
+* **1:** Perfect agreement between the two partitions.  
+* **0:** The agreement is what would be expected by random chance.  
+* **Negative values:** The agreement is worse than random.
+
+The mclust package provides a straightforward implementation with the adjustedRandIndex() function.35
+
+It is important to recognize the fundamental tension between internal and external validation. Internal metrics are designed to optimize for specific geometric definitions of a "good" cluster, such as compactness and separation. These properties often favor spherical clusters. External metrics, like ARI, are agnostic to shape; they only care if points that *should* be grouped together *are* grouped together. For a dataset like the intertwined spirals, a perfect clustering would achieve an ARI of 1.0. However, its Silhouette score might be mediocre, because points in one spiral can be geometrically closer to points in the other spiral than to distant points in their own. This demonstrates that validation metrics are not neutral observers; they have their own biases. A high internal score does not guarantee a high external score, and the choice of metric should be guided by the ultimate goal of the analysis.
+
+## **Case Study: Uncovering Patterns in Complex Data**
+
+To synthesize the concepts of this chapter, we will conduct a comparative case study. We will apply k-means, DBSCAN, and GMM to a single, challenging dataset and use our validation metrics to objectively determine which algorithm performs best.
+
+### **The Challenge Dataset**
+
+We will use the mlbench.cassini dataset, which is specifically designed to challenge simple clustering algorithms. It consists of 500 data points organized into three distinct, non-spherical clusters: two crescent-shaped "bananas" and a central circle.36 We have the ground truth labels for this dataset, which will allow us to use both internal and external validation metrics for a comprehensive comparison.
+
+### **Comparative Analysis in R**
+
+We will now apply each of the three algorithms to the cassini dataset and visualize the results.
+
+R
+
+\# \--- Load Libraries and Prepare Data \---  
+library(mlbench)  
+library(ggplot2)  
+library(dbscan)  
+library(mclust)  
+library(factoextra)  
+library(cluster)  
+library(clusterSim)
+
+set.seed(42)  
+cassini\_data \<- mlbench.cassini(n \= 500)  
+df \<- as.data.frame(cassini\_data$x)  
+names(df) \<- c("X1", "X2")  
+true\_labels \<- as.factor(cassini\_data$classes)
+
+\# Plot ground truth for reference  
+ggplot(df, aes(x \= X1, y \= X2, color \= true\_labels)) \+  
+  geom\_point() \+ theme\_classic() \+ ggtitle("Ground Truth: Cassini Dataset")
+
+\# \--- Algorithm 1: K-Means \---  
+km\_result \<- kmeans(df, centers \= 3, nstart \= 25)  
+df$kmeans\_cluster \<- as.factor(km\_result$cluster)
+
+\# \--- Algorithm 2: DBSCAN \---  
+\# Estimate parameters  
+kNNdistplot(df\[,1:2\], k \= 10) \# MinPts \= 2\*dim \= 4, let's try a higher k for stability  
+abline(h \= 0.2, lty \= 2, col \= "red") \# Elbow appears around 0.2  
+db\_result \<- dbscan(df\[,1:2\], eps \= 0.2, minPts \= 10)  
+df$dbscan\_cluster \<- as.factor(db\_result$cluster)
+
+\# \--- Algorithm 3: Gaussian Mixture Model (GMM) \---  
+gmm\_result \<- Mclust(df\[,1:2\], G \= 3) \# Specify G=3 for a fair comparison  
+df$gmm\_cluster \<- as.factor(gmm\_result$classification)
+
+\# \--- Visualize Results \---  
+p\_km \<- ggplot(df, aes(x \= X1, y \= X2, color \= kmeans\_cluster)) \+  
+  geom\_point() \+ theme\_classic() \+ ggtitle("K-Means Clustering")
+
+p\_db \<- ggplot(df, aes(x \= X1, y \= X2, color \= dbscan\_cluster)) \+  
+  geom\_point() \+ theme\_classic() \+ ggtitle("DBSCAN Clustering")
+
+p\_gmm \<- ggplot(df, aes(x \= X1, y \= X2, color \= gmm\_cluster)) \+  
+  geom\_point() \+ theme\_classic() \+ ggtitle("GMM Clustering")
+
+\# Arrange plots for comparison (requires gridExtra package)  
+\# gridExtra::grid.arrange(p\_km, p\_db, p\_gmm, nrow \= 1\)
+
+Visual inspection of the plots immediately reveals the shortcomings of k-means, which carves the data into three roughly triangular regions, completely failing to respect the natural banana and circle shapes. DBSCAN and GMM appear to perform much better visually.
+
+### **Evaluation and Interpretation**
+
+Visuals are informative, but quantitative metrics provide objective proof. Let's calculate the internal and external validation scores for each algorithm.
+
+R
+
+\# \--- Calculate External Validation: Adjusted Rand Index \---  
+ari\_km \<- adjustedRandIndex(true\_labels, df$kmeans\_cluster)  
+ari\_db \<- adjustedRandIndex(true\_labels, df$dbscan\_cluster)  
+ari\_gmm \<- adjustedRandIndex(true\_labels, df$gmm\_cluster)
+
+\# \--- Calculate Internal Validation: Silhouette & Davies-Bouldin \---  
+\# Note: DBSCAN noise points (cluster 0\) must be handled for internal metrics.  
+\# We will exclude them for a fair comparison of the cluster structures.  
+df\_db\_no\_noise \<- df\[df$dbscan\_cluster\!= 0, \]  
+dist\_db \<- dist(df\_db\_no\_noise\[, c("X1", "X2")\])  
+sil\_db \<- silhouette(as.integer(df\_db\_no\_noise$dbscan\_cluster), dist\_db)  
+dbi\_db \<- index.DB(df\_db\_no\_noise\[, c("X1", "X2")\],  
+                   as.integer(df\_db\_no\_noise$dbscan\_cluster))$DB
+
+\# K-Means metrics  
+dist\_km \<- dist(df\[, c("X1", "X2")\])  
+sil\_km \<- silhouette(km\_result$cluster, dist\_km)  
+dbi\_km \<- index.DB(df\[, c("X1", "X2")\], km\_result$cluster)$DB
+
+\# GMM metrics  
+dist\_gmm \<- dist(df\[, c("X1", "X2")\])  
+sil\_gmm \<- silhouette(gmm\_result$classification, dist\_gmm)  
+dbi\_gmm \<- index.DB(df\[, c("X1", "X2")\], gmm\_result$classification)$DB
+
+\# \--- Create Summary Table \---  
+results\_table \<- data.frame(  
+  Algorithm \= c("K-Means", "DBSCAN", "GMM"),  
+  Adjusted\_Rand\_Index \= c(ari\_km, ari\_db, ari\_gmm),  
+  Avg\_Silhouette\_Width \= c(mean(sil\_km\[, "sil\_width"\]),  
+                           mean(sil\_db\[, "sil\_width"\]),  
+                           mean(sil\_gmm\[, "sil\_width"\])),  
+  Davies\_Bouldin\_Index \= c(dbi\_km, dbi\_db, dbi\_gmm)  
+)
+
+print(round(results\_table, 3))
+
+The results can be summarized in the following table.
+
+**Table 13.1: Comparative Performance of Clustering Algorithms on the Cassini Dataset**
+
+| Algorithm | Adjusted Rand Index (ARI) | Avg. Silhouette Width | Davies-Bouldin Index |
 | :---- | :---- | :---- | :---- |
-| **XGBoost** | (Actual value depends on run) | Medium | Can incorporate many external features (e.g., promotions, weather); powerful for complex, non-linear relationships. |
-| **ARIMA** | (Actual value depends on run) | Low (with auto.arima) | Provides a strong statistical baseline; excels at capturing autocorrelation. |
-| **Prophet** | (Actual value depends on run) | Low | Easily handles multiple seasonalities and complex holiday effects with minimal feature engineering. Highly interpretable. |
+| K-Means | 0.288 | 0.370 | 1.121 |
+| DBSCAN | 0.992 | 0.505 | 0.816 |
+| GMM | 0.996 | 0.506 | 0.771 |
 
-The results demonstrate that there is no single "best" model for all forecasting problems. XGBoost, with its ability to incorporate external regressors, is a powerful choice when rich feature sets are available. ARIMA provides a robust statistical baseline, particularly for series with clear autocorrelation structures. Prophet shines in its ease of use and its specialized design for business time series with complex seasonal and holiday patterns, often providing excellent results with minimal effort. The choice of model should be guided by the specific characteristics of the data and the goals of the analysis.
+*(Note: Exact values may vary slightly due to stochasticity in algorithms, but the relative performance will be consistent.)*
 
-## **13.5 Chapter Summary and Further Learning**
+### **Conclusion of Case Study**
 
-This chapter has navigated the transition from classical statistical modeling to advanced machine learning, equipping you with the theory and practical R skills to tackle complex predictive tasks.
+The results in Table 13.1 provide a clear and compelling story.
 
-We began with **Ensemble Methods**, revealing how combining multiple models can lead to superior performance. We contrasted the parallel, variance-reducing approach of **Bagging**, exemplified by Random Forests, with the sequential, bias-reducing strategy of **Boosting**, showcased by the powerful Gradient Boosting Machine and its state-of-the-art implementation, XGBoost.
+* **K-Means:** As predicted by its theoretical limitations, k-means performs poorly. Its ARI of \~0.29 is low, indicating its partitioning is not much better than a random guess when compared to the ground truth. Its internal metrics are also worse than the other two algorithms.  
+* **DBSCAN & GMM:** Both advanced algorithms perform exceptionally well. Their ARI scores are nearly 1.0, signifying an almost perfect recovery of the true underlying clusters. Their internal metrics are also superior, with higher average silhouette widths and lower Davies-Bouldin indices, confirming that they found a more compact and well-separated structure. GMM slightly outperforms DBSCAN on all metrics in this particular run, likely due to the smooth, probabilistic boundaries it can model.
 
-Next, we journeyed into the world of **Neural Networks**, demystifying their architecture of neurons and layers. Using the keras and tensorflow packages, we constructed a complete workflow in R: from data preparation and model definition to compilation, training, and evaluation. We saw how these models, inspired by the brain, can learn hierarchical representations of data to model intricate patterns.
+This case study powerfully demonstrates the central theme of this chapter: algorithm selection must be driven by the data's characteristics. For the non-spherical, complex structure of the Cassini dataset, the density-based approach of DBSCAN and the probabilistic, flexible-covariance approach of GMM were vastly superior to the simple, centroid-based logic of k-means.
 
-Finally, we addressed the specialized domain of **Time Series Forecasting**. We explored the rigorous statistical framework of **ARIMA**, understanding its components (AR, I, MA) and the importance of stationarity. We then contrasted this with **Prophet**, a modern, flexible tool designed to automatically handle the trend, seasonality, and holiday effects common in business time series.
+## **Chapter Summary**
 
-The culminating hands-on project demonstrated that model selection is not a one-size-fits-all process. By applying these diverse techniques to a single, realistic forecasting problem, we underscored the importance of aligning the choice of algorithm with the specific structure of the data and the analytical goals at hand.
+In this chapter, we moved beyond the foundational clustering techniques to explore two powerful, advanced methods: DBSCAN and Gaussian Mixture Models. We learned that the limitations of simpler algorithms like k-means are not just technical flaws but indicators that their core assumptions do not match the data's underlying structure.
 
-The techniques covered in this chapter represent the cutting edge of applied machine learning. To continue your journey and deepen your understanding, the following resources are highly recommended:
+* **DBSCAN** redefines clustering based on **density**, allowing it to discover arbitrarily shaped clusters and robustly identify noise. Its performance hinges on the careful selection of its eps and MinPts parameters, which together define what it means for a region to be "dense."  
+* **Gaussian Mixture Models (GMMs)** approach clustering from a **probabilistic** perspective, assuming data is a mixture of several Gaussian distributions. Through the Expectation-Maximization algorithm, GMMs provide "soft" cluster assignments and can model flexible, elliptical cluster shapes, making them a powerful generalization of k-means.  
+* **Cluster validation** is a critical and non-negotiable step in the analysis pipeline. We distinguished between **internal metrics** (like the Silhouette score and Davies-Bouldin Index), used when no ground truth is available, and **external metrics** (like the Adjusted Rand Index), which compare results to known labels.
 
-* **Books:**  
-  * *An Introduction to Statistical Learning* by James, Witten, Hastie, and Tibshirani: An accessible yet rigorous introduction to many machine learning concepts, including tree-based methods and support vector machines.5  
-  * *Applied Predictive Modeling* by Max Kuhn and Kjell Johnson: A practical, practitioner-focused guide to the entire modeling process, written by the creator of the caret package.5  
-  * *Deep Learning with R* by François Chollet with J.J. Allaire: The definitive guide to using Keras in R, written by the creator of Keras.  
-* **Package Vignettes:** The documentation and vignettes for the randomForest, xgboost, keras, forecast, and prophet packages are invaluable resources for exploring advanced features and arguments.
+The final case study solidified these lessons, demonstrating quantitatively how DBSCAN and GMM succeeded where k-means failed on a dataset with complex, non-spherical structures. This reinforces the most important takeaway: there is no single best clustering algorithm. An effective data scientist must diagnose the characteristics of their data and select the tool whose assumptions best align with that structure. These advanced clustering techniques are essential additions to your toolkit, preparing you for the diverse and complex challenges you will encounter in real-world research and providing a solid foundation for the even more advanced machine learning methods discussed in the chapters to come.
 
 #### **Works cited**
 
-1. Ensemble methods and boosting | Advanced R Programming Class Notes \- Fiveable, accessed on July 30, 2025, [https://library.fiveable.me/introduction-to-advanced-programming-in-r/unit-8/ensemble-methods-boosting/study-guide/CwLoBFZ9yJq71fZv](https://library.fiveable.me/introduction-to-advanced-programming-in-r/unit-8/ensemble-methods-boosting/study-guide/CwLoBFZ9yJq71fZv)  
-2. Bagging vs Boosting in Machine Learning \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/bagging-vs-boosting-in-machine-learning/](https://www.geeksforgeeks.org/machine-learning/bagging-vs-boosting-in-machine-learning/)  
-3. Perform Bagging in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/perform-bagging-in-r/](https://www.geeksforgeeks.org/machine-learning/perform-bagging-in-r/)  
-4. Bagging, Boosting and Stacking: Ensemble Learning in ML Models \- Analytics Vidhya, accessed on July 30, 2025, [https://www.analyticsvidhya.com/blog/2023/01/ensemble-learning-methods-bagging-boosting-and-stacking/](https://www.analyticsvidhya.com/blog/2023/01/ensemble-learning-methods-bagging-boosting-and-stacking/)  
-5. Bagging \- UB, accessed on July 30, 2025, [https://www.ub.edu/cursosR/files/bagging.html](https://www.ub.edu/cursosR/files/bagging.html)  
-6. How to Perform Bagging in R \- Statology, accessed on July 30, 2025, [https://www.statology.org/how-to-perform-bagging-r/](https://www.statology.org/how-to-perform-bagging-r/)  
-7. Random Forest in R \- Tutorialspoint, accessed on July 30, 2025, [https://www.tutorialspoint.com/r/r\_random\_forest.htm](https://www.tutorialspoint.com/r/r_random_forest.htm)  
-8. How to Perform Bagging in R (Step-by-Step) \- Statology, accessed on July 30, 2025, [https://www.statology.org/bagging-in-r/](https://www.statology.org/bagging-in-r/)  
-9. Chapter 12 Gradient Boosting | Hands-On Machine Learning with R \- · Bradley Boehmke, accessed on July 30, 2025, [https://bradleyboehmke.github.io/HOML/gbm.html](https://bradleyboehmke.github.io/HOML/gbm.html)  
-10. Gradient Boosting in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/deep-learning/gradient-boosting-in-r/](https://www.geeksforgeeks.org/deep-learning/gradient-boosting-in-r/)  
-11. Beginners Tutorial on XGBoost and Parameter Tuning in R Tutorials ..., accessed on July 30, 2025, [https://www.hackerearth.com/practice/machine-learning/machine-learning-algorithms/beginners-tutorial-on-xgboost-parameter-tuning-r/tutorial/](https://www.hackerearth.com/practice/machine-learning/machine-learning-algorithms/beginners-tutorial-on-xgboost-parameter-tuning-r/tutorial/)  
-12. What is a Neural Network? \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/neural-networks-a-beginners-guide/](https://www.geeksforgeeks.org/machine-learning/neural-networks-a-beginners-guide/)  
-13. What Are Neural Networks? A Beginner's Complete Guide, accessed on July 30, 2025, [https://www.pricefx.com/learning-center/what-are-neural-networks-a-beginners-complete-guide](https://www.pricefx.com/learning-center/what-are-neural-networks-a-beginners-complete-guide)  
-14. Concepts — ML Glossary documentation \- Read the Docs, accessed on July 30, 2025, [https://ml-cheatsheet.readthedocs.io/en/latest/nn\_concepts.html](https://ml-cheatsheet.readthedocs.io/en/latest/nn_concepts.html)  
-15. Machine Learning for Beginners: An Introduction to Neural Networks \- victorzhou.com, accessed on July 30, 2025, [https://victorzhou.com/blog/intro-to-neural-networks/](https://victorzhou.com/blog/intro-to-neural-networks/)  
-16. Day 39: Basics of Neural Networks — Layers, Neurons, and Activation Functions, accessed on July 30, 2025, [https://ianclemence.medium.com/day-39-basics-of-neural-networks-layers-neurons-and-activation-functions-fa623acf9a9f](https://ianclemence.medium.com/day-39-basics-of-neural-networks-layers-neurons-and-activation-functions-fa623acf9a9f)  
-17. Activation functions in Neural Networks \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/activation-functions-neural-networks/](https://www.geeksforgeeks.org/machine-learning/activation-functions-neural-networks/)  
-18. Activation Functions in Neural Networks \[12 Types & Use Cases\], accessed on July 30, 2025, [https://www.v7labs.com/blog/neural-networks-activation-functions](https://www.v7labs.com/blog/neural-networks-activation-functions)  
-19. Introduction to Activation Functions in Neural Networks \- DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/introduction-to-activation-functions-in-neural-networks](https://www.datacamp.com/tutorial/introduction-to-activation-functions-in-neural-networks)  
-20. Neural networks: Activation functions | Machine Learning \- Google for Developers, accessed on July 30, 2025, [https://developers.google.com/machine-learning/crash-course/neural-networks/activation-functions](https://developers.google.com/machine-learning/crash-course/neural-networks/activation-functions)  
-21. A Beginner's Guide to Neural Networks \- APIDNA, accessed on July 30, 2025, [https://apidna.ai/a-beginners-guide-to-neural-networks/](https://apidna.ai/a-beginners-guide-to-neural-networks/)  
-22. Build a Neural Network Classifier in R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/build-a-neural-network-classifier-in-r/](https://www.geeksforgeeks.org/machine-learning/build-a-neural-network-classifier-in-r/)  
-23. CRAN: Package keras \- The Comprehensive R Archive Network, accessed on July 30, 2025, [https://cran.r-project.org/package=keras](https://cran.r-project.org/package=keras)  
-24. Getting Started with Keras \- The Comprehensive R Archive Network, accessed on July 30, 2025, [https://cran.r-project.org/web/packages/keras/vignettes/](https://cran.r-project.org/web/packages/keras/vignettes/)  
-25. Quick start \- TensorFlow for R, accessed on July 30, 2025, [https://tensorflow.rstudio.com/install/](https://tensorflow.rstudio.com/install/)  
-26. Quick Start Guide to Neural Networks in R with Keras and Tensorflow, accessed on July 30, 2025, [https://dustysturner.com/post/2024-01-13-quick-start-guide-to-neural-networks-in-r-with-keras-and-tensorflow/](https://dustysturner.com/post/2024-01-13-quick-start-guide-to-neural-networks-in-r-with-keras-and-tensorflow/)  
-27. Time Series Analysis using ARIMA model in R Programming \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/time-series-analysis-using-arima-model-in-r-programming/](https://www.geeksforgeeks.org/r-language/time-series-analysis-using-arima-model-in-r-programming/)  
-28. ARIMA for Beginners: A Practical Introduction \- Number Analytics, accessed on July 30, 2025, [https://www.numberanalytics.com/blog/arima-for-beginners](https://www.numberanalytics.com/blog/arima-for-beginners)  
-29. Introduction to ARIMA Model. ARIMA (Auto-Regressive Integrated… | by Ritu Santra, accessed on July 30, 2025, [https://medium.com/@ritusantra/introduction-to-arima-model-c8925103f4c7](https://medium.com/@ritusantra/introduction-to-arima-model-c8925103f4c7)  
-30. Autoregressive Integrated Moving Average (ARIMA) Prediction Model \- Investopedia, accessed on July 30, 2025, [https://www.investopedia.com/terms/a/autoregressive-integrated-moving-average-arima.asp](https://www.investopedia.com/terms/a/autoregressive-integrated-moving-average-arima.asp)  
-31. Stationarity of Time Series Data using R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-machine-learning/stationarity-of-time-series-data-using-r/](https://www.geeksforgeeks.org/r-machine-learning/stationarity-of-time-series-data-using-r/)  
-32. 1 Time Series Basics – STAT 510 | Applied Time Series Analysis \- STAT ONLINE, accessed on July 30, 2025, [https://online.stat.psu.edu/stat510/Lesson01.html](https://online.stat.psu.edu/stat510/Lesson01.html)  
-33. ARIMA for Time Series Forecasting: A Complete Guide | DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/arima](https://www.datacamp.com/tutorial/arima)  
-34. Identifying the orders of AR and MA terms in an ARIMA model, accessed on July 30, 2025, [https://people.duke.edu/\~rnau/411arim3.htm](https://people.duke.edu/~rnau/411arim3.htm)  
-35. Time Series: Interpreting ACF and PACF \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/code/iamleonie/time-series-interpreting-acf-and-pacf](https://www.kaggle.com/code/iamleonie/time-series-interpreting-acf-and-pacf)  
-36. Performing Time Series Analysis using ARIMA Model in R \- Analytics Vidhya, accessed on July 30, 2025, [https://www.analyticsvidhya.com/blog/2021/11/performing-time-series-analysis-using-arima-model-in-r/](https://www.analyticsvidhya.com/blog/2021/11/performing-time-series-analysis-using-arima-model-in-r/)  
-37. 8.7 ARIMA modelling in R | Forecasting: Principles and Practice ..., accessed on July 30, 2025, [https://otexts.com/fpp2/arima-r.html](https://otexts.com/fpp2/arima-r.html)  
-38. How Auto ARIMA Works in R, accessed on July 30, 2025, [https://mrinalcs.github.io/how-auto-arima-works](https://mrinalcs.github.io/how-auto-arima-works)  
-39. Prophet | Forecasting at scale. \- Meta Open Source, accessed on July 30, 2025, [https://facebook.github.io/prophet/](https://facebook.github.io/prophet/)  
-40. Time series forecasting using Facebook Prophet \- Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/code/nilaychauhan/time-series-forecasting-using-facebook-prophet](https://www.kaggle.com/code/nilaychauhan/time-series-forecasting-using-facebook-prophet)  
-41. Generate Quick and Accurate Time Series Forecasts using Facebook's Prophet (with Python & R codes) \- Analytics Vidhya, accessed on July 30, 2025, [https://www.analyticsvidhya.com/blog/2018/05/generate-accurate-forecasts-facebook-prophet-python-r/](https://www.analyticsvidhya.com/blog/2018/05/generate-accurate-forecasts-facebook-prophet-python-r/)  
-42. Time Series Analysis using Facebook Prophet in R Programming \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/time-series-analysis-using-facebook-prophet-in-r-programming/](https://www.geeksforgeeks.org/r-language/time-series-analysis-using-facebook-prophet-in-r-programming/)  
-43. ARIMA vs Prophet vs LSTM \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/deep-learning/arima-vs-prophet-vs-lstm/](https://www.geeksforgeeks.org/deep-learning/arima-vs-prophet-vs-lstm/)  
-44. (PDF) A Comparative Study of ARIMA, Prophet and LSTM for Time ..., accessed on July 30, 2025, [https://www.researchgate.net/publication/387701628\_A\_Comparative\_Study\_of\_ARIMA\_Prophet\_and\_LSTM\_for\_Time\_Series\_Prediction](https://www.researchgate.net/publication/387701628_A_Comparative_Study_of_ARIMA_Prophet_and_LSTM_for_Time_Series_Prediction)  
-45. Quick Start | Prophet \- Meta Open Source, accessed on July 30, 2025, [https://facebook.github.io/prophet/docs/quick\_start.html](https://facebook.github.io/prophet/docs/quick_start.html)  
-46. Forecasting in R with Prophet | Reports \- Mode \- Mode Analytics, accessed on July 30, 2025, [https://mode.com/example-gallery/forecasting\_prophet\_r\_cookbook/](https://mode.com/example-gallery/forecasting_prophet_r_cookbook/)  
-47. Seasonality, Holiday Effects, And Regressors | Prophet, accessed on July 30, 2025, [https://facebook.github.io/prophet/docs/seasonality,\_holiday\_effects,\_and\_regressors.html](https://facebook.github.io/prophet/docs/seasonality,_holiday_effects,_and_regressors.html)  
-48. Facebook Prophet: Seasonality, Holiday Effects, And Regressors \- Nextjournal, accessed on July 30, 2025, [https://nextjournal.com/fb-prophet/facebook-prophet-seasonality-holiday-effects](https://nextjournal.com/fb-prophet/facebook-prophet-seasonality-holiday-effects)  
-49. Store Sales \- Time Series Forecasting | Kaggle, accessed on July 30, 2025, [https://www.kaggle.com/competitions/store-sales-time-series-forecasting](https://www.kaggle.com/competitions/store-sales-time-series-forecasting)  
-50. Predictive modeling and machine learning in R with the caret ..., accessed on July 30, 2025, [http://zevross.com/blog/2017/09/19/predictive-modeling-and-machine-learning-in-r-with-the-caret-package/](http://zevross.com/blog/2017/09/19/predictive-modeling-and-machine-learning-in-r-with-the-caret-package/)
+1. Comparing DBSCAN, k-means, and Hierarchical Clustering: When ..., accessed on July 30, 2025, [https://hex.tech/blog/comparing-density-based-methods/](https://hex.tech/blog/comparing-density-based-methods/)  
+2. Difference between K means and Hierarchical Clustering \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/difference-between-k-means-and-hierarchical-clustering/](https://www.geeksforgeeks.org/machine-learning/difference-between-k-means-and-hierarchical-clustering/)  
+3. The Drawbacks of K-Means Algorithm | Baeldung on Computer Science, accessed on July 30, 2025, [https://www.baeldung.com/cs/k-means-flaws-improvements](https://www.baeldung.com/cs/k-means-flaws-improvements)  
+4. How to understand the drawbacks of K-means \- Cross Validated, accessed on July 30, 2025, [https://stats.stackexchange.com/questions/133656/how-to-understand-the-drawbacks-of-k-means](https://stats.stackexchange.com/questions/133656/how-to-understand-the-drawbacks-of-k-means)  
+5. Hierarchical Cluster Analysis \- UC Business Analytics R Programming Guide ·, accessed on July 30, 2025, [https://uc-r.github.io/hc\_clustering](https://uc-r.github.io/hc_clustering)  
+6. DBSCAN: density-based clustering for discovering clusters in large ..., accessed on July 30, 2025, [https://www.sthda.com/english/wiki/wiki.php?id\_contents=7940](https://www.sthda.com/english/wiki/wiki.php?id_contents=7940)  
+7. DBSCAN and t-SNE tutorial to detect credit card fraud with R, accessed on July 30, 2025, [https://www.stepbystepdatascience.com/fraud-detection-with-dbscan-and-tsne](https://www.stepbystepdatascience.com/fraud-detection-with-dbscan-and-tsne)  
+8. Overview of clustering methods in R | R-bloggers, accessed on July 30, 2025, [https://www.r-bloggers.com/2024/01/overview-of-clustering-methods-in-r/](https://www.r-bloggers.com/2024/01/overview-of-clustering-methods-in-r/)  
+9. A Guide to the DBSCAN Clustering Algorithm \- DataCamp, accessed on July 30, 2025, [https://www.datacamp.com/tutorial/dbscan-clustering-algorithm](https://www.datacamp.com/tutorial/dbscan-clustering-algorithm)  
+10. DBScan Clustering in R Programming \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-language/dbscan-clustering-in-r-programming/](https://www.geeksforgeeks.org/r-language/dbscan-clustering-in-r-programming/)  
+11. DBSCAN in R | by Amit Yadav \- Medium, accessed on July 30, 2025, [https://medium.com/@amit25173/dbscan-in-r-3c93c97b674b](https://medium.com/@amit25173/dbscan-in-r-3c93c97b674b)  
+12. DBSCAN in R | Reintech media, accessed on July 30, 2025, [https://reintech.io/blog/dbscan-in-r-tutorial](https://reintech.io/blog/dbscan-in-r-tutorial)  
+13. Practical Guide to Clustering Algorithms & Evaluation in R Tutorials & Notes \- HackerEarth, accessed on July 30, 2025, [https://www.hackerearth.com/practice/machine-learning/machine-learning-algorithms/clustering-algorithms-evaluation-r/tutorial/](https://www.hackerearth.com/practice/machine-learning/machine-learning-algorithms/clustering-algorithms-evaluation-r/tutorial/)  
+14. Understanding Gaussian Mixture Models: A Comprehensive Guide | by Juan C Olamendy, accessed on July 30, 2025, [https://medium.com/@juanc.olamendy/understanding-gaussian-mixture-models-a-comprehensive-guide-df30af59ced7](https://medium.com/@juanc.olamendy/understanding-gaussian-mixture-models-a-comprehensive-guide-df30af59ced7)  
+15. Advanced Clustering Methods \- RPubs, accessed on July 30, 2025, [https://rpubs.com/Myavuzars/acm](https://rpubs.com/Myavuzars/acm)  
+16. Gaussian Mixture Models∗ \- LEAP Laboratory, accessed on July 30, 2025, [http://leap.ee.iisc.ac.in/sriram/teaching/MLSP\_16/refs/GMM\_Tutorial\_Reynolds.pdf](http://leap.ee.iisc.ac.in/sriram/teaching/MLSP_16/refs/GMM_Tutorial_Reynolds.pdf)  
+17. Gaussian Mixture Models in R \- The R Journal, accessed on July 30, 2025, [https://journal.r-project.org/articles/RJ-2023-043/](https://journal.r-project.org/articles/RJ-2023-043/)  
+18. R Tutorial: Gaussian mixture models (GMM) \- YouTube, accessed on July 30, 2025, [https://www.youtube.com/watch?v=6f3wIQ0uAdM](https://www.youtube.com/watch?v=6f3wIQ0uAdM)  
+19. An Intro to Gaussian Mixture Modeling \- R-bloggers, accessed on July 30, 2025, [https://www.r-bloggers.com/2017/02/an-intro-to-gaussian-mixture-modeling/](https://www.r-bloggers.com/2017/02/an-intro-to-gaussian-mixture-modeling/)  
+20. What is Gaussian mixture model clustering using R \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/r-machine-learning/what-is-gaussian-mixture-model-clustering-using-r/](https://www.geeksforgeeks.org/r-machine-learning/what-is-gaussian-mixture-model-clustering-using-r/)  
+21. An Intro to Gaussian Mixture Modeling | R-bloggers, accessed on July 30, 2025, [https://www.r-bloggers.com/2017/02/an-intro-to-gaussian-mixture-modeling](https://www.r-bloggers.com/2017/02/an-intro-to-gaussian-mixture-modeling)  
+22. Clustering Metrics in Machine Learning \- GeeksforGeeks, accessed on July 30, 2025, [https://www.geeksforgeeks.org/machine-learning/clustering-metrics/](https://www.geeksforgeeks.org/machine-learning/clustering-metrics/)  
+23. Help for package Clustering, accessed on July 30, 2025, [https://cran.r-project.org/web/packages/Clustering/refman/Clustering.html](https://cran.r-project.org/web/packages/Clustering/refman/Clustering.html)  
+24. Silhouette Plots | Baeldung on Computer Science, accessed on July 30, 2025, [https://www.baeldung.com/cs/silhouette-values-clustering](https://www.baeldung.com/cs/silhouette-values-clustering)  
+25. Visualize Silhouette Information from Clustering — fviz\_silhouette ..., accessed on July 30, 2025, [https://rpkgs.datanovia.com/factoextra/reference/fviz\_silhouette.html](https://rpkgs.datanovia.com/factoextra/reference/fviz_silhouette.html)  
+26. Silhouette Plots \- RPubs, accessed on July 30, 2025, [https://rpubs.com/DragonflyStats/Silhouette-Plots](https://rpubs.com/DragonflyStats/Silhouette-Plots)  
+27. Mastering the Davies-Bouldin Index for Clustering Model Validation | CodeSignal Learn, accessed on July 30, 2025, [https://codesignal.com/learn/courses/cluster-performance-unveiled/lessons/mastering-the-davies-bouldin-index-for-clustering-model-validation](https://codesignal.com/learn/courses/cluster-performance-unveiled/lessons/mastering-the-davies-bouldin-index-for-clustering-model-validation)  
+28. Mastering Clustering: A Guided Tour of the Davies-Bouldin Index \- Number Analytics, accessed on July 30, 2025, [https://www.numberanalytics.com/blog/mastering-clustering-davies-bouldin-index](https://www.numberanalytics.com/blog/mastering-clustering-davies-bouldin-index)  
+29. index.DB function \- RDocumentation, accessed on July 30, 2025, [https://www.rdocumentation.org/packages/clusterSim/versions/0.34-1/topics/index.DB](https://www.rdocumentation.org/packages/clusterSim/versions/0.34-1/topics/index.DB)  
+30. Calculates Davies-Bouldin's index \- R, accessed on July 30, 2025, [https://search.r-project.org/CRAN/refmans/clusterSim/html/index.DB.html](https://search.r-project.org/CRAN/refmans/clusterSim/html/index.DB.html)  
+31. adj.rand.index function \- RDocumentation, accessed on July 30, 2025, [https://www.rdocumentation.org/packages/pdfCluster/versions/1.0-4/topics/adj.rand.index](https://www.rdocumentation.org/packages/pdfCluster/versions/1.0-4/topics/adj.rand.index)  
+32. Understanding Adjusted Rand Index in Clustering: Practical Guide \- Number Analytics, accessed on July 30, 2025, [https://www.numberanalytics.com/blog/understanding-adjusted-rand-index-clustering-guide](https://www.numberanalytics.com/blog/understanding-adjusted-rand-index-clustering-guide)  
+33. adjusted\_rand\_score — scikit-learn 1.7.1 documentation, accessed on July 30, 2025, [https://scikit-learn.org/stable/modules/generated/sklearn.metrics.adjusted\_rand\_score.html](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.adjusted_rand_score.html)  
+34. What is Adjusted Rand Index and How it works\! \- Mk Hasan's Blog, accessed on July 30, 2025, [https://mk-hasan.github.io/posts/2020/04/blog-post-4/](https://mk-hasan.github.io/posts/2020/04/blog-post-4/)  
+35. adjustedRandIndex function \- RDocumentation, accessed on July 30, 2025, [https://www.rdocumentation.org/packages/mclust/versions/6.1/topics/adjustedRandIndex](https://www.rdocumentation.org/packages/mclust/versions/6.1/topics/adjustedRandIndex)  
+36. Spectral Clustering, accessed on July 30, 2025, [https://www.di.fc.ul.pt/\~jpn/r/spectralclustering/spectralclustering.html](https://www.di.fc.ul.pt/~jpn/r/spectralclustering/spectralclustering.html)  
+37. mlbench: Machine Learning Benchmark Problems \- The ..., accessed on July 30, 2025, [https://cran.r-project.org/web/packages/mlbench/mlbench.pdf](https://cran.r-project.org/web/packages/mlbench/mlbench.pdf)

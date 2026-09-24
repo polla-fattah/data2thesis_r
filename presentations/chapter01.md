@@ -1,13 +1,13 @@
 ---
 marp: true
-title: Getting Started with R Programming Language
+title: Getting Started with R
 author: Dr. Polla Fattah
 theme: gaia
 paginate: true
 footer: "R Programming | Chapter 1"
 ---
 
-# Getting Started with R Programming Language
+# Getting Started with R
 
 - Learn the fundamentals of R for data analysis and automation.
 - Understand the tools and environment necessary to begin coding in R.
