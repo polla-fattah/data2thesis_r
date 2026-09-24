@@ -1,13 +1,13 @@
 # remote_theme: jasongrimes/jekyll-chapterbook
 
-title: R4NTR
-longtitle: R for Non-Technical Researchers
+title: From Data to Thesis
+longtitle: "From Data to Thesis: Research Data Analysis with R"
 author: Polla Fattah
 email: polla.fattah@gmail.com
 description: >
-  This book aims to provide a comprehensive guide for the non-technical researchers that seek to use R for their research.
-  The primary Audience for this book is non-technical researchers and researchers to introduce them with statistical analysis and data analysis using R.
-  The book is designed to be a practical guide for researchers who are new to R and Programming in general.
+  A practical guide to analysing research data with R, for researchers with no programming
+  or statistics background. The book follows one Master's thesis from raw data to results,
+  introducing each method as the answer to a real research question.
 
 
 
@@ -44,7 +44,7 @@ bookcrumbs:
 # Links shown above the TOC in the sidebar
 # All "url" variables should have a leading slash.
 sidebar_nav_top:
-- label: R for Non-Technical Researchers
+- label: From Data to Thesis
   url: /index.html
 
 # Links shown below the TOC in the sidebar
@@ -109,6 +109,8 @@ exclude:
   - plan.md
   - Links.md
   - data/specification.md
+  - data-raw
+  - data2thesis
 
 page_width: 800px
 

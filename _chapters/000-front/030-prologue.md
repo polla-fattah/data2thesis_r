@@ -15,7 +15,7 @@ In the modern age of data-driven decision-making, research is no longer confined
 
 Yet, for many researchers, the tools and techniques of data analysis can seem intimidating, particularly those without a technical background. Complex terminologies, steep learning curves, and a lack of accessible resources often create barriers for non-technical researchers and researchers who are eager to leverage the potential of data.
 
-This book, *R for Non-Technical Researchers*, is written with you in mind. It serves as a bridge between the technical intricacies of data science and the practical needs of researchers in diverse fields. By using R—a powerful, open-source programming language tailored for statistical computing and data visualization—this book aims to make statistical and machine learning techniques accessible, approachable, and applicable to real-world research challenges.
+This book, *From Data to Thesis: Research Data Analysis with R*, is written with you in mind. It serves as a bridge between the technical intricacies of data science and the practical needs of researchers in diverse fields. By using R—a powerful, open-source programming language tailored for statistical computing and data visualization—this book aims to make statistical and machine learning techniques accessible, approachable, and applicable to real-world research challenges.
 
 Through clear explanations, practical examples, and step-by-step guidance, this book demystifies the process of working with data in R. Whether you're a novice looking to understand basic statistical principles or a researcher seeking to incorporate machine learning into your work, this book will empower you to confidently analyze data and draw meaningful conclusions.
 

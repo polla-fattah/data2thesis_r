@@ -1,0 +1,29 @@
+\name{data2thesis-package}
+\alias{data2thesis-package}
+\alias{data2thesis}
+\docType{package}
+\title{Data for 'From Data to Thesis: Research Data Analysis with R'}
+\description{
+The Graduate Wellbeing Study, the running case study of the book
+\emph{From Data to Thesis: Research Data Analysis with R}. Elaf, a Master's student in
+Educational Psychology, follows 600 graduate students over four semesters
+to learn how lifestyle, stress, and supervisor support relate to their
+wellbeing, grades, and thoughts of dropping out, and whether a wellbeing
+workshop helps. The data is simulated for teaching and describes no real
+people.
+}
+\details{
+Datasets:
+\itemize{
+  \item \code{\link{students}}: background, workshop group, and dropout question (600 rows).
+  \item \code{\link{questionnaire}}: 22 questionnaire items (600 rows).
+  \item \code{\link{semesters}}: semester records in long format (2,326 rows).
+  \item \code{\link{supervisors}}: supervisors (120 rows).
+  \item \code{\link{open_responses}} and \code{open_responses_coded}: open-ended answers.
+  \item \code{\link{counselling_visits}}: weekly counselling-service visits (260 weeks).
+}
+Raw files for practising data import are available through
+\code{\link{data2thesis_example}}.
+}
+\author{Polla Fattah \email{polla.fattah@gmail.com}}
+\keyword{package}

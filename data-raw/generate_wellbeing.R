@@ -2,7 +2,7 @@
 # generate_wellbeing.R
 #
 # Generates the simulated Graduate Wellbeing Study used as the running case
-# study in "R for Non-Technical Researchers". Every file in data/ is created
+# study in "From Data to Thesis: Research Data Analysis with R". Every file in data/ is created
 # by this script from a fixed seed, so anyone can regenerate identical data.
 #
 # Specification: data/specification.md

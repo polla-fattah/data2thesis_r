@@ -72,7 +72,7 @@ A two-year **longitudinal study** at one university. The university and country 
 | `wellbeing.sav` | 600 | SPSS version of `students` and `questionnaire`, with variable and value labels | Ch 2 |
 
 - The clean CSV files are what most chapters use; the raw Excel file is cleaned into them in Chapter 3.
-- **Distributed both ways:** as files in the `data/` folder on the book's website, and as a small installable R package (name to be chosen, e.g. `r4ntrdata`). The book teaches both: loading files teaches file paths and importing; installing the package teaches how packages work.
+- **Distributed both ways:** as files in the `data/` folder on the book's website, and as the installable R package `data2thesis` (source in `data2thesis/`, installation instructions in `data2thesis/README.md`). The book teaches both: loading files teaches file paths and importing; installing the package teaches how packages work.
 
 ---
 

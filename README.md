@@ -1,6 +1,6 @@
 ---
 layout: home
-title: R for non-Technical Researchers
+title: "From Data to Thesis: Research Data Analysis with R"
 ---
 
 *Every chapter ends with a chapter review: a short summary and a list of key terms, which are collected in the glossary (Appendix B).*

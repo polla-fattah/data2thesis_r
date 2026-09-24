@@ -1,6 +1,6 @@
-# R4NTR Revision Plan
+# Revision Plan: From Data to Thesis
 
-Working plan for revising *R for Non-Technical Researchers*. The chapter outline lives in [README.md](README.md); this file holds the instructions that apply across the book, the known defects, and the order of work.
+Working plan for revising *From Data to Thesis: Research Data Analysis with R* (formerly *R for Non-Technical Researchers*; the repository and website address remain `R4NTR`). The chapter outline lives in [README.md](README.md); this file holds the instructions that apply across the book, the known defects, and the order of work.
 
 Most chapters are first drafts from 2025, and many sections were generated with AI tools. Treat every chapter as a draft to be restructured, fact-checked, and updated, not as finished text.
 
@@ -22,6 +22,13 @@ The story comes from the author's lecture notes *Data Analysis for Research* (20
 **Dataset specification:** approved by the author.
 
 **Rewrite, not repair (decided):** each chapter is rewritten around Elaf's study, in the author's voice. The current chapter drafts and both sets of lecture notes are source material: correct explanations and code are reused, everything else is replaced. The defects in section 3 are fixed as part of each rewrite, not in a separate pass over the old text.
+
+**Playground (decided):** an online section of the website, separate from the chapters, with one page per chapter for hands-on practice. Git is never required.
+- **Try it in the browser:** exercises run directly on the page with webR (R running inside the browser), so readers need no installation. Best for Chapters 1–9; packages that cannot run in the browser (e.g. `keras`) are practised through the downloadable project instead.
+- **Download the chapter project:** a zip file with an RStudio project, Elaf's data, a starter script with the exercises, and a solutions script. Readers either click a download link or type one line in R: `usethis::use_course("<link to the zip>")`, which downloads, unzips, and opens the project in RStudio.
+- **Hidden solutions:** each exercise has an answer that expands when clicked, so readers try first and check afterwards.
+- **Version control is optional:** git and GitHub are introduced only in Chapter 15 (reproducible research), as an extra for readers who want it.
+- **Test first:** build one pilot page (Chapter 1) to confirm webR works on the GitHub Pages site before building the others.
 
 ---
 
@@ -61,7 +68,7 @@ Chapter order comes from the file-name prefix; the website address comes from `s
   3. Main sections, numbered `N.1`, `N.2`, … (sub-sections `N.1.1`).
   4. A worked case study or hands-on project.
   5. **Chapter review**: a short summary and a list of **key terms** (key terms are also added to the glossary in Appendix B).
-  6. Exercises.
+  6. Exercises: a few short ones in the chapter, with longer practice on the chapter's playground page.
   7. References / further reading.
 - Remove repetition between chapters (see section 4); teach each idea once and refer back to it.
 - Keep chapters a manageable length; split material that has grown beyond the chapter's topic.
@@ -160,7 +167,7 @@ Already in the README outline:
 - **Ch 9:** Mixed-Effects Models (new chapter).
 - **Ch 16:** Using AI with R (new chapter).
 - **Every chapter:** chapter review with summary and key terms.
-- **Appendix E:** further learning resources, including Arabic-language videos.
+- **Appendix E:** further learning resources, including Arabic-language videos. Include Tyson Barrett's free book *R for Researchers: An Introduction* (2019, https://tysonbarrett.com/Rstats/) as a shorter companion for the same audience.
 
 Proposed, not yet in the outline:
 - Ch 1: Positron; the native pipe.
@@ -179,11 +186,12 @@ Proposed, not yet in the outline:
 
 1. [x] **Write the dataset specification** ([data/specification.md](data/specification.md)). Approved.
 2. [x] **Generate the dataset**: `data-raw/generate_wellbeing.R` produces all files (version 1.0.0); `data-raw/check_wellbeing.R` confirms all 72 designed effects. **Follow-up:** the open-ended answers are built from 56 template sentences, so the same sentences repeat many times across 535 answers; expand the phrase bank (or write more varied answers) before Chapter 16 is written.
-3. [ ] **Build the data package** so readers can install the data as well as download the files.
-4. [ ] **Rewrite each chapter** around Elaf's study (section 0), using the template in 2.1 and following sections 2.2–2.7: tiny example first, then Elaf's data; fact-checked content and proper references; figures, diagrams, "in your field" boxes, exercises, and chapter reviews.
-5. [ ] **Write the new chapters** (9, 16, 17) and appendices B–E.
-6. [ ] **Unify style** across the whole book.
-7. [ ] **Publish**: set `published: true` chapter by chapter as each one is finished.
+3. [x] **Build the data package**: `data2thesis/` (version 1.0.0) passes `R CMD check` with no warnings or notes. `data-raw/build_package.R` copies the data into it; the built file `data/data2thesis_1.0.0.tar.gz` lets readers install from the website. Package name `data2thesis` chosen so a future Python book could share it.
+4. [ ] **Build the playground pilot**: one Chapter 1 page with browser exercises, a downloadable project, and hidden solutions; confirm webR works on GitHub Pages.
+5. [ ] **Rewrite each chapter** around Elaf's study (section 0), using the template in 2.1 and following sections 2.2–2.7: tiny example first, then Elaf's data; fact-checked content and proper references; figures, diagrams, "in your field" boxes, exercises, and chapter reviews. Each chapter also gets its playground page.
+6. [ ] **Write the new chapters** (9, 16, 17) and appendices B–E.
+7. [ ] **Unify style** across the whole book.
+8. [ ] **Publish**: set `published: true` chapter by chapter as each one is finished.
 
 ---
 
@@ -199,3 +207,8 @@ Proposed, not yet in the outline:
 - **Dataset specification approved** ([data/specification.md](data/specification.md)), including the author's decisions in its section 9.
 - **Rewrite rather than repair:** chapters are rewritten around Elaf's study; existing drafts and lecture notes are source material.
 - **Time series:** counselling-service visits, kept after considering alternatives (survey answer timestamps, supervisor meetings, Elaf's research diary, daily check-ins, university withdrawal records). Story: the counselling doctors ask Elaf for an internal analysis, separate from her thesis.
+- **Book title:** *From Data to Thesis: Research Data Analysis with R* (replacing *R for Non-Technical Researchers*). Chosen because it describes the reader's goal rather than what they lack, matches the thesis case study, and does not clash with existing books. "R for Researchers" was ruled out: Tyson Barrett's *R for Researchers: An Introduction* (2019) already uses it for a similar audience. That book is shorter (about 28,000 words), not updated since 2019, and has no running case study, machine learning part, or AI chapter, so this book remains worth writing.
+- **Future, not in the current plan:** a sibling book, *From Data to Thesis: Research Data Analysis with Python*, may follow later.
+- **Package name:** `data2thesis` (replacing the working name `r4ntrdata`), valid for both R and Python packages so a future Python book could share it. Its helper function is `data2thesis_example()`.
+- **Playground:** an online practice section with browser exercises (webR), downloadable chapter projects (`usethis::use_course()`), and hidden solutions; no git required. Replaces the idea of borrowing the downloadable "Apply It" projects from Barrett's book.
+- **Follow-up:** the cover images (`assets/img/front-cover.png`, `back-cover.png`) still show the old title; to be redone later.
