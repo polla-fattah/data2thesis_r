@@ -1,0 +1,197 @@
+---
+title: "Playground: Chapter 8"
+subtitle: Multivariate Statistical Methods
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - semesters.csv
+  - questionnaire.csv
+  - chapter08.zip
+webr:
+  packages:
+    - dplyr
+  resources:
+    - semesters.csv
+    - questionnaire.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+These exercises practise PCA, factor analysis, and clustering. To keep the page fast, they use functions that come with R: `prcomp()`, `factanal()` (a base R version of factor analysis), `kmeans()`, and `hclust()`. The downloadable project uses the psych and factoextra packages from the chapter. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5]
+library(dplyr)
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+items <- questionnaire |> select(-student_id)
+
+scores <- questionnaire |>
+  mutate(
+    stress_4     = 6 - stress_4,
+    stress       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, support, satisfaction)
+profiles <- semesters |>
+  summarise(across(c(sleep_hours, study_hours, caffeine_mg, exercise_days),
+                   ~ mean(.x, na.rm = TRUE)), .by = student_id) |>
+  left_join(scores, join_by(student_id)) |>
+  na.omit()
+profile_data <- scale(profiles |> select(-student_id))
+```
+
+## PCA and factor analysis
+
+### Exercise 1: PCA of one scale
+
+Run a PCA on the six support items. How much of their variation does the first component capture? What does that suggest?
+
+```{webr}
+#| exercise: ex1
+support_items <- na.omit(items[, paste0("support_", 1:6)])
+support_pca <- prcomp(support_items, scale. = ______)
+summary(support_pca)
+```
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+support_items <- na.omit(items[, paste0("support_", 1:6)])
+support_pca <- prcomp(support_items, scale. = TRUE)
+summary(support_pca)
+```
+
+The first component captures about 57% of the variation, and each of the others about 10% or less. The six items mostly measure one thing, which is what a good scale should do.
+:::
+:::
+
+### Exercise 2: Three factors instead of four
+
+Run a factor analysis with three factors. Which two scales end up sharing a factor, and why might that be?
+
+```{webr}
+#| exercise: ex2
+fa3 <- factanal(na.omit(items), factors = ______)
+print(fa3$loadings, cutoff = 0.3, sort = TRUE)
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+fa3 <- factanal(na.omit(items), factors = 3)
+print(fa3$loadings, cutoff = 0.3, sort = TRUE)
+```
+
+The stress and burnout items share one factor. The two traits are closely related (their factors correlated about 0.66 in the chapter), so with only three factors available, they are combined. Parallel analysis and the four-factor solution show that they are better kept apart.
+:::
+:::
+
+### Exercise 3: A reversed item
+
+`stress_4` is worded the other way round from the other stress items. Correlate it with the average of the other five stress items. What sign do you expect?
+
+```{webr}
+#| exercise: ex3
+other_stress <- rowMeans(questionnaire[, paste0("stress_", c(1, 2, 3, 5, 6))], na.rm = TRUE)
+cor(questionnaire$______, other_stress, use = "complete.obs")
+```
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+other_stress <- rowMeans(questionnaire[, paste0("stress_", c(1, 2, 3, 5, 6))], na.rm = TRUE)
+cor(questionnaire$stress_4, other_stress, use = "complete.obs")
+```
+
+About −0.5: strongly *negative*. Students who agree with the other stress items tend to disagree with `stress_4`. If it is not reversed before scoring, it cancels out part of the scale, and Cronbach's alpha drops from about 0.83 to about 0.57 (the project exercise shows this).
+:::
+:::
+
+## Clustering
+
+### Exercise 4: Three clusters
+
+Run k-means with three clusters on the profile data, then describe each cluster by its averages. Which of the four profiles from the chapter were merged?
+
+```{webr}
+#| exercise: ex4
+set.seed(123)
+k3 <- kmeans(profile_data, centers = ______, nstart = 25)
+profiles |>
+  mutate(cluster = k3$cluster) |>
+  summarise(students = n(), across(sleep_hours:satisfaction, ~ round(mean(.x), 1)),
+            .by = cluster)
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+set.seed(123)
+k3 <- kmeans(profile_data, centers = 3, nstart = 25)
+profiles |>
+  mutate(cluster = k3$cluster) |>
+  summarise(students = n(), across(sleep_hours:satisfaction, ~ round(mean(.x), 1)),
+            .by = cluster)
+```
+
+The three clusters are the balanced students, the disengaged or isolated students (few study hours, low support and satisfaction), and one overloaded group: the two overloaded clusters of the four-cluster solution, with and without very high caffeine, are merged.
+:::
+:::
+
+### Exercise 5: Do two methods agree?
+
+Cut a hierarchical clustering tree (Ward's method) into three groups and compare it with your k-means clusters.
+
+```{webr}
+#| exercise: ex5
+set.seed(123)
+k3 <- kmeans(profile_data, centers = 3, nstart = 25)
+tree <- hclust(dist(profile_data), method = "______")
+h3 <- cutree(tree, k = 3)
+table(hierarchical = h3, kmeans = k3$cluster)
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+tree <- hclust(dist(profile_data), method = "ward.D2")
+h3 <- cutree(tree, k = 3)
+table(hierarchical = h3, kmeans = k3$cluster)
+```
+
+Most students fall on one cell per row: with three clusters, the two methods agree much better than with four. The three broad profiles are the most trustworthy.
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 8 project
+
+The project contains the data, these exercises, extra exercises with the psych and factoextra packages (parallel analysis, an oblique factor analysis, Cronbach's alpha with and without reversing `stress_4`, and cluster plots), and the solutions.
+
+- [Download chapter08.zip](chapter08.zip), unzip it, and double-click `chapter08.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter08.zip")
+```
+:::

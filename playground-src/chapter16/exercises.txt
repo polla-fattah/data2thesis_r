@@ -1,0 +1,28 @@
+From Data to Thesis: Research Data Analysis with R
+Playground, Chapter 16: Reproducible Research - exercises
+
+1. Render results.qmd. The average wellbeing in the first sentence has many
+   decimal places. Change the inline code so that it is rounded to one decimal
+   place, and render again.
+
+2. Change the format in the YAML header of results.qmd to produce both a web
+   page and a Word document:
+     format:
+       html: default
+       docx: default
+   Render, and open the Word file.
+
+3. Add a figure to results.qmd: a line chart of average wellbeing by semester.
+   Give the chunk a label starting with fig- and a caption (fig-cap), and refer
+   to it in the text with @fig-... so that Quarto numbers it.
+
+4. Cite the two references in references.bib in the text of results.qmd, using
+   their keys (for example [@cohen1988]). Render, and look at the reference list.
+
+5. Render faculty-report.qmd for another faculty from the Terminal:
+     quarto render faculty-report.qmd -P faculty:"Health Sciences"
+   Then add a sentence to the report with the faculty's average sleep in the
+   first semester, written with inline code.
+
+6. Open app.R and click Run App. Then add a slider (sliderInput) that chooses
+   the range of semesters shown in the plot and the table.

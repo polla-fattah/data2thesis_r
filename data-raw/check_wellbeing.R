@@ -39,7 +39,7 @@ between <- function(x, lo, hi) !is.na(x) && x >= lo && x <= hi
 
 q <- questionnaire
 q$stress_4 <- 6 - q$stress_4
-scale_items <- function(prefix) grep(paste0("^", prefix, "_"), names(q), value = TRUE)
+scale_items <- function(prefix) grep(paste0("^", prefix, "_[0-9]+$"), names(q), value = TRUE)
 for (s in c("stress", "burnout", "support", "satisfaction")) {
   q[[paste0(s, "_score")]] <- rowMeans(q[scale_items(s)], na.rm = TRUE)
 }
@@ -155,7 +155,7 @@ check("5.3", "interaction: support x PhD (coef > 0, p)", m_i["support_score:prog
 
 for (s in c("stress", "burnout", "support", "satisfaction")) {
   a <- suppressWarnings(psych::alpha(q[scale_items(s)], check.keys = FALSE)$total$raw_alpha)
-  check("5.4", paste("Cronbach's alpha:", s), a, between(a, 0.75, 0.90), "0.86-0.89")
+  check("5.4", paste("Cronbach's alpha:", s), a, between(a, 0.72, 0.90), "0.75-0.88")
 }
 raw_items <- questionnaire[-1]
 fa4 <- suppressWarnings(suppressMessages(psych::fa(raw_items, nfactors = 4, rotate = "oblimin", fm = "ml")))

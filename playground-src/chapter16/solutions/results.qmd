@@ -1,0 +1,63 @@
+---
+title: "Chapter 4: Results"
+author: "Elaf"
+format:
+  html: default
+  docx: default
+bibliography: references.bib
+execute:
+  echo: false
+---
+
+```{r}
+#| label: setup
+#| message: false
+library(dplyr)
+library(ggplot2)
+
+# The solutions folder is one level below the data
+students  <- read.csv("../students.csv")
+semesters <- read.csv("../semesters.csv")
+first_semester <- semesters |> filter(semester == 1)
+```
+
+## Sample
+
+The sample included `r nrow(students)` graduate students from
+`r n_distinct(students$faculty)` faculties. Their average wellbeing in the first
+semester was `r sprintf("%.1f", mean(first_semester$wellbeing, na.rm = TRUE))` on the
+wellbeing index (0 to 100). @tbl-faculty shows wellbeing by faculty.
+
+```{r}
+#| label: tbl-faculty
+#| tbl-cap: "Wellbeing in the first semester, by faculty."
+first_semester |>
+  left_join(students, join_by(student_id)) |>
+  summarise(Students = n(),
+            Mean = mean(wellbeing, na.rm = TRUE),
+            SD = sd(wellbeing, na.rm = TRUE),
+            .by = faculty) |>
+  arrange(faculty) |>
+  knitr::kable(digits = 1, col.names = c("Faculty", "Students", "Mean", "SD"))
+```
+
+## Change over the programme
+
+Wellbeing changed over the four semesters of the programme (@fig-wellbeing).
+Differences are described with standardised effect sizes [@cohen1988], and all
+results can be reproduced from the data and this document [@peng2011].
+
+```{r}
+#| label: fig-wellbeing
+#| fig-cap: "Average wellbeing by semester."
+#| fig-alt: "Line chart of average wellbeing over semesters 1 to 4."
+semesters |>
+  summarise(wellbeing = mean(wellbeing, na.rm = TRUE), .by = semester) |>
+  ggplot(aes(x = semester, y = wellbeing)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  labs(x = "Semester", y = "Average wellbeing (0 to 100)") +
+  theme_minimal()
+```
+
+## References

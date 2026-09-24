@@ -83,8 +83,8 @@ toc: false
       <div class="timeline">
         <div class="item"><div class="when">Part 1 · Chapters 1–4</div><h3>Foundations</h3><p>R and RStudio, data structures, cleaning and reshaping Elaf's messy survey export, and your first plots.</p></div>
         <div class="item"><div class="when">Part 2 · Chapters 5–9</div><h3>Statistical analysis for research</h3><p>Describing data, hypothesis tests, ANOVA and regression, questionnaire scales, and change over time.</p></div>
-        <div class="item"><div class="when">Part 3 · Chapters 10–14</div><h3>Machine learning with R</h3><p>Predicting who might drop out, finding student profiles, and forecasting.</p></div>
-        <div class="item"><div class="when">Part 4 · Chapters 15–17</div><h3>Reproducible research and applications</h3><p>Quarto reports, Shiny dashboards, using AI tools responsibly, and a complete project from raw data to thesis chapter.</p></div>
+        <div class="item"><div class="when">Part 3 · Chapters 10–15</div><h3>Machine learning with R</h3><p>Predicting who might drop out, finding student profiles, and forecasting.</p></div>
+        <div class="item"><div class="when">Part 4 · Chapters 16–18</div><h3>Reproducible research and applications</h3><p>Quarto reports, Shiny dashboards, using AI tools responsibly, and a complete project from raw data to thesis chapter.</p></div>
       </div>
     </div>
   </div>
@@ -117,13 +117,13 @@ toc: false
 Install the package from this website:
 
 ```r
-install.packages("https://polla-fattah.github.io/R4NTR/downloads/data2thesis_1.0.0.tar.gz",
+install.packages("https://polla-fattah.github.io/R4NTR/downloads/data2thesis_1.1.0.tar.gz",
                  repos = NULL, type = "source")
 library(data2thesis)
 head(students)
 ```
 
-Or download the [package file](downloads/data2thesis_1.0.0.tar.gz) and the [data files on GitHub](https://github.com/polla-fattah/R4NTR/tree/main/data).
+Or download the [package file](downloads/data2thesis_1.1.0.tar.gz) and the [data files on GitHub](https://github.com/polla-fattah/R4NTR/tree/main/data).
 
 ```{=html}
     </div>
@@ -140,7 +140,7 @@ Or download the [package file](downloads/data2thesis_1.0.0.tar.gz) and the [data
       <details><summary>Is Elaf's data real?</summary><p>No. It is simulated for teaching and describes no real people. It was designed so that every method in the book finds something worth interpreting, including some honest "no effect" results. The script that generates it is published, so anyone can check or regenerate it.</p></details>
       <details><summary>My research is not in education. Is the book for me?</summary><p>Yes. The methods are the same in every field. "In your field" boxes in each chapter show the same method on real data from health, agriculture, and business research.</p></details>
       <details><summary>Do I need to install anything to start?</summary><p>Not for the playground: its exercises run in your browser. To follow the book on your own computer you will install R and RStudio, and Chapter 1 shows you how.</p></details>
-      <details><summary>Does it cover AI tools?</summary><p>Yes. Chapter 16 shows how to use AI assistants to write and check R code, how to analyse open-ended answers with a language model, and how to use AI responsibly in research.</p></details>
+      <details><summary>Does it cover AI tools?</summary><p>Yes. Chapter 17 shows how to use AI assistants to write and check R code, how to analyse open-ended answers with a language model, and how to use AI responsibly in research.</p></details>
     </div>
   </div>
 </section>

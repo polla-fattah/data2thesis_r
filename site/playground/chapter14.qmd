@@ -1,0 +1,254 @@
+---
+title: "Playground: Chapter 14"
+subtitle: Neural Networks
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - questionnaire.csv
+  - chapter14.zip
+webr:
+  packages:
+    - dplyr
+    - nnet
+  resources:
+    - students.csv
+    - semesters.csv
+    - questionnaire.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+tidymodels is too large to run in a browser, so these exercises practise the ideas of Chapter 14 with base R and the **nnet** package, which is the engine behind the chapter's `mlp()` models. The downloadable project at the bottom uses tidymodels, exactly as in the chapter. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+library(dplyr)
+library(nnet)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+scores <- questionnaire |>
+  mutate(
+    stress_4 = 6 - stress_4,
+    stress   = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    burnout  = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+    support  = rowMeans(pick(support_1:support_6), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, burnout, support)
+dropout_data <- students |>
+  left_join(scores, join_by(student_id)) |>
+  left_join(semesters |> filter(semester == 1), join_by(student_id)) |>
+  mutate(dropout = as.integer(considering_dropout == "Yes")) |>
+  select(dropout, stress, burnout, support, financial_worry, sleep_hours,
+         study_hours, caffeine_mg, wellbeing, gpa) |>
+  na.omit()
+
+set.seed(10)
+train_rows <- sample(nrow(dropout_data), round(0.75 * nrow(dropout_data)))
+train <- dropout_data[train_rows, ]
+test  <- dropout_data[-train_rows, ]
+
+# Normalise the predictors with the training means and SDs
+predictors <- setdiff(names(train), "dropout")
+centres <- sapply(train[predictors], mean)
+spreads <- sapply(train[predictors], sd)
+train[predictors] <- scale(train[predictors], centres, spreads)
+test[predictors]  <- scale(test[predictors], centres, spreads)
+
+auc <- function(prob, truth) {
+  r <- rank(prob); n1 <- sum(truth == 1); n0 <- sum(truth == 0)
+  (sum(r[truth == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
+}
+sigmoid <- function(z) 1 / (1 + exp(-z))
+```
+
+## Neurons
+
+### Exercise 1: A neuron by hand
+
+The chapter's neuron has a bias of −4 and weights 1.2 for stress and −0.8 for support. Change the support weight to −1.6, so that support matters twice as much, and calculate the output for a student with stress 4 and support 2.
+
+```{webr}
+#| exercise: ex1
+neuron <- function(stress, support) {
+  sigmoid(-4 + 1.2 * stress + ______ * support)
+}
+neuron(stress = 4, support = 2)
+neuron(stress = 4, support = 4)
+```
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+neuron <- function(stress, support) {
+  sigmoid(-4 + 1.2 * stress - 1.6 * support)
+}
+```
+
+The output falls from 0.31 (with the chapter's weights) to about 0.08, and to about 0.004 for a student with support 4. A negative weight means that the input *lowers* the output: the more support, the lower the predicted risk.
+:::
+:::
+
+### Exercise 2: A neuron is a logistic regression
+
+Fit a logistic regression of dropout on stress and support with `glm()`. Use its coefficients as the bias and weights of a neuron, and check that the neuron gives the same predictions as `predict()`.
+
+```{webr}
+#| exercise: ex2
+model <- glm(dropout ~ stress + support, data = train, family = binomial)
+b <- coef(model)
+b
+neuron_output <- sigmoid(b[1] + b[2] * test$stress + b[3] * test$______)
+glm_output <- predict(model, newdata = test, type = "response")
+head(cbind(neuron_output, glm_output))
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+neuron_output <- sigmoid(b[1] + b[2] * test$stress + b[3] * test$support)
+```
+
+The two columns are identical. A single neuron with a sigmoid activation *is* a logistic regression: the intercept is the bias, and the coefficients are the weights.
+:::
+:::
+
+### Exercise 3: The ReLU
+
+Write the ReLU activation function, which returns 0 for negative inputs and the input itself otherwise, and plot it next to the sigmoid.
+
+```{webr}
+#| exercise: ex3
+relu <- function(z) pmax(______, z)
+z <- seq(-5, 5, length.out = 100)
+par(mfrow = c(1, 2))
+plot(z, sigmoid(z), type = "l", main = "Sigmoid")
+plot(z, relu(z), type = "l", main = "ReLU")
+```
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+relu <- function(z) pmax(0, z)
+```
+
+`pmax()` takes the larger of 0 and each value of `z`. Simple as it is, the ReLU is the standard activation in deep networks: it is fast to compute, and it helps very deep networks train.
+:::
+:::
+
+## Networks
+
+### Exercise 4: A network that memorises
+
+Fit a network with 20 hidden neurons (`size = 20`) and no weight decay (`decay = 0`) to the training data, and compare its AUC on the training and test data.
+
+```{webr}
+#| exercise: ex4
+set.seed(1)
+big_net <- nnet(dropout ~ ., data = train, size = ______, decay = 0,
+                maxit = 1000, entropy = TRUE, trace = FALSE)
+auc(predict(big_net, train), train$dropout)
+auc(predict(big_net, test), test$dropout)
+```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`entropy = TRUE` tells nnet that the outcome is a 0/1 variable, so the output is a probability; `maxit` is the number of training iterations (epochs); `trace = FALSE` hides the training log.
+:::
+:::
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+big_net <- nnet(dropout ~ ., data = train, size = 20, decay = 0,
+                maxit = 1000, entropy = TRUE, trace = FALSE)
+```
+
+A perfect AUC of 1 on the training data, and a much lower one on the test data: the network has memorised the training students. With 9 predictors and 20 hidden neurons it has 221 weights, for about 400 training students.
+:::
+:::
+
+### Exercise 5: Weight decay
+
+Fit the same network with a weight decay of 1. What happens to the training and test AUCs?
+
+```{webr}
+#| exercise: ex5
+set.seed(1)
+decayed_net <- nnet(dropout ~ ., data = train, size = 20, decay = ______,
+                    maxit = 1000, entropy = TRUE, trace = FALSE)
+auc(predict(decayed_net, train), train$dropout)
+auc(predict(decayed_net, test), test$dropout)
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+decayed_net <- nnet(dropout ~ ., data = train, size = 20, decay = 1,
+                    maxit = 1000, entropy = TRUE, trace = FALSE)
+```
+
+The training AUC falls below 1, because the penalty stops the network from memorising, and the test AUC rises a lot. Weight decay does for neural networks what the ridge penalty did for regression in Chapter 12.
+:::
+:::
+
+### Exercise 6: Network or logistic regression?
+
+Compare the test AUC of the weight-decayed network with a logistic regression using all the predictors.
+
+```{webr}
+#| exercise: ex6
+set.seed(1)
+decayed_net <- nnet(dropout ~ ., data = train, size = 20, decay = 1,
+                    maxit = 1000, entropy = TRUE, trace = FALSE)
+logistic <- glm(dropout ~ ., data = ______, family = binomial)
+auc(predict(decayed_net, test), test$dropout)
+auc(predict(logistic, newdata = test, type = "response"), test$dropout)
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+logistic <- glm(dropout ~ ., data = train, family = binomial)
+```
+
+The two AUCs are very close. For Elaf's data, with its smooth pattern, a neural network has nothing extra to find, and the logistic regression has the advantage of interpretable coefficients.
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 14 project
+
+The project uses tidymodels, as in the chapter: `mlp()` with the nnet engine, tuning the number of hidden neurons and the weight decay, a fair comparison with logistic regression, and a regression network for the concrete data, with exercises and solutions.
+
+- [Download chapter14.zip](chapter14.zip), unzip it, and double-click `chapter14.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter14.zip")
+```
+:::

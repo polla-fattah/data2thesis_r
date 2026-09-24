@@ -1,0 +1,62 @@
+---
+title: "Chapter 4: Results"
+author: "Elaf"
+format:
+  html: default
+  docx: default
+bibliography: references.bib
+execute:
+  echo: false
+---
+
+```{r}
+#| label: setup
+#| message: false
+library(dplyr)
+library(here)
+
+# Created by R/01-clean-data.R and R/02-analysis.R: run those first
+results <- readRDS(here("output", "results.rds"))
+study <- results$study
+gaps <- results$gaps
+sleep_row <- results$gpa_table |> filter(term == "sleep_hours")
+stress_row <- results$dropout_table |> filter(term == "stress")
+support_row <- results$dropout_table |> filter(term == "support")
+
+format_p <- function(p) if (p < 0.001) "p < .001" else paste("p =", sub("^0", "", sprintf("%.3f", p)))
+mean_sd <- function(x) sprintf("%.1f (%.1f)", mean(x, na.rm = TRUE), sd(x, na.rm = TRUE))
+percent <- function(x) sprintf("%.0f%%", 100 * mean(x, na.rm = TRUE))
+```
+
+## Participants
+
+The sample included `r nrow(study)` graduate students, `r sum(study$programme == "Master's")` in Master's and `r sum(study$programme == "PhD")` in doctoral programmes (@tbl-sample).
+
+```{r}
+#| label: tbl-sample
+#| tbl-cap: "Characteristics of the sample."
+tibble::tibble(
+  Characteristic = c("Age, mean (SD)", "Women", "Part-time",
+                     "Stress (1-5), mean (SD)", "Wellbeing in semester 1, mean (SD)"),
+  Value = c(mean_sd(study$age), percent(study$gender == "Female"),
+            percent(study$study_mode == "Part-time"), mean_sd(study$stress),
+            mean_sd(study$wellbeing))
+) |>
+  knitr::kable(align = "lr")
+```
+
+## The wellbeing workshop
+
+Wellbeing was similar in the two groups before the workshop (difference `r sprintf("%.1f", gaps$gap[1])` points). After the workshop, invited students' wellbeing was `r sprintf("%.1f", gaps$gap[2])` points higher in semester 2, but the difference narrowed to `r sprintf("%.1f", gaps$gap[3])` points in semester 3 and `r sprintf("%.1f", gaps$gap[4])` in semester 4 (@fig-results, panel A).
+
+![(A) Predicted wellbeing by semester and workshop group. (B) First-semester GPA against hours of sleep.](output/figure-1.png){#fig-results fig-alt="Two panels: wellbeing by semester for the two workshop groups, and GPA against sleep with a regression line."}
+
+## Grade point average
+
+Each additional hour of sleep was associated with a GPA `r sprintf("%.2f", sleep_row$estimate)` points higher (95% CI `r sprintf("%.2f", sleep_row$conf.low)` to `r sprintf("%.2f", sleep_row$conf.high)`, `r format_p(sleep_row$p.value)`), holding study hours, stress, and support constant. The model explained `r round(100 * results$gpa_fit$r.squared)`% of the variation in first-semester GPA.
+
+## Considering dropping out
+
+Each one-point increase in stress was associated with `r sprintf("%.1f", stress_row$estimate)` times the odds of considering dropping out (95% CI `r sprintf("%.1f", stress_row$conf.low)` to `r sprintf("%.1f", stress_row$conf.high)`), and each one-point increase in supervisor support with `r sprintf("%.2f", support_row$estimate)` times the odds (95% CI `r sprintf("%.2f", support_row$conf.low)` to `r sprintf("%.2f", support_row$conf.high)`). Effect sizes are interpreted following @cohen1988.
+
+## References

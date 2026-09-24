@@ -1,21 +1,422 @@
 # Data Structures in R {#sec-ch02}
 
-::: {.callout-note appearance="simple"}
-## This chapter is being rewritten
+```{r}
+#| label: setup
+#| include: false
+library(data2thesis)
+```
 
-The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+Elaf's data does not arrive in one neat file. The survey tool gave her an Excel export. The university's records office sent the semester results as CSV files. And a colleague who helped with an earlier pilot study still works in SPSS, so part of the data exists as an SPSS file too.
+
+Before she can open any of them, Elaf needs to know how R holds data once it is inside. That is what this chapter is about. R has a small number of ways to hold data, called **data structures**. Once you know them, every dataset you meet will look familiar, whatever file it came from.
+
+::: {.callout-tip appearance="simple"}
+## By the end of this chapter you will be able to
+
+- Create vectors and factors, and pick out and change their values.
+- Explain what a data frame is, and select rows and columns from one.
+- Recognise matrices and lists when you meet them.
+- Import data from CSV, Excel, and SPSS files, keeping SPSS labels, and export data again.
+- Map familiar SPSS and Excel tasks to R.
+- Read R's most common error messages and fix what they point to.
 :::
 
-## Elaf's question
+## Vectors: the building block
 
-Elaf's data arrives in three formats: CSV files, an Excel export, and an SPSS file with labels. How does R hold each of them?
+You met vectors in Chapter 1: a set of values combined with `c()`. They are the basic building block of R. Almost everything else is built from them.
 
-## What this chapter will cover
+```{r}
+sleep <- c(6.5, 7, 5.5, 8, 6)
+sleep
+```
 
-- Understanding vectors, matrices, lists, and data frames.
-- Indexing, subsetting, and modifying data structures.
-- Handling Errors Gracefully
-- Packages and Libraries in R.
-- Importing and exporting data: CSV, Excel (`readxl`), and SPSS (`haven`), keeping variable and value labels.
-- Coming from SPSS or Excel: how familiar tasks map to R.
-- Basic exploratory analysis: summary statistics and data visualization.
+A vector holds values of **one type** only. If you mix types, R quietly converts everything to the most flexible type, which is usually text:
+
+```{r}
+mixed <- c(6.5, "seven", 5.5)
+mixed
+class(mixed)
+```
+
+The numbers are now text, in quotes, and you cannot average them. This matters more than it seems. If one person in a survey types "seven" instead of 7, the whole column arrives in R as text. You will see exactly this in Elaf's Excel file later in the chapter.
+
+### Working with a whole vector at once
+
+Most things you do to a vector happen to every value at once. To turn Elaf's sleep from hours into minutes, multiply the whole vector:
+
+```{r}
+sleep * 60
+```
+
+Comparisons work the same way, and give one `TRUE` or `FALSE` for each value. Which nights were shorter than the recommended 7 hours?
+
+```{r}
+sleep < 7
+```
+
+Because R counts `TRUE` as 1 and `FALSE` as 0, `sum()` counts the short nights, and `mean()` gives their share:
+
+```{r}
+sum(sleep < 7)
+mean(sleep < 7)
+```
+
+Three of the five nights, or 60%, were short. The same line of code would work just as well on 2,000 nights.
+
+### Picking values out
+
+Square brackets pick values from a vector by their position. Positions start at 1:
+
+```{r}
+sleep[1]         # the first night
+sleep[c(1, 3)]   # the first and third nights
+sleep[-2]        # every night except the second
+```
+
+You can also pick values with a condition, by putting a `TRUE`/`FALSE` vector inside the brackets. R keeps the values where the condition is `TRUE`:
+
+```{r}
+sleep[sleep < 7]
+```
+
+Read it aloud as "sleep, where sleep is less than 7". This way of selecting, called **logical indexing**, is one of the most useful ideas in R, and you will use it constantly.
+
+### Changing values
+
+Brackets on the left of the arrow change values. Suppose Elaf realises the second night was 7.5 hours, not 7:
+
+```{r}
+sleep[2] <- 7.5
+sleep
+```
+
+## Factors: categories
+
+Research data is full of categories: faculty, gender, treatment group, agreement on a scale. R stores categories as **factors**. A factor looks like text but knows the complete set of possible values, called its **levels**:
+
+```{r}
+faculty <- factor(c("Education", "Humanities", "Education", "Health Sciences"))
+faculty
+levels(faculty)
+table(faculty)
+```
+
+By default, levels are in alphabetical order. When the categories have a natural order, set it yourself with the `levels` argument, so that tables and graphs show them in that order:
+
+```{r}
+employment <- factor(
+  c("None", "Full-time job", "Part-time job", "None"),
+  levels = c("None", "Part-time job", "Full-time job")
+)
+table(employment)
+```
+
+Factors matter most in statistics and graphs. When you compare groups in Chapter 6, or plot them in Chapter 4, R uses the factor's levels to decide which groups exist and in which order to show them.
+
+## Data frames: tables of data
+
+Most research data is a table: one row for each person (or case), one column for each thing you measured. In R, such a table is a **data frame**. Each column is a vector, so each column has one type, but different columns can have different types.
+
+You can build a small one yourself with `data.frame()`:
+
+```{r}
+pilot <- data.frame(
+  student = c("S1", "S2", "S3", "S4"),
+  faculty = c("Education", "Humanities", "Education", "Health Sciences"),
+  sleep   = c(6.5, 7.5, 5.5, 8),
+  invited = c(TRUE, FALSE, TRUE, FALSE)
+)
+pilot
+```
+
+`str()`, short for *structure*, is the quickest way to understand a data frame. It lists every column with its type and first few values:
+
+```{r}
+str(pilot)
+```
+
+### Selecting columns and rows
+
+You already know `$` for picking one column:
+
+```{r}
+pilot$sleep
+```
+
+Square brackets work on data frames too, with two positions separated by a comma: rows first, then columns. Leave a position empty to mean "all":
+
+```{r}
+pilot[2, ]                        # the second row, all columns
+pilot[, c("student", "sleep")]    # all rows, two columns
+pilot[pilot$sleep < 7, ]          # rows where sleep is under 7
+```
+
+The last line combines a data frame with logical indexing: "pilot, the rows where sleep is under 7, all columns". It is the R version of SPSS's *Select Cases*.
+
+### Adding and changing columns
+
+Assigning to a new column name adds a column:
+
+```{r}
+pilot$short_sleep <- pilot$sleep < 7
+pilot
+```
+
+### Elaf's data
+
+`students` from the `data2thesis` package is a data frame, with the same structure as `pilot`, only bigger:
+
+```{r}
+str(students)
+```
+
+`chr` means character, `int` whole numbers, and `num` numbers with decimals. Notice that `faculty` and the other categories arrive as text. When Elaf needs them as factors, she converts them:
+
+```{r}
+students$faculty <- factor(students$faculty)
+levels(students$faculty)
+```
+
+The same selecting works as before. How many PhD students in Health Sciences are in the study?
+
+```{r}
+hs_phd <- students[students$faculty == "Health Sciences" & students$programme == "PhD", ]
+nrow(hs_phd)
+```
+
+Two things are new here. `==` means "is equal to" (a single `=` is used for arguments, so comparisons need two). And `&` means "and": both conditions must be `TRUE`. Its partner `|` means "or".
+
+::: {.callout-tip}
+## Looking at data like a spreadsheet
+
+In RStudio, `View(students)` opens the data in a spreadsheet-style viewer, where you can scroll, sort, and filter. It is only for looking: changes you want to keep should be made with code, so they are recorded.
+:::
+
+## Matrices and lists
+
+Two more structures appear regularly, even if you rarely build them yourself.
+
+### Matrices
+
+A **matrix** is a grid of values of one type, usually numbers. You meet matrices most often as results. For example, `cor()` calculates the correlations between several variables and returns them as a matrix:
+
+```{r}
+vars <- semesters[, c("gpa", "sleep_hours", "study_hours", "wellbeing")]
+correlations <- cor(vars, use = "complete.obs")
+round(correlations, 2)
+```
+
+Every variable correlates perfectly with itself, hence the 1s on the diagonal. Chapter 5 explains how to read correlations. For now, notice that you can pick values from a matrix exactly as from a data frame, with `[row, column]`:
+
+```{r}
+correlations["sleep_hours", "wellbeing"]
+```
+
+### Lists
+
+A **list** is a container that can hold anything: vectors of different lengths, data frames, even other lists. Its parts are usually named:
+
+```{r}
+elaf <- list(
+  name   = "Elaf",
+  degree = "Master's",
+  sleep  = c(6.5, 7.5, 5.5)
+)
+elaf$sleep
+```
+
+You rarely build lists yourself, but R's statistical functions return their results as lists. Here is a preview of a test from Chapter 6, asking whether students sleep 7 hours on average in their first semester:
+
+```{r}
+first_semester <- semesters[semesters$semester == 1, ]
+result <- t.test(first_semester$sleep_hours, mu = 7)
+names(result)
+result$estimate
+```
+
+`names()` lists everything the test calculated, and `$` picks out one part. Here, the students' average sleep. When you want to report a number from a statistical test, this is how you get it.
+
+## Importing data
+
+Now Elaf can open her files. Each format has its own function, but every one of them gives back a data frame.
+
+The files used below come with the `data2thesis` package. `data2thesis_example()` finds them on your computer. For your own data, you would put the file in your RStudio Project and give its name instead (see Chapter 1).
+
+### CSV files
+
+A CSV file (*comma-separated values*) is a plain text table, where commas separate the columns. It is the most common format for sharing data, and R reads it with `read.csv()`:
+
+```{r}
+path <- data2thesis_example("semesters.csv")
+semester_file <- read.csv(path)
+head(semester_file, 3)
+```
+
+In your own project, this would simply be `read.csv("semesters.csv")`, or `read.csv(here::here("data", "semesters.csv"))` with a data folder.
+
+### Excel files
+
+The **readxl** package reads Excel files. Install it once with `install.packages("readxl")`:
+
+```{r}
+library(readxl)
+raw <- read_excel(data2thesis_example("wellbeing_raw.xlsx"))
+dim(raw)
+```
+
+This is the export from Elaf's survey tool, and it shows what real survey exports look like. `dim()` gives its size: `r nrow(raw)` rows (more than the 600 students) and `r ncol(raw)` columns. Look at the first rows:
+
+```{r}
+head(raw[, 1:6])
+```
+
+The printout looks a little different from before, because `read_excel()` returns a **tibble**: a modern kind of data frame that prints more compactly and shows each column's type under its name. You can use it exactly like a data frame.
+
+Several problems are already visible. There are test responses (`TEST`), odd codes such as `99` for missing age, and the same answer spelled several ways (`Male`, `male`). And every column shown is `<chr>`, text, even the ages, because a few entries are not plain numbers. Chapter 3 is devoted to cleaning this file. For now, Elaf knows how to open it.
+
+If a workbook has several sheets, choose one with the `sheet` argument, for example `read_excel("file.xlsx", sheet = "Semester 2")`.
+
+### SPSS files
+
+The **haven** package reads SPSS files (`.sav`), and also Stata and SAS files:
+
+```{r}
+library(haven)
+spss <- read_sav(data2thesis_example("wellbeing.sav"))
+spss[1:3, c("student_id", "gender", "faculty", "stress_1")]
+```
+
+SPSS files carry **labels**, and haven keeps them. Each value is stored as a number, with its label shown in square brackets: `2 [Health Sciences]`. The question behind each variable is kept too:
+
+```{r}
+attr(spss$stress_1, "label")
+```
+
+To analyse a labelled variable as categories, turn it into a factor with `as_factor()`, which uses the labels as levels:
+
+```{r}
+table(as_factor(spss$faculty))
+```
+
+This is one of the great conveniences for anyone moving from SPSS: the work you put into labelling your data is not lost.
+
+## Exporting data
+
+To save a data frame, use the matching `write` function. Each of these creates a file in your project folder:
+
+```r
+write.csv(students, "students_clean.csv", row.names = FALSE)   # CSV
+writexl::write_xlsx(students, "students_clean.xlsx")           # Excel (writexl package)
+haven::write_sav(spss, "students_clean.sav")                   # SPSS
+```
+
+`row.names = FALSE` stops R from adding an extra column of row numbers to the CSV file.
+
+Keep your original data files untouched. Save cleaned or changed versions under new names, and let your script record how one became the other.
+
+## Coming from SPSS or Excel
+
+If you have used SPSS or Excel, most of what you did there has a direct equivalent in R. @tbl-spss collects the ones from this chapter and the last.
+
+| In SPSS or Excel | In R |
+|---|---|
+| Open a data file | `read_sav()`, `read_excel()`, `read.csv()` |
+| Variable View: names, types, labels | `str()`; `attr(x, "label")` for a variable label |
+| Data View | `View()` |
+| Select Cases | `data[condition, ]` |
+| Compute Variable | `data$new <- ...` |
+| Frequencies | `table()` |
+| Descriptives | `mean()`, `summary()` |
+| Save As | `write_sav()`, `write_xlsx()`, `write.csv()` |
+
+: SPSS and Excel tasks and their R equivalents {#tbl-spss}
+
+The biggest change is not a particular command. In SPSS or Excel, you change the data and the change is saved; the steps you took are forgotten. In R, the data file stays as it was, and the steps are saved in your script. Run the script again, and you get the same result again.
+
+## When things go wrong
+
+Everyone who writes R sees error messages every day. They are not a sign that you are doing badly; they are R telling you precisely what it could not do. Read the message. It usually says what went wrong, and often where. Here are the four you will meet most often.
+
+**Object not found.** A name is misspelled, or the object was never created (perhaps you forgot to run the line that creates it):
+
+```{r}
+#| error: true
+mean(slep)
+```
+
+**Could not find function.** A function name is misspelled, or its package has not been loaded with `library()`:
+
+```{r}
+#| error: true
+reed_csv("students.csv")
+```
+
+**Non-numeric argument.** You tried to calculate with text, often because a column arrived as text:
+
+```{r}
+#| error: true
+mixed * 2
+```
+
+**Undefined columns selected.** A column name in brackets does not exist, often because of a typo or wrong capitals:
+
+```{r}
+#| error: true
+students[, "Faculty"]
+```
+
+When you cannot see the problem, check spelling and capitals first, then check that every line above was run, then read the help page of the function. Copying the error message into a search engine works surprisingly often, because someone has almost always met it before.
+
+## A first summary
+
+With the data open, `summary()` gives a quick overview of every column: averages and ranges for numbers, counts for factors, and the number of missing values:
+
+```{r}
+summary(semesters[, c("gpa", "sleep_hours", "study_hours", "wellbeing")])
+```
+
+Already, Elaf can see that the average student sleeps less than 7 hours, and that a few values are missing (`NA's`). Chapter 5 turns this quick look into a full description of the data.
+
+::: {.callout-note icon="false"}
+## In your field: health research
+
+`ToothGrowth` is a real dataset that comes with R, from an experiment on the effect of vitamin C on tooth growth in 60 guinea pigs. Its structure is typical of experiments in health research: an outcome, a treatment group, and a dose.
+
+```{r}
+str(ToothGrowth)
+table(ToothGrowth$supp, ToothGrowth$dose)
+```
+
+`supp` is already a factor with two levels, the two ways the vitamin was given (orange juice, `OJ`, or ascorbic acid, `VC`), and the table shows 10 animals for every combination of method and dose.
+:::
+
+## Chapter review
+
+### Summary
+
+- A **vector** holds values of one type. Mixing types turns everything into text.
+- Most operations work on every value of a vector at once. `[ ]` picks values by position or by a condition (logical indexing).
+- A **factor** holds categories with a fixed set of **levels**, whose order you can set.
+- A **data frame** is a table: one row per case, one column (a vector) per variable. Select with `$` or `[rows, columns]`, and use `str()` to see its structure.
+- A **matrix** is a grid of one type, often a result such as a correlation matrix. A **list** can hold anything; statistical results are lists.
+- `read.csv()`, `read_excel()` (readxl), and `read_sav()` (haven) import data. haven keeps SPSS labels, and `as_factor()` turns them into factors. `write.csv()`, `write_xlsx()`, and `write_sav()` export data.
+- Error messages say what R could not do. Read them, and check spelling and capitals first.
+
+### Key terms
+
+Data structure, vector, type conversion, logical indexing, factor, level, data frame, tibble, matrix, list, CSV file, variable label, value label, error message.
+
+## Exercises
+
+The [playground](../playground/chapter02.html) has these and more, with hints and solutions, in your browser or as an RStudio project to download.
+
+1. Create a vector with the ages 24, 31, 28, 45, and 26. Use logical indexing to show only the ages over 30, and count how many there are.
+2. Create a factor from `c("Agree", "Disagree", "Neutral", "Agree")` whose levels run from `"Disagree"` through `"Neutral"` to `"Agree"`. Check the order with `table()`.
+3. Using `students`, how many students are part-time and have children? (Use `&`.)
+4. Add a column to `students` called `over_30` that is `TRUE` for students older than 30. How many students is that? Why might the count need `na.rm = TRUE`?
+5. Read the SPSS file with `read_sav()` and find the question behind `support_3`.
+
+## Further reading
+
+- *R for Data Science* [@wickham2023]: chapters "Data import", "Spreadsheets", and "Factors" go further with importing and with categories, and "A field guide to base R" covers the square-bracket style used in this chapter.
+- The documentation of the [readxl](https://readxl.tidyverse.org) and [haven](https://haven.tidyverse.org) packages.

@@ -8,7 +8,7 @@
 #   Rscript data-raw/build_package.R
 # Then build and check the package:
 #   R CMD build data2thesis
-#   R CMD check data2thesis_1.0.0.tar.gz
+#   R CMD check data2thesis_1.1.0.tar.gz
 # ------------------------------------------------------------------------------
 
 pkg <- "data2thesis"

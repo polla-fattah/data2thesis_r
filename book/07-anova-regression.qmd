@@ -1,18 +1,473 @@
 # ANOVA and Regression {#sec-ch07}
 
-::: {.callout-note appearance="simple"}
-## This chapter is being rewritten
+```{r}
+#| label: setup
+#| include: false
+library(data2thesis)
+```
 
-The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+Chapter 6 compared two groups at a time. Elaf's next questions need more. Do stress levels differ between the five faculties, and between full-time and part-time students (RQ4)? What explains why some students get better grades than others (RQ5)? And what makes a student more likely to consider dropping out (RQ9)?
+
+This chapter introduces two of the most widely used tools in research. **ANOVA** compares the averages of three or more groups. **Regression** models how an outcome depends on one or more predictors: linear regression for numeric outcomes such as GPA, and logistic regression for yes-or-no outcomes such as considering dropout.
+
+::: {.callout-tip appearance="simple"}
+## By the end of this chapter you will be able to
+
+- Compare three or more groups with one-way ANOVA, and find which groups differ with post-hoc tests.
+- Analyse two grouping factors and their interaction with two-way ANOVA.
+- Fit and interpret simple and multiple linear regression models, including categorical predictors.
+- Use regression to separate a real effect from a confounder, and model curves and interactions.
+- Check a regression model's assumptions.
+- Fit and interpret a logistic regression model in terms of odds ratios and probabilities.
+- Report ANOVA and regression results in a thesis.
 :::
 
-## Elaf's question
+The chapter uses each student's first-semester records, their background information, and their questionnaire scores, calculated as in Chapter 3:
 
-Do stress and wellbeing differ between faculties and study modes? (RQ4) What explains students' GPA? (RQ5) Which students consider dropping out? (RQ9)
+```{r}
+library(dplyr)
+library(ggplot2)
 
-## What this chapter will cover
+scores <- questionnaire |>
+  mutate(
+    stress_4 = 6 - stress_4,
+    stress   = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    support  = rowMeans(pick(support_1:support_6), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, support)
 
-- ANOVA (one-way and two-way) and post hoc testing.
-- Linear regression: simple and multiple.
-- Logistic regression for binary outcomes.
-- Case study: Predicting outcomes using regression models.
+study <- students |>
+  left_join(scores, join_by(student_id)) |>
+  left_join(semesters |> filter(semester == 1), join_by(student_id))
+```
+
+## Comparing three or more groups: one-way ANOVA
+
+Elaf wants to know whether stress differs between the five faculties. She could run a t-test for every pair of faculties, but that is 10 tests. Chapter 6 showed that each test has a 5% chance of a false alarm, and the chances add up: across 10 independent tests, the chance of at least one false alarm is about 40%. **Analysis of variance** (ANOVA) avoids the problem by asking one question first: do the faculty averages differ *at all*?
+
+### The idea
+
+ANOVA compares two kinds of variation. Here are stress scores for three small groups:
+
+```{r}
+group_scores <- tibble(
+  group  = rep(c("A", "B", "C"), each = 4),
+  stress = c(2.5, 3.0, 2.8, 3.1,   3.4, 3.8, 3.5, 3.9,   2.9, 3.3, 3.0, 3.4)
+)
+group_scores |> summarise(mean = mean(stress), .by = group)
+```
+
+The group averages differ (variation *between* groups), and the scores within each group differ too (variation *within* groups). If the groups really are the same, the between-group variation should be no larger than you would expect from the within-group variation alone. ANOVA's **F statistic** is the ratio of the two:
+
+$$
+F = \frac{\text{variation between groups}}{\text{variation within groups}}
+$$
+
+An F close to 1 means the group averages differ no more than chance would produce; a large F means they differ more. `aov()` fits the model, and `summary()` shows the test:
+
+```{r}
+summary(aov(stress ~ group, data = group_scores))
+```
+
+The p-value is small: these three groups differ.
+
+### Elaf's data
+
+First look at the data. @fig-stress-faculty shows stress in each faculty.
+
+```{r}
+#| label: fig-stress-faculty
+#| fig-cap: "Stress scores by faculty."
+#| fig-alt: "Five box plots of stress scores, one per faculty. Health Sciences is highest and Humanities lowest, with much overlap between all faculties."
+#| fig-width: 7
+#| fig-height: 3.8
+ggplot(study, aes(x = faculty, y = stress)) +
+  geom_boxplot() +
+  labs(x = NULL, y = "Stress score (1 to 5)") +
+  theme_minimal(base_size = 12)
+```
+
+The faculties overlap a lot, but Health Sciences sits a little higher and Humanities a little lower. Now the test:
+
+```{r}
+stress_anova <- aov(stress ~ faculty, data = study)
+summary(stress_anova)
+```
+
+```{r}
+#| include: false
+anova_table <- summary(stress_anova)[[1]]
+eta_sq <- anova_table[["Sum Sq"]][1] / sum(anova_table[["Sum Sq"]])
+```
+
+The p-value is `r round(anova_table[["Pr(>F)"]][1], 3)`: the faculties do differ in stress. How much? **Eta squared** ($\eta^2$), the share of all the variation in stress that lies between faculties, measures the size of the effect:
+
+```{r}
+ss <- summary(stress_anova)[[1]][["Sum Sq"]]
+ss[1] / sum(ss)
+```
+
+Only about `r round(100 * eta_sq)`% of the differences in stress between students have to do with their faculty; the rest is about the individual students. By common guidelines, an $\eta^2$ of 0.01 is small, 0.06 medium, and 0.14 large [@cohen1988], so this is a real but small effect.
+
+### Which faculties differ? Post-hoc tests
+
+ANOVA says that the faculties differ, but not which ones. **Post-hoc tests** compare every pair while keeping the overall chance of a false alarm at 5%. Tukey's test is the most common:
+
+```{r}
+TukeyHSD(stress_anova)
+```
+
+Each row compares two faculties: the difference in average stress, its confidence interval, and an adjusted p-value (`p adj`). Only one comparison is significant: Health Sciences students are more stressed than Humanities students, by about a third of a point. The other differences are small enough to be chance.
+
+### Checking the assumptions
+
+ANOVA makes the same assumptions as the t-test: independent observations, roughly normal data within each group (or large groups), and similar spread in each group. The spread can be checked with **Levene's test**, from the **car** package:
+
+```{r}
+library(car)
+leveneTest(stress ~ factor(faculty), data = study)
+```
+
+The p-value is large, so there is no evidence that the spread differs between faculties. When the assumptions fail, the **Kruskal-Wallis test** is the non-parametric alternative, comparing ranks instead of averages:
+
+```{r}
+kruskal.test(stress ~ faculty, data = study)
+```
+
+It agrees with the ANOVA.
+
+## Two factors at once: two-way ANOVA
+
+Does wellbeing depend on the programme (Master's or PhD), on study mode (full-time or part-time), or on both? A **two-way ANOVA** answers all three questions at once:
+
+- the **main effect** of programme: do Master's and PhD students differ, on average?
+- the **main effect** of study mode: do full-time and part-time students differ?
+- the **interaction**: does the effect of study mode *depend on* the programme? For example, is part-time study harder on PhD students than on Master's students?
+
+An **interaction plot** shows the group averages as lines. If the lines are parallel, there is no interaction: the effect of study mode is the same in both programmes.
+
+```{r}
+#| label: fig-interaction
+#| fig-cap: "Average first-semester wellbeing by programme and study mode."
+#| fig-alt: "Two lines, for full-time and part-time students, across Master's and PhD. Part-time is lower in both programmes; the lines are roughly parallel."
+#| fig-width: 6
+#| fig-height: 3.8
+study |>
+  summarise(wellbeing = mean(wellbeing), .by = c(programme, study_mode)) |>
+  ggplot(aes(x = programme, y = wellbeing, colour = study_mode, group = study_mode)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  scale_colour_viridis_d(end = 0.8) +
+  labs(x = NULL, y = "Average wellbeing", colour = "Study mode") +
+  theme_minimal(base_size = 13)
+```
+
+Part-time students have lower wellbeing in both programmes, and the lines are close to parallel. In the formula, `programme * study_mode` asks for both main effects and their interaction:
+
+```{r}
+summary(aov(wellbeing ~ programme * study_mode, data = study))
+```
+
+Study mode has a clear effect. Programme does not, and neither does the interaction: part-time study lowers wellbeing by about the same amount whether a student is doing a Master's or a PhD. When an interaction *is* significant, interpret it before the main effects, because it means that no single "effect of study mode" describes everyone.
+
+## Linear regression
+
+ANOVA compares groups. **Regression** goes further: it models how an outcome changes with one or more **predictors**, which can be numeric or categorical. It is the workhorse of quantitative research, and ANOVA is in fact a special case of it.
+
+### A straight line through the data
+
+Here are five students' sleep and GPA:
+
+```{r}
+five <- tibble(
+  sleep = c(5, 6, 6.5, 7, 8),
+  gpa   = c(2.8, 3.0, 3.2, 3.1, 3.4)
+)
+```
+
+**Simple linear regression** fits the straight line that best describes how GPA changes with sleep:
+
+$$
+\text{GPA} = b_0 + b_1 \times \text{sleep} + \text{error}
+$$
+
+$b_0$ is the **intercept**, the predicted GPA for a student who sleeps zero hours, and $b_1$ is the **slope**, the change in predicted GPA for each extra hour of sleep. "Best" means the line that makes the squared vertical distances between the points and the line, the **residuals**, as small as possible, a method called **least squares**. `lm()`, for *linear model*, finds it:
+
+```{r}
+lm(gpa ~ sleep, data = five)
+```
+
+Each extra hour of sleep goes with a GPA that is about 0.19 higher. The intercept is where the line would cross zero hours of sleep, which no one does; it is needed to place the line, but it rarely means anything on its own.
+
+### Elaf's data
+
+Now all of Elaf's students. `summary()` gives the full results:
+
+```{r}
+gpa_simple <- lm(gpa ~ sleep_hours, data = study)
+summary(gpa_simple)
+```
+
+The output has three parts:
+
+- **Coefficients**: the estimate of each coefficient, its standard error, a t statistic, and a p-value testing whether it is zero. The slope for `sleep_hours` is about `r round(coef(gpa_simple)[2], 2)`: each extra hour of sleep goes with a GPA about `r round(coef(gpa_simple)[2], 2)` higher, and the p-value shows that this is not chance.
+- **R-squared**: the share of the variation in GPA that the model explains. Here it is only `r round(summary(gpa_simple)$r.squared, 2)`: sleep explains about `r round(100 * summary(gpa_simple)$r.squared)`% of the differences in GPA. Sleep matters, but it is far from the whole story, just as the scatter plot in Chapter 4 suggested.
+- **Residual standard error**: the typical distance between a student's actual GPA and the line, about 0.3 points.
+
+### Multiple regression
+
+Many things affect grades at once. **Multiple regression** includes several predictors in one model:
+
+```{r}
+gpa_model <- lm(gpa ~ sleep_hours + study_hours + stress + support, data = study)
+summary(gpa_model)
+```
+
+Each coefficient now means the change in predicted GPA for a one-unit increase in that predictor, **holding the other predictors constant**. Among students with the same study hours, stress, and support, each extra hour of sleep goes with a GPA about `r round(coef(gpa_model)["sleep_hours"], 2)` higher. Each extra hour of study per week adds about `r round(coef(gpa_model)["study_hours"], 3)`, each point of stress lowers GPA by about `r round(-coef(gpa_model)["stress"], 2)`, and each point of supervisor support raises it by about `r round(coef(gpa_model)["support"], 2)`. All four are significant.
+
+Together, the four predictors explain about `r round(100 * summary(gpa_model)$r.squared)`% of the variation in GPA. That may sound modest, but grades depend on many things no survey measures, from ability to luck on exam day. In social and educational research, models that explain a quarter of the variation are common and useful. The **adjusted R-squared** is slightly lower, because it corrects for the number of predictors: adding any predictor, even a useless one, raises R-squared a little, but only a useful one raises the adjusted version.
+
+Notice the line `(13 observations deleted due to missingness)`: `lm()` leaves out students with a missing value in any variable of the model. Report the number of students each model is based on.
+
+### Categorical predictors
+
+Categorical variables can be predictors too. Does gender matter, once the other predictors are taken into account?
+
+```{r}
+gpa_gender <- lm(gpa ~ sleep_hours + study_hours + stress + support + gender, data = study)
+summary(gpa_gender)$coefficients
+```
+
+R turns a categorical predictor into a comparison with a **reference category**, by default the first in alphabetical order: here `Female`. The coefficient `genderMale` is the difference between men and women, holding everything else constant. It is tiny and far from significant: there is no evidence that gender affects GPA. That is a finding too, and worth reporting.
+
+For a variable with more categories, such as faculty, R compares each category with the reference, giving one coefficient for each of the others. To choose a different reference, use `relevel(factor(faculty), ref = "Humanities")`.
+
+### Separating an effect from a confounder
+
+In Chapter 5, students who took more caffeine had lower GPAs, but they also slept less. Does caffeine harm grades, or is sleep the real reason? Regression can tell the two explanations apart. First caffeine alone:
+
+```{r}
+summary(lm(gpa ~ caffeine_mg, data = study))$coefficients
+```
+
+Caffeine has a significant negative effect. Now add sleep:
+
+```{r}
+summary(lm(gpa ~ caffeine_mg + sleep_hours, data = study))$coefficients
+```
+
+Once sleep is held constant, caffeine's effect shrinks to almost nothing and is no longer significant, while sleep stays significant. Among students who sleep the same amount, caffeine makes no difference to grades. Caffeine looked harmful only because heavy caffeine users sleep less: sleep was a **confounder**.
+
+::: {.callout-important}
+## Regression adjusts only for what you include
+
+Regression can remove the effect of a confounder only if you measured it and put it in the model. It cannot adjust for anything you did not measure. That is why, outside a randomised experiment like Elaf's workshop, regression shows associations *adjusted for* the variables in the model, not proof of cause.
+:::
+
+### Curved relationships
+
+A straight line assumes that every extra hour of study adds the same amount to GPA. Is that realistic? Adding a squared term lets the line curve:
+
+```{r}
+gpa_curve <- lm(gpa ~ study_hours + I(study_hours^2), data = study)
+summary(gpa_curve)$coefficients
+```
+
+`I()` tells R to calculate `study_hours^2` before fitting. The squared term is negative and significant: the line bends downwards. @fig-curve shows the shape.
+
+```{r}
+#| label: fig-curve
+#| fig-cap: "GPA and weekly study hours, with a curved (quadratic) trend line."
+#| fig-alt: "Scatter plot of GPA against study hours, with a curve that rises steeply at first and flattens out at around 30 hours a week."
+#| fig-width: 6.5
+#| fig-height: 4
+ggplot(study, aes(x = study_hours, y = gpa)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2)) +
+  labs(x = "Study hours per week", y = "GPA") +
+  theme_minimal(base_size = 13)
+```
+
+The first hours of study make a real difference; beyond about 30 hours a week, more study brings little or nothing extra. Economists call this **diminishing returns**, and it is worth knowing for any student tempted to study all night instead of sleeping.
+
+### Interactions
+
+Does supervisor support matter equally for every student? An **interaction** term lets the effect of one predictor depend on another. `support * programme` gives the effect of support, the effect of programme, and how the effect of support differs between programmes. To make the coefficients easier to read, support is first **centred**: the average is subtracted, so that zero means "average support":
+
+```{r}
+study <- study |> mutate(support_c = support - mean(support))
+gpa_interaction <- lm(gpa ~ support_c * programme + sleep_hours + study_hours, data = study)
+summary(gpa_interaction)$coefficients
+```
+
+```{r}
+#| include: false
+b <- coef(gpa_interaction)
+slope_masters <- b["support_c"]
+slope_phd <- b["support_c"] + b["support_c:programmePhD"]
+fmt <- function(x) sprintf("%.2f", x)
+```
+
+For Master's students (the reference category), each point of support goes with a GPA about `r fmt(slope_masters)` higher. The interaction coefficient, `support_c:programmePhD`, says that for PhD students the effect is larger, by about `r fmt(b["support_c:programmePhD"])`, making it about `r fmt(slope_phd)`. Supervisor support matters more than twice as much for PhD students, which makes sense: a PhD depends more heavily on the supervisor.
+
+### Checking the model
+
+Linear regression assumes that the relationship is linear (or modelled as curved, as above), that the residuals have similar spread everywhere, and that they are roughly normal. As always, graphs are the best check. `plot()` on a model draws four diagnostic plots; the first two matter most:
+
+```{r}
+#| label: fig-diagnostics
+#| fig-cap: "Diagnostic plots for the GPA model: residuals against fitted values (left), and a Q-Q plot of the residuals (right)."
+#| fig-alt: "Left: residuals scattered evenly around zero across all fitted values, with no pattern. Right: residual Q-Q plot with points close to the diagonal."
+#| fig-width: 8
+#| fig-height: 3.8
+par(mfrow = c(1, 2))
+plot(gpa_model, which = 1:2)
+par(mfrow = c(1, 1))
+```
+
+In the left plot, the residuals should form a shapeless band around zero, with no curve and no funnel. In the right plot, they should follow the line. Both look good for Elaf's model. A curve in the left plot would suggest a missing curved term; a funnel shape would mean the spread is not constant; and points far off the line on the right would point to unusual cases worth looking at.
+
+### Reporting a regression
+
+The **broom** package turns model results into tidy tables, ready for a thesis. `tidy()` gives the coefficients with confidence intervals, and `glance()` the overall fit:
+
+```{r}
+library(broom)
+tidy(gpa_model, conf.int = TRUE)
+glance(gpa_model)
+```
+
+```{r}
+#| include: false
+g <- glance(gpa_model)
+tm <- tidy(gpa_model, conf.int = TRUE)
+f2 <- function(x) sprintf("%.2f", x)
+sl <- tm[tm$term == "sleep_hours", ]
+```
+
+::: {.callout-tip}
+## Writing it up
+
+A multiple regression of first-semester GPA on sleep, study hours, stress, and supervisor support explained `r round(100 * g$r.squared)`% of the variance in GPA, *F*(`r g$df`, `r g$df.residual`) = `r f2(g$statistic)`, *p* < .001, *N* = `r g$nobs`. Holding the other predictors constant, each additional hour of sleep was associated with a GPA `r f2(sl$estimate)` points higher (95% CI [`r f2(sl$conf.low)`, `r f2(sl$conf.high)`]).
+:::
+
+## Logistic regression
+
+Elaf's third question is about a yes-or-no outcome: has a student considered dropping out? Linear regression is the wrong tool here: it could predict probabilities below 0 or above 1, which make no sense. **Logistic regression** models the probability of a "yes" in a way that always stays between 0 and 1.
+
+### Odds and odds ratios
+
+Logistic regression works with **odds** rather than probabilities. The odds of an event are the probability that it happens divided by the probability that it does not. Take the table from Chapter 6:
+
+```{r}
+jobs <- table(students$employment, students$considering_dropout)
+jobs
+```
+
+Among students with a full-time job, 25 have considered dropping out and 72 have not: odds of 25/72, about 0.35. Among students without a job, the odds are 42/265, about 0.16. The **odds ratio** compares them:
+
+```{r}
+odds_full <- 25 / 72
+odds_none <- 42 / 265
+odds_full / odds_none
+```
+
+Students with a full-time job have about twice the odds of considering dropout. An odds ratio of 1 means no difference, above 1 means higher odds, and below 1 means lower odds.
+
+### Elaf's model
+
+`glm()`, for *generalised linear model*, fits logistic regression when told `family = binomial`. The outcome must be coded 0 and 1:
+
+```{r}
+study <- study |> mutate(dropout = as.integer(considering_dropout == "Yes"))
+
+dropout_model <- glm(
+  dropout ~ stress + support + financial_worry + employment + study_mode,
+  data = study, family = binomial
+)
+summary(dropout_model)$coefficients
+```
+
+The coefficients are on the scale of **log-odds**, which is hard to interpret directly. `exp()` turns them into odds ratios, and `confint.default()` gives their confidence intervals:
+
+```{r}
+exp(cbind(odds_ratio = coef(dropout_model), confint.default(dropout_model))) |>
+  round(2)
+```
+
+```{r}
+#| include: false
+or <- exp(coef(dropout_model))
+```
+
+Reading the odds ratios, holding the other predictors constant:
+
+- Each extra point of **stress** multiplies the odds of considering dropout by about `r round(or["stress"], 1)`.
+- Each extra point of **supervisor support** multiplies them by about `r round(or["support"], 2)`, cutting them by two thirds.
+- Each extra point of **financial worry** multiplies them by about `r round(or["financial_worry"], 1)`.
+
+Something interesting has happened to **employment**. In Chapter 6, and in the odds ratio above, students with full-time jobs were about twice as likely to consider dropping out. In this model, the confidence intervals for employment include 1: once stress and financial worry are taken into account, having a job adds little on its own. The likely explanation is that a full-time job matters *because* of the stress and money pressure that come with it. This is the kind of insight multiple regression makes possible.
+
+### Predicted probabilities
+
+Odds ratios are hard for many readers. Predicted probabilities are easier. What is the predicted probability of considering dropout for two example students, identical except for their stress and support?
+
+```{r}
+examples <- tibble(
+  stress          = c(2.5, 4.0),
+  support         = c(4.0, 2.0),
+  financial_worry = 3,
+  employment      = "None",
+  study_mode      = "Full-time"
+)
+predict(dropout_model, newdata = examples, type = "response") |> round(2)
+```
+
+`type = "response"` asks for probabilities rather than log-odds. A student with low stress and good support has about a `r round(100 * predict(dropout_model, newdata = examples, type = "response")[1])`% chance of considering dropout; a stressed student with little support, about `r round(100 * predict(dropout_model, newdata = examples, type = "response")[2])`%. For Elaf's recommendations, that contrast is more persuasive than any coefficient.
+
+How well does the model *predict* who will consider dropping out, and how should that be tested fairly? That is a different question, about prediction rather than explanation, and it is the subject of Chapters 10 and 11.
+
+::: {.callout-note icon="false"}
+## In your field: forestry and agriculture
+
+R's `trees` dataset records the girth, height, and timber volume of 31 felled black cherry trees. Foresters need to estimate a standing tree's volume from measurements they can take without cutting it down, a classic job for multiple regression:
+
+```{r}
+tree_model <- lm(Volume ~ Girth + Height, data = trees)
+summary(tree_model)$coefficients
+summary(tree_model)$r.squared
+```
+
+Girth and height together explain about 95% of the variation in volume. Physical measurements are often far more predictable than human behaviour: compare this with the 25% of Elaf's GPA model.
+:::
+
+## Chapter review
+
+### Summary
+
+- One-way ANOVA tests whether three or more group averages differ, with one test instead of many. The F statistic compares variation between groups with variation within them; $\eta^2$ measures the size of the effect.
+- Post-hoc tests, such as Tukey's, find which groups differ while controlling false alarms. Levene's test checks equal spread; Kruskal-Wallis is the non-parametric alternative.
+- Two-way ANOVA tests two main effects and their interaction. An interaction means the effect of one factor depends on the other; parallel lines in an interaction plot mean no interaction.
+- Linear regression models a numeric outcome. A slope is the change in the outcome for a one-unit change in the predictor; in multiple regression, holding the other predictors constant. R-squared is the share of variation explained.
+- Categorical predictors are compared with a reference category. Adding a confounder to the model can remove a misleading effect, but only confounders that were measured.
+- Squared terms model curves; interaction terms let one predictor's effect depend on another. Check residual plots for patterns.
+- Logistic regression models the probability of a yes-or-no outcome. `exp()` of its coefficients gives odds ratios; `predict(..., type = "response")` gives probabilities.
+
+### Key terms
+
+ANOVA, F statistic, between-group variation, within-group variation, eta squared, post-hoc test, Tukey's test, Levene's test, Kruskal-Wallis test, two-way ANOVA, main effect, interaction, interaction plot, linear regression, predictor, outcome, intercept, slope, residual, least squares, R-squared, adjusted R-squared, multiple regression, reference category, confounder, quadratic term, diminishing returns, centring, diagnostic plot, logistic regression, odds, odds ratio, log-odds, predicted probability.
+
+## Exercises
+
+The [playground](../playground/chapter07.html) has these and more, with hints and solutions.
+
+1. Does first-semester wellbeing differ between faculties? Run a one-way ANOVA, calculate $\eta^2$, and, if the ANOVA is significant, run Tukey's test.
+2. Fit a simple regression of first-semester wellbeing on sleep hours. Interpret the slope and R-squared.
+3. Add stress and support to the model from Exercise 2. What happens to the slope of sleep, and to R-squared?
+4. Add `study_mode` to the model from Exercise 3. What is the reference category, and what does its coefficient mean?
+5. Fit a logistic regression of considering dropout on `burnout` score alone (calculate it from the questionnaire first), and report its odds ratio. What does it mean?
+
+## Further reading
+
+- *Introduction to Modern Statistics* [@cetinkaya2024ims]: chapters "Linear regression with a single predictor", "Linear regression with multiple predictors", "Logistic regression", and "Inference for comparing many means".
+- *Regression and Other Stories* [@gelman2020] is an excellent next step, with a strong focus on interpreting and checking regression models in real research.

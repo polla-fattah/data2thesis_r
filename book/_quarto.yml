@@ -41,12 +41,13 @@ book:
         - 11-classification.qmd
         - 12-predictive-regression.qmd
         - 13-advanced-clustering.qmd
-        - 14-advanced-ml.qmd
+        - 14-neural-networks.qmd
+        - 15-time-series.qmd
     - part: "Reproducible Research and Applications"
       chapters:
-        - 15-reproducible-research.qmd
-        - 16-ai.qmd
-        - 17-putting-it-together.qmd
+        - 16-reproducible-research.qmd
+        - 17-ai.qmd
+        - 18-putting-it-together.qmd
     - references.qmd
   appendices:
     - a-installation.qmd

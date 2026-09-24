@@ -1,0 +1,253 @@
+---
+title: "Playground: Chapter 13"
+subtitle: Advanced Clustering
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - questionnaire.csv
+  - chapter13.zip
+webr:
+  packages:
+    - dplyr
+  resources:
+    - students.csv
+    - semesters.csv
+    - questionnaire.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+These exercises practise the ideas of Chapter 13 with functions that come with R: membership probabilities worked out by hand, neighbourhoods and nearest-neighbour distances as in DBSCAN, and checking clusters against an outcome. The downloadable project at the bottom uses mclust and dbscan, exactly as in the chapter. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+library(dplyr)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+
+q <- questionnaire
+q$stress_4 <- 6 - q$stress_4
+scores <- q |>
+  mutate(
+    stress       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, support, satisfaction)
+profiles <- semesters |>
+  summarise(across(c(sleep_hours, study_hours, caffeine_mg, exercise_days),
+                   ~ mean(.x, na.rm = TRUE)),
+            .by = student_id) |>
+  left_join(scores, join_by(student_id)) |>
+  na.omit()
+profile_data <- scale(profiles |> select(-student_id))
+
+tiny <- data.frame(
+  x = c(1.0, 1.2, 1.1, 0.9, 1.3,   4.0, 4.2, 3.9, 4.1, 4.3,   2.5, 5.5),
+  y = c(1.0, 1.1, 1.3, 1.2, 0.9,   3.0, 3.2, 3.1, 2.8, 3.0,   4.5, 0.5)
+)
+```
+
+## Membership probabilities
+
+### Exercise 1: Short wait or long wait?
+
+The chapter's mixture model for Old Faithful found two groups of waiting times: short waits (36% of eruptions, mean 54.6 minutes) and long waits (64%, mean 80.1 minutes), both with a standard deviation of 5.9 minutes. The probability that a wait of 67 minutes belongs to the short group is the short group's share of the total height of the two curves at 67. Complete the calculation.
+
+```{webr}
+#| exercise: ex1
+wait <- 67
+short <- 0.36 * dnorm(wait, mean = 54.6, sd = 5.9)
+long  <- 0.64 * dnorm(wait, mean = ______, sd = 5.9)
+short / (short + ______)
+```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`dnorm()` gives the height of a normal curve. Multiplying by each group's share makes the bigger group's curve taller.
+:::
+:::
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+long  <- 0.64 * dnorm(wait, mean = 80.1, sd = 5.9)
+short / (short + long)
+```
+
+About 0.42, the same as mclust's answer in the chapter: a wait of 67 minutes is almost a coin toss between the two groups. Try 50 and 85 minutes: the probabilities are close to 1 and 0.
+:::
+:::
+
+## Density and noise
+
+### Exercise 2: Core points
+
+DBSCAN calls a point a core point if at least `minPts` points (counting itself) lie within `eps` of it. For the chapter's twelve tiny points, count each point's neighbours within 0.5, and find the core points with `minPts = 3`.
+
+```{webr}
+#| exercise: ex2
+distances <- as.matrix(dist(tiny))
+neighbours <- rowSums(distances <= ______)
+neighbours
+neighbours >= ______
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+neighbours <- rowSums(distances <= 0.5)
+neighbours >= 3
+```
+
+The ten points in the two tight groups each have five points (including themselves) within 0.5, so they are core points. The last two points have only themselves: they are noise.
+:::
+:::
+
+### Exercise 3: The nearest-neighbour distance plot
+
+For each student, find the distance to their seventh-nearest neighbour, sort these distances, and plot them. Where does the curve bend upwards?
+
+```{webr}
+#| exercise: ex3
+d <- as.matrix(dist(profile_data))
+kth <- apply(d, 1, function(row) sort(row)[______ + 1])
+plot(sort(kth), type = "l", ylab = "Distance to 7th nearest neighbour")
+abline(h = 2, lty = "dashed")
+```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Each student's distance to themselves is 0, and it comes first in the sorted row, so the seventh-nearest neighbour is element 7 + 1.
+:::
+:::
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+kth <- apply(d, 1, function(row) sort(row)[7 + 1])
+```
+
+The curve rises slowly to about 2 and then bends sharply upwards for the last few dozen students: the students in sparse regions of the data. That bend suggested `eps = 2` in the chapter.
+:::
+:::
+
+### Exercise 4: Students in sparse regions
+
+Show the students whose seventh-nearest neighbour is more than 2.4 away (in z-score units). What makes them unusual?
+
+```{webr}
+#| exercise: ex4
+d <- as.matrix(dist(profile_data))
+kth <- apply(d, 1, function(row) sort(row)[8])
+profiles |>
+  filter(kth > ______) |>
+  select(sleep_hours:satisfaction) |>
+  round(1)
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+profiles |>
+  filter(kth > 2.4) |>
+  select(sleep_hours:satisfaction) |>
+  round(1)
+```
+
+Two kinds of extreme student: some study about 60 hours a week, sleep about 4 hours, and drink over 700 mg of caffeine a day; others sleep close to 10 hours, study very little, and exercise almost every day. Each value on its own might not look impossible, but the combination is far from every other student.
+:::
+:::
+
+## Judging clusters
+
+### Exercise 5: Do the clusters matter?
+
+Cluster the students into three groups with k-means, then compare the groups on something the clustering did not use: the share considering dropout.
+
+```{webr}
+#| exercise: ex5
+set.seed(123)
+km <- kmeans(profile_data, centers = ______, nstart = 25)
+profiles |>
+  mutate(cluster = km$cluster) |>
+  left_join(students |> select(student_id, considering_dropout), join_by(student_id)) |>
+  summarise(students = n(),
+            stress = round(mean(stress), 1),
+            dropout = round(mean(considering_dropout == "Yes"), 2),
+            .by = cluster)
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+km <- kmeans(profile_data, centers = 3, nstart = 25)
+```
+
+The groups differ clearly in how many students consider dropping out, although dropout played no part in forming them. Clusters that differ on outcomes they were not built from are more convincing than clusters that merely exist.
+:::
+:::
+
+### Exercise 6: Do two methods agree?
+
+Cluster the students into three groups with hierarchical clustering (Ward's method) as well, and cross-tabulate the two solutions.
+
+```{webr}
+#| exercise: ex6
+set.seed(123)
+km <- kmeans(profile_data, centers = 3, nstart = 25)
+tree <- hclust(dist(profile_data), method = "ward.D2")
+hier <- cutree(tree, k = ______)
+table(kmeans = km$cluster, hierarchical = hier)
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+hier <- cutree(tree, k = 3)
+table(kmeans = km$cluster, hierarchical = hier)
+```
+
+The cluster numbers are arbitrary, so look for the big counts: most students fall in one cell of each row, but not all. Students who switch between methods sit near the boundaries. The chapter's adjusted Rand index summarises this kind of table in one number.
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 13 project
+
+The project uses mclust and dbscan, as in the chapter: Gaussian mixture models, BIC, membership probabilities, DBSCAN, and the adjusted Rand index, with exercises from the chapter and solutions.
+
+- [Download chapter13.zip](chapter13.zip), unzip it, and double-click `chapter13.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter13.zip")
+```
+:::

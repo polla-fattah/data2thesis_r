@@ -1,0 +1,25 @@
+From Data to Thesis: Research Data Analysis with R
+Playground, Chapter 16: Reproducible Research
+
+How to use this project
+1. Double-click chapter16.Rproj. RStudio opens with this folder as the working directory.
+2. Open results.qmd and click Render. Then open exercises.txt and work through the tasks.
+3. Finished versions of every file are in the solutions folder, for after you have tried.
+
+You need Quarto, which is installed with RStudio, and these packages (install once):
+install.packages(c("dplyr", "ggplot2", "knitr", "rmarkdown", "shiny", "bslib"))
+For PDF output you also need LaTeX: run  quarto install tinytex  in the Terminal.
+
+Files
+- results.qmd          Elaf's results chapter: inline numbers, a table, a figure
+- faculty-report.qmd   a one-page report with a faculty parameter
+- app.R                the wellbeing dashboard (click Run App)
+- references.bib       references for results.qmd
+- exercises.txt        the tasks for this chapter
+- solutions/           finished versions of the three files above
+- students.csv         one row per student in Elaf's study (600 students)
+- semesters.csv        one row per student per semester
+
+The data is simulated for teaching and describes no real people.
+Browser exercises for this chapter are at:
+https://polla-fattah.github.io/R4NTR/playground/chapter16.html

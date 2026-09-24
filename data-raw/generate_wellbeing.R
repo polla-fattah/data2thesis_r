@@ -17,7 +17,7 @@ suppressPackageStartupMessages({
   library(writexl)  # Excel file
 })
 
-dataset_version <- "1.0.0"
+dataset_version <- "1.1.0"
 set.seed(20260924)
 
 out_dir <- "data"
@@ -423,6 +423,7 @@ write_answer <- function(k) {
   w <- theme_weights[k, ]
   main <- sample(themes, 1, prob = w)
   text <- sample(theme_bank[[main]], 1)
+  second <- ""
   opener <- sample(c("", "", "", "Honestly, ", "To be honest, ", "For me, "), 1)
   if (opener != "") text <- paste0(opener, decap(text))
   if (runif(1) < 0.30) {
@@ -446,10 +447,23 @@ write_answer <- function(k) {
   }
   if (runif(1) < 0.10) text <- decap(text)
   if (runif(1) < 0.10) text <- sub("\\.$", "", text)
-  c(theme = main, text = text)
+  c(theme = main, second = second, text = text)
 }
 
-answers <- t(vapply(respondent, write_answer, character(2)))
+# The answers above fix each student's themes (and use the same random draws as
+# version 1.0.0). Version 1.1.0 rewrites the text from a much larger phrase bank
+# (answer_bank.R), using a separate random stream, so every other value in the
+# dataset stays exactly the same.
+answers <- t(vapply(respondent, write_answer, character(3)))
+saved_seed <- .Random.seed
+set.seed(20261101)
+source(file.path("data-raw", "answer_bank.R"))
+answers[, "text"] <- vapply(seq_along(respondent), function(i) {
+  k <- respondent[i]
+  write_varied(answers[i, "theme"], answers[i, "second"],
+               dropout = dropout[k], workshop = invited[k] && sessions[k] >= 3)
+}, character(1))
+assign(".Random.seed", saved_seed, envir = globalenv())
 open_responses <- data.frame(
   student_id = students$student_id[respondent],
   biggest_challenge = answers[, "text"]

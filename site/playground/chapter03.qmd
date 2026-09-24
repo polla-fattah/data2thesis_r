@@ -1,0 +1,265 @@
+---
+title: "Playground: Chapter 3"
+subtitle: Data Manipulation
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - chapter03.zip
+webr:
+  packages:
+    - dplyr
+    - tidyr
+  resources:
+    - students.csv
+    - semesters.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+These exercises practise the ideas from Chapter 3: the pipe, the dplyr verbs, reshaping, joins, and cleaning. The first run on this page takes a little longer, because your browser downloads the dplyr and tidyr packages. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6, ex7]
+library(dplyr)
+library(tidyr)
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+```
+
+## The pipe and the verbs
+
+### Exercise 1: Rewrite with the pipe
+
+Rewrite `round(mean(c(6.5, 7, 5.5, 8, 6)), 1)` using `|>`, so that it reads in the order the steps happen.
+
+```{webr}
+#| exercise: ex1
+c(6.5, 7, 5.5, 8, 6) |> ______ |> ______
+```
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+c(6.5, 7, 5.5, 8, 6) |> mean() |> round(1)
+```
+:::
+:::
+
+### Exercise 2: Average age by faculty
+
+Find the average age of students in each faculty, sorted from oldest to youngest.
+
+```{webr}
+#| exercise: ex2
+students |>
+  summarise(mean_age = mean(age, na.rm = TRUE), .by = ______) |>
+  arrange(______)
+```
+
+::: { .hint exercise="ex2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Group by `faculty`, and sort with `desc(mean_age)` for oldest first.
+:::
+:::
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+students |>
+  summarise(mean_age = mean(age, na.rm = TRUE), .by = faculty) |>
+  arrange(desc(mean_age))
+```
+:::
+:::
+
+### Exercise 3: Categories with `case_when()`
+
+Add a column `sleep_group`: `"Short"` under 6 hours, `"Recommended"` at 7 hours or more, and `"Moderate"` otherwise. Then count the semester records in each group.
+
+```{webr}
+#| exercise: ex3
+semesters |>
+  mutate(sleep_group = case_when(
+    sleep_hours < 6 ~ "Short",
+    ______ ~ "Recommended",
+    .default = ______
+  )) |>
+  count(sleep_group)
+```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The second condition is `sleep_hours >= 7`, and `.default` gives the label for everything else.
+:::
+:::
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+semesters |>
+  mutate(sleep_group = case_when(
+    sleep_hours < 6 ~ "Short",
+    sleep_hours >= 7 ~ "Recommended",
+    .default = "Moderate"
+  )) |>
+  count(sleep_group)
+```
+
+Records with missing sleep fall through to `.default`, so they are counted as `"Moderate"` here. To keep them separate, add `is.na(sleep_hours) ~ NA` as the first condition.
+:::
+:::
+
+## Reshaping and joining
+
+### Exercise 4: One column per semester
+
+Make a table of each student's GPA with one column per semester. Show the first rows.
+
+```{webr}
+#| exercise: ex4
+semesters |>
+  select(student_id, semester, gpa) |>
+  pivot_wider(names_from = ______, values_from = ______) |>
+  head()
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+semesters |>
+  select(student_id, semester, gpa) |>
+  pivot_wider(names_from = semester, values_from = gpa) |>
+  head()
+```
+:::
+:::
+
+### Exercise 5: Joining two tables
+
+Join `semesters` to `students` and compare the average semester GPA of full-time and part-time students.
+
+```{webr}
+#| exercise: ex5
+semesters |>
+  left_join(students, join_by(______)) |>
+  summarise(mean_gpa = mean(gpa, na.rm = TRUE), .by = ______)
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+semesters |>
+  left_join(students, join_by(student_id)) |>
+  summarise(mean_gpa = mean(gpa, na.rm = TRUE), .by = study_mode)
+```
+:::
+:::
+
+### Exercise 6: Who left the study?
+
+Use `anti_join()` to find the students with no record for semester 4. How many are there?
+
+```{webr}
+#| exercise: ex6
+students |>
+  anti_join(semesters |> filter(semester == ______), join_by(student_id)) |>
+  nrow()
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+students |>
+  anti_join(semesters |> filter(semester == 4), join_by(student_id)) |>
+  nrow()
+```
+
+The same students are missing from semesters 3 and 4: they left after the first year.
+:::
+:::
+
+## Cleaning
+
+### Exercise 7: A small messy table
+
+This table mimics a survey export. Clean it so that `gender` has only `"Female"` and `"Male"`, and `stress` is a number with the missing code `99` turned into `NA`. Then calculate the average stress.
+
+```{webr}
+#| exercise: ex7
+messy <- tibble(
+  gender = c("F", "female", "Male", "m", "Female"),
+  stress = c("3", "99", "4", "2", "5")
+)
+clean <- messy |>
+  mutate(
+    gender = if_else(startsWith(tolower(gender), "f"), ______, ______),
+    stress = as.integer(na_if(stress, ______))
+  )
+clean
+mean(clean$stress, na.rm = TRUE)
+```
+
+::: { .hint exercise="ex7" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`if_else(condition, value if TRUE, value if FALSE)`. The missing code is the text `"99"`, in quotes, because the column is still text at that point.
+:::
+:::
+
+::: { .solution exercise="ex7" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+clean <- messy |>
+  mutate(
+    gender = if_else(startsWith(tolower(gender), "f"), "Female", "Male"),
+    stress = as.integer(na_if(stress, "99"))
+  )
+clean
+mean(clean$stress, na.rm = TRUE)   # 3.5; with the 99 left in, it would be 22.6
+```
+
+(Base R's `startsWith()` and `tolower()` do the same job as stringr's `str_starts()` and `str_to_lower()` from the chapter.)
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 3 project
+
+The project contains the data, these exercises, a longer exercise that cleans Elaf's full survey export (`wellbeing_raw.xlsx`) from start to finish, and the solutions.
+
+- [Download chapter03.zip](chapter03.zip), unzip it, and double-click `chapter03.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter03.zip")
+```
+:::

@@ -1,27 +1,231 @@
 # Hypothesis Testing and Statistical Inference {#sec-ch06}
 
-::: {.callout-note appearance="simple"}
-## This chapter is being written
-
-The first section, *Comparing two groups*, is written. The rest of the chapter is outlined at the end of this page.
-:::
-
-## Comparing two groups {#sec-comparing-groups}
-
 ```{r}
 #| label: setup
 #| include: false
 library(data2thesis)
-library(ggplot2)
 ```
 
-### Elaf's question
+Elaf's sample is described. Now come the questions her thesis was designed to answer. Do graduate students sleep less than the recommended 7 hours (RQ2)? Did the wellbeing workshop improve wellbeing (RQ3)? Is having a job related to thinking about dropping out?
 
-Half of the 600 students in Elaf's study were invited, at random, to a six-week wellbeing workshop after their first semester. At the end of semester 2, Elaf wants to know:
+Each question is about graduate students *in general*, but Elaf has data on only 600 of them. **Statistical inference** is the set of tools for drawing conclusions about a whole population from a sample, and for saying how confident we can be. This chapter builds up those tools, from the idea of a sampling distribution to the tests that appear in almost every thesis.
 
-> **Did the workshop improve students' wellbeing?**
+::: {.callout-tip appearance="simple"}
+## By the end of this chapter you will be able to
 
-The invited students' average wellbeing is higher than the others'. But averages always differ a little between any two groups, even when nothing real is going on. The question is whether the difference is bigger than chance alone would produce. A **t-test** answers exactly that question.
+- Explain sampling distributions, the standard error, and the central limit theorem.
+- Calculate and interpret confidence intervals, including bootstrap intervals.
+- Explain the logic of a hypothesis test, p-values, and the two kinds of error.
+- Carry out one-sample, two-sample, and paired t-tests, and measure the size of an effect.
+- Check the assumptions of a test, and choose non-parametric tests when they fail.
+- Test relationships between categorical variables with chi-square tests.
+- Choose the right test for a question, and report the result in a thesis.
+:::
+
+## From sample to population
+
+The **population** is everyone you want to draw conclusions about: here, graduate students. The **sample** is the people you actually measured: Elaf's 600 students. A number that describes the population, such as the true average sleep of all graduate students, is a **parameter**. We never know it exactly. The same number calculated from the sample, such as the average sleep of Elaf's 600, is a **statistic**, and it is our estimate of the parameter.
+
+The problem is that a different sample would give a slightly different estimate. How much would it vary? To see, pretend for a moment that Elaf's 600 students *are* the whole population, draw many small samples from them, and watch what happens.
+
+### Sampling distributions
+
+Caffeine intake is strongly skewed (Chapter 5): most students take a moderate amount, and a few take a great deal. Draw a sample of 5 students, and calculate their average caffeine. Then do it again, and again, a thousand times. `sample()` draws a random sample, and `replicate()` repeats the whole thing:
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
+
+caffeine <- first_sem$caffeine_mg[!is.na(first_sem$caffeine_mg)]
+
+set.seed(2026)
+means_5  <- replicate(1000, mean(sample(caffeine, 5)))
+means_30 <- replicate(1000, mean(sample(caffeine, 30)))
+```
+
+`set.seed()` fixes R's random number generator, so that the "random" samples are the same every time the code runs, and you get the same results as in this book. Use it whenever your analysis involves randomness.
+
+The thousand averages form a **sampling distribution**: the distribution of a statistic over many possible samples. @fig-clt compares the sampling distributions for samples of 5 and of 30 students.
+
+```{r}
+#| label: fig-clt
+#| fig-cap: "The sampling distribution of average caffeine intake, for samples of 5 and of 30 students drawn from Elaf's data."
+#| fig-alt: "Two histograms. For samples of 5, the averages are widely spread and skewed to the right. For samples of 30, they are narrow and nearly symmetrical, centred on the same value."
+#| fig-width: 7
+#| fig-height: 3.4
+tibble(
+  mean_caffeine = c(means_5, means_30),
+  sample_size   = rep(c("Samples of 5", "Samples of 30"), each = 1000)
+) |>
+  mutate(sample_size = factor(sample_size, levels = c("Samples of 5", "Samples of 30"))) |>
+  ggplot(aes(x = mean_caffeine)) +
+  geom_histogram(bins = 40, fill = "grey70", colour = "white") +
+  facet_wrap(~ sample_size) +
+  labs(x = "Average caffeine in the sample (mg)", y = "Number of samples") +
+  theme_minimal(base_size = 12)
+```
+
+Three things stand out, and together they are the foundation of statistical inference:
+
+1. **Both are centred on the true average.** The average of all 600 students is `r round(mean(caffeine))` mg, and both sampling distributions centre on it. A sample average is an unbiased estimate.
+2. **Larger samples vary less.** Averages of 5 students range widely; averages of 30 are much more tightly packed. Larger samples give more precise estimates.
+3. **Larger samples give a bell shape, even from skewed data.** Caffeine itself is strongly skewed, and so are the averages of 5 students. But the averages of 30 students are almost symmetrical and bell-shaped.
+
+The third point is the **central limit theorem**: whatever the shape of the data, the averages of reasonably large samples follow an approximately normal distribution. It is why tests based on the normal distribution work for so many kinds of data. As a rule of thumb, samples of 30 or more are usually large enough, unless the data is extremely skewed.
+
+### The standard error
+
+The spread of a sampling distribution has its own name: the **standard error** (SE). It measures how much an estimate would vary from sample to sample, which is exactly the uncertainty we want to know. In practice we have only one sample, so we cannot draw a thousand. Fortunately, the standard error of an average can be calculated from a single sample:
+
+$$
+SE = \frac{s}{\sqrt{n}}
+$$
+
+where $s$ is the standard deviation and $n$ the sample size. Compare the formula with the simulation:
+
+```{r}
+sd(means_30)                       # spread of the 1,000 simulated averages
+sd(caffeine) / sqrt(30)            # the formula, from the data
+```
+
+They agree closely. Notice the $\sqrt{n}$: to halve the standard error, you need four times as many people.
+
+### Confidence intervals
+
+An estimate on its own says nothing about how precise it is. A **confidence interval** (CI) adds that information: a range of values that are plausible for the population parameter, given the data. A 95% confidence interval for a mean is approximately
+
+$$
+\bar{x} \pm 2 \times SE
+$$
+
+(more precisely, the 2 is a value from the *t*-distribution, which R works out for you). `t.test()` calculates the confidence interval for you. Here it is for the average sleep of Elaf's students in their first semester:
+
+```{r}
+t.test(first_sem$sleep_hours)$conf.int
+```
+
+The average sleep of graduate students is plausibly between about 6.4 and 6.6 hours. The interval is narrow because the sample is large.
+
+What does "95%" mean? If the study were repeated many times, and a 95% confidence interval calculated each time, about 95% of those intervals would contain the true population value. It is a statement about the method, not a 95% probability that this particular interval is right.
+
+::: {.callout-warning}
+## Mean ± SE is not a confidence interval
+
+Theses often report "mean ± SE" and treat it as if it were a confidence interval. It is not: the SE is only half the width of an approximate 95% CI. Report the confidence interval itself, and say what it is.
+:::
+
+### Bootstrap confidence intervals
+
+The formula above works for averages. For other statistics, such as the median, there is no simple formula. The **bootstrap** gets around this with a clever idea: treat the sample as if it were the population, and draw many new samples from it *with replacement*, so that each new sample contains some people twice and leaves others out. The spread of the statistic across these resamples estimates its sampling distribution.
+
+Suppose Elaf had surveyed only 40 students and wanted a confidence interval for their median caffeine intake:
+
+```{r}
+set.seed(1)
+small_sample <- sample(caffeine, 40)
+median(small_sample)
+
+boot_medians <- replicate(2000, median(sample(small_sample, replace = TRUE)))
+quantile(boot_medians, c(0.025, 0.975))
+```
+
+`replace = TRUE` is what makes it a bootstrap. The middle 95% of the 2,000 bootstrap medians, from the 2.5th to the 97.5th percentile, is the 95% bootstrap confidence interval. The median of all 600 students, `r median(caffeine)` mg, lies inside it. The same few lines work for almost any statistic.
+
+## The logic of hypothesis testing
+
+A confidence interval says what values are plausible. A **hypothesis test** answers a yes-or-no question: is the data consistent with a particular claim?
+
+Every test starts with two statements:
+
+- The **null hypothesis**, $H_0$, is the claim of "no effect": no difference, no relationship. For example: *the workshop has no effect on wellbeing*.
+- The **alternative hypothesis**, $H_1$, is what the researcher suspects: *the workshop does affect wellbeing*.
+
+The test then asks: **if the null hypothesis were true, how surprising would our data be?** The answer is the **p-value**: the probability of getting a result at least as extreme as ours, if the null hypothesis were true.
+
+- A small p-value means the data would be surprising if $H_0$ were true, so we **reject** $H_0$. By convention, "small" means below 0.05, a threshold called the **significance level**, $\alpha$. Such a result is called **statistically significant**.
+- A large p-value means the data is consistent with $H_0$, so we **fail to reject** it. This is not proof that $H_0$ is true. It means only that the data does not provide strong evidence against it.
+
+::: {.callout-important}
+## What a p-value is not
+
+A p-value is **not** the probability that the null hypothesis is true, and **not** the probability that the result happened by chance. It is the probability of data like yours, *assuming* the null hypothesis is true. A p-value of 0.03 means: if the workshop had no effect, a difference this large would appear in only 3% of studies like this one.
+:::
+
+### Two kinds of error
+
+Because tests work with probabilities, they can be wrong in two ways:
+
+| | $H_0$ is really true | $H_0$ is really false |
+|---|---|---|
+| **Reject $H_0$** | Type I error (a false alarm) | Correct |
+| **Fail to reject $H_0$** | Correct | Type II error (a missed effect) |
+
+: The two kinds of error in hypothesis testing {#tbl-errors}
+
+The significance level controls Type I errors: with $\alpha = 0.05$, about 5% of tests of a true null hypothesis will be "significant" by chance alone. You can see this happen. Split Elaf's students into two groups completely at random, so that there can be no real difference, and test whether their wellbeing differs. Then do it a thousand times:
+
+```{r}
+set.seed(7)
+p_values <- replicate(1000, {
+  random_group <- sample(rep(c("A", "B"), 300))
+  t.test(first_sem$wellbeing ~ random_group)$p.value
+})
+mean(p_values < 0.05)
+```
+
+About `r round(100 * mean(p_values < 0.05))`% of the tests are "significant", even though every difference is pure chance: close to the 5% the significance level predicts (with only 1,000 repetitions, a little variation is expected). This is one reason a single significant result is never the final word, and why running many tests and reporting only the significant ones is misleading.
+
+Type II errors are reduced by larger samples: the more data, the easier it is to detect a real effect.
+
+### One-tailed and two-tailed tests
+
+A **two-tailed** test looks for a difference in either direction: the workshop might raise *or* lower wellbeing. A **one-tailed** test looks in one direction only. One-tailed tests are easier to pass, which makes them tempting, but they are justified only when the opposite direction is truly impossible or irrelevant, and when the direction was decided before seeing the data. Use two-tailed tests unless you have a strong reason not to. R's tests are two-tailed by default.
+
+### Statistical and practical significance
+
+A statistically significant result is not necessarily an important one. With a large enough sample, even a tiny, meaningless difference becomes significant. Always report *how big* the effect is, not just whether it is significant. The rest of this chapter does that for each test.
+
+## Comparing a mean with a value: the one-sample t-test
+
+Elaf's second research question asks whether graduate students sleep less than the recommended 7 hours (RQ2). The hypotheses are:
+
+- $H_0$: the average sleep of graduate students is 7 hours.
+- $H_1$: it is not 7 hours.
+
+A **one-sample t-test** compares a sample average with a fixed value, given by the argument `mu`:
+
+```{r}
+sleep_test <- t.test(first_sem$sleep_hours, mu = 7)
+sleep_test
+```
+
+```{r}
+#| include: false
+f2 <- function(x) sprintf("%.2f", x)
+short_min <- round(60 * (7 - rev(sleep_test$conf.int)))
+```
+
+The output has three parts to read:
+
+- **The estimate**: the sample average, `r f2(sleep_test$estimate)` hours.
+- **The confidence interval**: `r f2(sleep_test$conf.int[1])` to `r f2(sleep_test$conf.int[2])` hours. It does not include 7.
+- **The test**: the *t* statistic measures how far the average is from 7, in standard errors: more than 12 standard errors below. The p-value is so small that R prints it as "< 2.2e-16", meaning less than 0.0000000000000002.
+
+Graduate students sleep about half an hour less than recommended, and the difference is far too large to be chance. The confidence interval also answers the practical question: the shortfall is somewhere between about `r short_min[1]` and `r short_min[2]` minutes a night.
+
+::: {.callout-note}
+## One value per student
+
+The test uses first-semester records only, one value per student. A t-test assumes that the observations are **independent**. Using all four semesters would count each student up to four times, as if they were four different people, and make the result look more certain than it is. Chapter 9 shows how to analyse repeated measurements properly.
+:::
+
+## Comparing two groups: the two-sample t-test {#sec-comparing-groups}
+
+Now Elaf's central question (RQ3). Half of her students were invited, at random, to a six-week wellbeing workshop after their first semester. **Did the workshop improve their wellbeing?**
 
 ### The idea on a handful of numbers
 
@@ -35,26 +239,27 @@ mean(invited)
 mean(not_invited)
 ```
 
-The invited group is `r mean(invited) - mean(not_invited)` points higher on average. Is that more than chance? `t.test()` compares the two groups:
+The invited group is `r mean(invited) - mean(not_invited)` points higher on average. Is that more than chance? A **two-sample t-test** compares the averages of two independent groups:
 
 ```{r}
 small_test <- t.test(invited, not_invited)
 small_test
 ```
 
-The important number is the **p-value**. It tells you how often a difference at least this large would appear by chance alone, if the workshop had no effect at all. Here it is `r round(small_test$p.value, 3)`: a difference this large would happen by chance about `r round(100 * small_test$p.value)` times in 100. By convention, researchers call a result **statistically significant** when the p-value is below 0.05.
+The p-value is `r round(small_test$p.value, 3)`: if the workshop had no effect, a difference this large would appear in about `r round(100 * small_test$p.value)` studies in 100. By the usual 0.05 threshold, it is statistically significant, though with only five students per group, it is fragile evidence.
 
 ### Elaf's data
 
-Now the same test on the real study. First, combine each student's workshop group (in `students`) with their semester 2 wellbeing score (in `semesters`):
+Now the real study. First, combine each student's workshop group with their semester 2 wellbeing:
 
 ```{r}
-semester2 <- merge(students, semesters[semesters$semester == 2, ],
-                   by = "student_id")
+semester2 <- semesters |>
+  filter(semester == 2) |>
+  left_join(students, join_by(student_id))
 nrow(semester2)
 ```
 
-Always look at the data before testing it. @fig-workshop shows wellbeing in each group.
+Always look before testing. @fig-workshop shows wellbeing in each group.
 
 ```{r}
 #| label: fig-workshop
@@ -68,7 +273,7 @@ ggplot(semester2, aes(x = workshop, y = wellbeing, fill = workshop)) +
   theme_minimal(base_size = 13)
 ```
 
-The invited group sits a little higher, but the two groups overlap a lot. Now the test:
+The invited group sits a little higher, but the groups overlap a lot. Now the test. The formula `wellbeing ~ workshop` reads "wellbeing by workshop group":
 
 ```{r}
 result <- t.test(wellbeing ~ workshop, data = semester2)
@@ -81,30 +286,173 @@ means <- tapply(semester2$wellbeing, semester2$workshop, mean)
 gap <- means[["Invited"]] - means[["Not invited"]]
 ```
 
-Invited students scored `r round(gap, 1)` points higher on average (`r round(means[["Invited"]], 1)` against `r round(means[["Not invited"]], 1)`), and the p-value is below 0.001. A difference this large would almost never appear by chance, so Elaf can conclude that the workshop improved wellbeing. Because students were invited **at random**, she can say the workshop *caused* the improvement, not just that it went with it.
+Invited students scored `r round(gap, 1)` points higher on average (`r round(means[["Invited"]], 1)` against `r round(means[["Not invited"]], 1)`). The 95% confidence interval for the difference runs from `r round(result$conf.int[1], 1)` to `r round(result$conf.int[2], 1)` points, and the p-value is below 0.001. The difference is very unlikely to be chance. And because students were invited **at random**, Elaf can conclude that the workshop *caused* the improvement, not just that it went with it: randomisation makes the two groups alike in everything except the invitation.
 
-::: {.callout-tip}
-## Writing it up in a thesis
+The heading of the output, "Welch Two Sample t-test", names the version R uses by default. It does not assume that the two groups have equal spread, which makes it the safer choice. Use it unless you have a reason not to.
 
-"Students invited to the wellbeing workshop reported higher wellbeing at the end of semester 2 (M = `r round(means[["Invited"]], 1)`) than those not invited (M = `r round(means[["Not invited"]], 1)`), a difference of `r round(gap, 1)` points, *t*(`r round(result$parameter)`) = `r round(abs(result$statistic), 2)`, *p* < .001."
-:::
+### How big is the difference?
 
-Notice that the numbers in that sentence are not typed in: they come from the code. If the data changed, the text would update itself.
+Five points on a 100-point scale: is that a lot? One common way to judge is **Cohen's *d***, the difference between the means divided by the standard deviation. It expresses the difference in standard deviations, so it can be compared across studies and scales:
 
-### Which test when?
+```{r}
+inv <- semester2$wellbeing[semester2$workshop == "Invited"]
+not <- semester2$wellbeing[semester2$workshop == "Not invited"]
+d <- (mean(inv) - mean(not)) / sqrt((var(inv) + var(not)) / 2)
+d
+```
 
-The t-test is one of several tests for comparing groups. The diagram shows where it fits; this chapter covers each of them.
+Cohen's guidelines call 0.2 a small effect, 0.5 medium, and 0.8 large [@cohen1988]. At about `r round(d, 2)`, the workshop's effect is small to medium: a real improvement, but not a transformation. For a six-week workshop, that is a worthwhile result, and exactly the kind of judgement a thesis discussion should make.
+
+## Comparing the same people twice: the paired t-test
+
+The two-sample t-test compared two different groups of students. Elaf can also ask a different question: did the invited students' own wellbeing rise from semester 1 to semester 2? Now the same students are measured twice, so the two sets of scores are **paired**. Each student is compared with themselves, which removes the large differences *between* students and makes the test more sensitive.
+
+The data needs one row per student, with the two semesters side by side (Chapter 3):
+
+```{r}
+library(tidyr)
+
+invited_wide <- semesters |>
+  filter(semester %in% c(1, 2)) |>
+  left_join(students, join_by(student_id)) |>
+  filter(workshop == "Invited") |>
+  select(student_id, semester, wellbeing) |>
+  pivot_wider(names_from = semester, values_from = wellbeing,
+              names_prefix = "semester_")
+
+t.test(invited_wide$semester_2, invited_wide$semester_1, paired = TRUE)
+```
+
+The invited students' wellbeing rose by `r round(mean(invited_wide$semester_2 - invited_wide$semester_1), 1)` points on average, and the change is clearly significant.
+
+But notice what this test cannot tell Elaf: *why* wellbeing rose. It could be the workshop, or it could be that semester 2 is simply less stressful than semester 1 for everyone. The paired test has no comparison group. The two-sample test above, comparing invited with not-invited students, is the one that answers the causal question. Choosing the design that actually answers your question is as important as running the test correctly.
+
+## Checking the assumptions
+
+Every test rests on assumptions. For t-tests, they are:
+
+1. **Independence**: each observation comes from a different person (or, for the paired test, each *pair* does). This is a matter of study design, not something you can test.
+2. **Approximate normality**: the data in each group is roughly normal, or the sample is large enough for the central limit theorem to help. With 30 or more per group, moderate skewness is not a problem.
+3. **Similar spread**: required only by the classic version of the two-sample test; Welch's version, R's default, does not need it.
+
+Check normality with graphs: a histogram and a Q-Q plot (Chapter 5). There are formal tests of normality too, such as the Shapiro-Wilk test, but they have a trap:
+
+```{r}
+shapiro.test(first_sem$sleep_hours)
+```
+
+The test says sleep is *not* normal (p < 0.05). Yet in Chapter 5, the histogram and Q-Q plot of sleep looked almost perfectly normal. Both are right: with 600 students, the test is sensitive enough to detect tiny departures from normality that make no practical difference. In large samples, normality tests reject almost everything; in small samples, where normality matters most, they can miss real problems. Trust the graphs, and let the sample size guide you.
+
+## Categorical data: chi-square tests
+
+The t-test compares averages of a numeric variable. For categorical variables, the **chi-square test** ($\chi^2$) compares counts: how many cases fall into each category, against how many would be expected if the null hypothesis were true.
+
+### Goodness of fit
+
+The **goodness-of-fit test** compares the counts of one categorical variable with expected proportions. Is Elaf's sample evenly split between women and men?
+
+```{r}
+table(students$gender)
+chisq.test(table(students$gender), p = c(0.5, 0.5))
+```
+
+With `r sum(students$gender == "Female")` women and `r sum(students$gender == "Male")` men, the split is a little uneven, but the p-value is large: a difference this size is quite likely in a random sample from an evenly split population. There is no evidence against a 50/50 split. (Not every test has to be significant, and a non-significant result is still a result.)
+
+### Test of independence
+
+The **test of independence** asks whether two categorical variables are related. Is having a job related to considering dropping out?
+
+```{r}
+jobs <- table(students$employment, students$considering_dropout)
+jobs
+prop.table(jobs, margin = 1) |> round(2)
+```
+
+`prop.table(..., margin = 1)` turns the counts into proportions within each row. About a quarter of students with full-time jobs have considered dropping out, compared with about one in eight of the others. Is the difference larger than chance?
+
+```{r}
+job_test <- chisq.test(jobs)
+job_test
+```
+
+Yes: the p-value is `r round(job_test$p.value, 3)`. Students with full-time jobs are more likely to consider dropping out. (This is an association, not proof that jobs cause dropout thoughts: students who work full-time may differ in other ways too, such as financial pressure.)
+
+The chi-square test is reliable when the **expected** counts, the counts you would expect if the variables were unrelated, are at least 5 in every cell. The test stores them:
+
+```{r}
+round(job_test$expected, 1)
+```
+
+All are well above 5. When some are not, use `fisher.test()` instead, which is exact for small counts.
+
+## When assumptions fail: non-parametric tests
+
+When data is clearly not normal and the sample is small, or when the data is ordinal (ranks, or answers on a short scale), **non-parametric tests** are the alternative. Instead of the values themselves, they compare the **ranks** of the values, so extreme values and skewness do not throw them off.
+
+The **Mann-Whitney U test** (called the Wilcoxon rank-sum test in R) replaces the two-sample t-test. Caffeine is strongly skewed; do women and men differ in caffeine intake?
+
+```{r}
+tapply(first_sem$caffeine_mg, first_sem$gender, median, na.rm = TRUE)
+wilcox.test(caffeine_mg ~ gender, data = first_sem)
+```
+
+The medians differ a little, but the p-value is above 0.05: no clear evidence of a difference. Report medians, not means, alongside a non-parametric test.
+
+The **Wilcoxon signed-rank test** replaces the paired t-test. Applied to the invited students' wellbeing in semesters 1 and 2:
+
+```{r}
+wilcox.test(invited_wide$semester_2, invited_wide$semester_1, paired = TRUE)
+```
+
+It agrees with the paired t-test. When the parametric and non-parametric tests agree, you can report either with confidence; when they disagree, look again at the data, and trust the one whose assumptions fit.
+
+## Which test when?
+
+@tbl-choose-test and @fig-choose-test summarise the tests of this chapter and the next.
+
+| Question | Data | Test | In R |
+|---|---|---|---|
+| Is a mean equal to a value? | Numeric, one group | One-sample t-test | `t.test(x, mu = )` |
+| Do two groups differ? | Numeric, two independent groups | Two-sample t-test | `t.test(y ~ group)` |
+| Do the same people differ at two times? | Numeric, paired | Paired t-test | `t.test(x2, x1, paired = TRUE)` |
+| Do three or more groups differ? | Numeric, 3+ groups | ANOVA (Chapter 7) | `aov()` |
+| Do two groups differ (skewed or ordinal)? | Ranks, two groups | Mann-Whitney U | `wilcox.test(y ~ group)` |
+| Paired, skewed or ordinal? | Ranks, paired | Wilcoxon signed-rank | `wilcox.test(x2, x1, paired = TRUE)` |
+| Do counts match expected proportions? | One categorical variable | Chi-square goodness of fit | `chisq.test(table, p = )` |
+| Are two categorical variables related? | Two categorical variables | Chi-square test of independence | `chisq.test(table)` |
+
+: Choosing a test {#tbl-choose-test}
 
 ```{mermaid}
+%%| label: fig-choose-test
+%%| fig-cap: "Choosing a test for comparing groups."
 flowchart TD
-  A[What are you comparing?] --> B{How many groups?}
-  B -->|Two| C{Same people measured twice?}
-  B -->|Three or more| F[ANOVA]
-  C -->|No, different people| D[Two-sample t-test]
-  C -->|Yes| E[Paired t-test]
-  D -.->|Data very skewed| G[Mann-Whitney U test]
-  E -.->|Data very skewed| H[Wilcoxon signed-rank test]
+  A[What is the outcome?] -->|Numeric| B{How many groups?}
+  A -->|Categorical| K[Chi-square test]
+  B -->|One, against a value| C[One-sample t-test]
+  B -->|Two| D{Same people twice?}
+  B -->|Three or more| F[ANOVA, Chapter 7]
+  D -->|No, different people| G[Two-sample t-test]
+  D -->|Yes| H[Paired t-test]
+  G -.->|Very skewed, small sample, or ordinal| I[Mann-Whitney U test]
+  H -.->|Very skewed, small sample, or ordinal| J[Wilcoxon signed-rank test]
 ```
+
+## Reporting results in a thesis
+
+Report each test with the statistic, its degrees of freedom (df, printed by R), the p-value, and, most importantly, the size of the effect with a confidence interval. Give exact p-values to two or three decimal places, and write "*p* < .001" for very small ones. For example:
+
+::: {.callout-tip}
+## Example write-ups
+
+**One-sample t-test.** Students slept less than the recommended 7 hours (*M* = `r f2(sleep_test$estimate)`, 95% CI [`r f2(sleep_test$conf.int[1])`, `r f2(sleep_test$conf.int[2])`]), *t*(`r sleep_test$parameter`) = `r f2(sleep_test$statistic)`, *p* < .001.
+
+**Two-sample t-test.** Students invited to the wellbeing workshop reported higher wellbeing at the end of semester 2 (*M* = `r round(means[["Invited"]], 1)`) than those not invited (*M* = `r round(means[["Not invited"]], 1)`), a difference of `r round(gap, 1)` points, 95% CI [`r round(result$conf.int[1], 1)`, `r round(result$conf.int[2], 1)`], *t*(`r round(result$parameter)`) = `r round(abs(result$statistic), 2)`, *p* < .001, *d* = `r f2(d)`.
+
+**Chi-square test.** Considering dropout was related to employment, $\chi^2$(2) = `r round(job_test$statistic, 2)`, *p* = `r sub("^0", "", sprintf("%.3f", job_test$p.value))`: `r round(100 * prop.table(jobs, 1)["Full-time job", "Yes"])`% of students with full-time jobs had considered dropping out, compared with `r round(100 * prop.table(jobs, 1)["None", "Yes"])`% of those without a job.
+:::
+
+All the numbers in these examples are filled in by the code, so they cannot drift out of step with the analysis.
 
 ::: {.callout-note icon="false"}
 ## In your field: health research
@@ -117,26 +465,37 @@ drug2 <- sleep$extra[sleep$group == 2]
 t.test(drug2, drug1, paired = TRUE)
 ```
 
-Patients slept on average 1.6 hours longer with the second drug.
+Patients slept on average 1.6 hours longer with the second drug. With only 10 patients, the confidence interval is wide, from about 0.7 to 2.5 hours: a clear effect, but an imprecise estimate of its size.
 :::
-
-## Still to be written
-
-- Sampling distributions by simulation, and bootstrap confidence intervals.
-- Basics of hypothesis testing: p-values and confidence intervals.
-- One-sample and paired t-tests: do students sleep less than 7 hours? (RQ2)
-- Chi-square tests for categorical data: is having a job related to considering dropout?
-- Non-parametric tests: Wilcoxon and Mann-Whitney U tests.
 
 ## Chapter review
 
-**Summary**
+### Summary
 
-- Two group averages almost always differ a little. A t-test asks whether the difference is larger than chance would produce.
-- The p-value is how often a difference at least this large would appear by chance if there were no real effect. Below 0.05 is usually called statistically significant.
-- Always plot the groups before testing them.
-- Random assignment, as in Elaf's workshop, lets you draw causal conclusions.
+- A statistic estimates a population parameter. Its sampling distribution shows how it would vary across samples; its spread is the standard error, $s / \sqrt{n}$.
+- The central limit theorem: averages of reasonably large samples are approximately normal, whatever the shape of the data.
+- A 95% confidence interval gives the plausible values of a parameter. The bootstrap gives confidence intervals for almost any statistic.
+- A hypothesis test asks how surprising the data would be if the null hypothesis were true. The p-value is that probability; below 0.05 is conventionally called significant. Significance is not importance: always report the size of the effect.
+- Type I errors are false alarms (about 5% of tests of true null hypotheses); Type II errors are missed effects.
+- t-tests compare a mean with a value, two independent groups, or paired measurements. Random assignment allows causal conclusions.
+- Check assumptions with graphs; in large samples, formal normality tests reject trivial departures.
+- Chi-square tests compare counts of categorical variables; Mann-Whitney and Wilcoxon tests are non-parametric alternatives to t-tests.
 
-**Key terms**: t-test, p-value, statistically significant, paired t-test, random assignment.
+### Key terms
 
-**Practise**: the exercises for this chapter will be in the [playground](../playground/index.html).
+Population, sample, parameter, statistic, sampling distribution, central limit theorem, standard error, confidence interval, bootstrap, null hypothesis, alternative hypothesis, p-value, significance level, statistically significant, Type I error, Type II error, one-tailed test, two-tailed test, one-sample t-test, two-sample t-test, Welch test, paired t-test, effect size, Cohen's *d*, independence, chi-square test, expected count, non-parametric test, Mann-Whitney U test, Wilcoxon signed-rank test.
+
+## Exercises
+
+The [playground](../playground/chapter06.html) has these and more, with hints and solutions.
+
+1. Draw 1,000 samples of 10 students' first-semester `study_hours` and plot the sample averages. Then try samples of 50. How do the two sampling distributions differ?
+2. Calculate a 95% confidence interval for the average first-semester GPA. What does it tell you?
+3. Is the average first-semester wellbeing different from 60? State the hypotheses, run the test, and write a one-sentence conclusion.
+4. Do full-time and part-time students differ in first-semester GPA? Run a two-sample t-test and calculate Cohen's *d*.
+5. Is living away from family (`lives_away`) related to considering dropout? Run a chi-square test and check the expected counts.
+
+## Further reading
+
+- *Introduction to Modern Statistics* [@cetinkaya2024ims], a free online textbook, explains sampling distributions, bootstrapping, and hypothesis tests with many more examples, using simulation throughout.
+- *Statistical Power Analysis for the Behavioral Sciences* [@cohen1988] on effect sizes.

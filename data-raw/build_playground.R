@@ -21,14 +21,21 @@ for (chapter in chapters) {
   unlink(staging, recursive = TRUE)
   dir.create(staging, recursive = TRUE)
 
-  # Project files (everything except the list of data files)
+  # Project files and folders (everything except the list of data files)
   project_files <- setdiff(list.files(src), "files.txt")
-  file.copy(file.path(src, project_files), staging)
+  file.copy(file.path(src, project_files), staging, recursive = TRUE)
 
-  # Data files the chapter needs
-  data_files <- readLines(file.path(src, "files.txt"))
-  data_files <- data_files[nzchar(trimws(data_files))]
-  ok <- file.copy(file.path("data", data_files), staging)
+  # Data files the chapter needs; a line "file -> folder" puts a file in a subfolder
+  data_lines <- readLines(file.path(src, "files.txt"))
+  data_lines <- data_lines[nzchar(trimws(data_lines))]
+  parts <- strsplit(data_lines, "->", fixed = TRUE)
+  data_files <- trimws(vapply(parts, `[`, character(1), 1))
+  folders <- vapply(parts, function(p) if (length(p) > 1) trimws(p[2]) else ".", character(1))
+  for (folder in unique(folders)) {
+    dir.create(file.path(staging, folder), recursive = TRUE, showWarnings = FALSE)
+  }
+  ok <- mapply(function(file, folder) file.copy(file.path("data", file), file.path(staging, folder)),
+               data_files, folders)
   if (!all(ok)) stop("Missing data file(s): ", paste(data_files[!ok], collapse = ", "))
 
   # Zip with the chapter folder at the top level, so unzipping gives one folder

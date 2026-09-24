@@ -1,0 +1,210 @@
+---
+title: "Playground: Chapter 16"
+subtitle: Reproducible Research
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - chapter16.zip
+webr:
+  packages:
+    - dplyr
+    - knitr
+  resources:
+    - students.csv
+    - semesters.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+Quarto documents are rendered on your own computer, so the downloadable project at the bottom of this page is the main practice for Chapter 16: a small Quarto project with Elaf's results chapter, a parameterised faculty report, and the Shiny dashboard. The exercises below practise the R side of reproducible reporting in your browser: writing results into sentences, making tables, and checking data before sharing it. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+library(dplyr)
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+```
+
+## Numbers in sentences
+
+### Exercise 1: A sentence that writes itself
+
+Inline code in a Quarto document puts the result of R code into a sentence. `paste0()` does the same in the Console. Complete the sentence so that it reports the number of students and the number of faculties.
+
+```{webr}
+#| exercise: ex1
+paste0("The sample included ", nrow(students), " graduate students from ",
+       n_distinct(students$______), " faculties.")
+```
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+paste0("The sample included ", nrow(students), " graduate students from ",
+       n_distinct(students$faculty), " faculties.")
+```
+
+"The sample included 600 graduate students from 5 faculties." In a Quarto document, the same numbers would be written with inline code, so they update whenever the data changes.
+:::
+:::
+
+### Exercise 2: Rounding for the reader
+
+Calculate the mean wellbeing in the first semester and report it rounded to one decimal place. `sprintf("%.1f", x)` always shows exactly one decimal place, even when it is zero, which `round()` does not.
+
+```{webr}
+#| exercise: ex2
+first <- semesters |> filter(semester == 1)
+m <- mean(first$wellbeing, na.rm = TRUE)
+m
+round(m, 1)
+sprintf("Average wellbeing was %s (SD %s).",
+        sprintf("%.1f", m), sprintf("%.1f", sd(first$______, na.rm = TRUE)))
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+sprintf("Average wellbeing was %s (SD %s).",
+        sprintf("%.1f", m), sprintf("%.1f", sd(first$wellbeing, na.rm = TRUE)))
+```
+
+"Average wellbeing was 60.5 (SD 12.0)." `round(12.0, 1)` would print `12`, dropping the decimal; `sprintf("%.1f", ...)` keeps it, as journals expect.
+:::
+:::
+
+## Tables
+
+### Exercise 3: A results table
+
+Summarise first-semester wellbeing by faculty, then turn the result into a formatted table with `knitr::kable()`, with one decimal place.
+
+```{webr}
+#| exercise: ex3
+semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id)) |>
+  summarise(Students = n(),
+            Mean = mean(wellbeing, na.rm = TRUE),
+            SD = sd(wellbeing, na.rm = TRUE),
+            .by = faculty) |>
+  arrange(faculty) |>
+  knitr::kable(digits = ______)
+```
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+  knitr::kable(digits = 1)
+```
+
+In the browser, `kable()` prints a plain-text table; in a rendered Quarto document, the same code produces a formatted, numbered table.
+:::
+:::
+
+## Before sharing data
+
+### Exercise 4: Small cells
+
+Count the students in each combination of faculty, study mode, gender, and having children, and show the combinations with fewer than 5 students.
+
+```{webr}
+#| exercise: ex4
+students |>
+  count(faculty, study_mode, gender, has_children) |>
+  filter(n < ______) |>
+  arrange(n)
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+  filter(n < 5) |>
+```
+
+Five combinations describe only three or four students each, all of them part-time students with children. Anyone who knows the department might recognise them.
+:::
+:::
+
+### Exercise 5: Protecting the small cells
+
+Leave `has_children` out of the combination and count again. What is the smallest group now?
+
+```{webr}
+#| exercise: ex5
+students |>
+  count(faculty, study_mode, ______) |>
+  arrange(n) |>
+  head(3)
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+students |>
+  count(faculty, study_mode, gender) |>
+  arrange(n) |>
+  head(3)
+```
+
+Without `has_children`, the smallest groups are much larger. Removing (or grouping) one variable that the analysis does not need is often enough to protect participants before sharing.
+:::
+:::
+
+## Recording versions
+
+### Exercise 6: What am I running?
+
+Report the version of R and of the dplyr package. (In the browser, R runs through webR, so the versions may differ from your computer's.)
+
+```{webr}
+#| exercise: ex6
+R.version.string
+packageVersion("______")
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+R.version.string
+packageVersion("dplyr")
+```
+
+These are the numbers to report in a methods section, together with a citation for each key package from `citation("dplyr")`.
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 16 project
+
+A small Quarto project: `results.qmd`, Elaf's results chapter with inline numbers, a numbered table and figure, and citations; `faculty-report.qmd`, a report with a faculty parameter; and `app.R`, the wellbeing dashboard. The exercises ask you to extend each of them, and the `solutions` folder has finished versions. You need Quarto (it comes with RStudio) and the packages listed in `README.txt`.
+
+- [Download chapter16.zip](chapter16.zip), unzip it, and double-click `chapter16.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter16.zip")
+```
+:::

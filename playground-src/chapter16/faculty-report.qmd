@@ -1,0 +1,31 @@
+---
+title: "Wellbeing report"
+format: html
+params:
+  faculty: "Education"
+execute:
+  echo: false
+---
+
+```{r}
+#| message: false
+library(dplyr)
+
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+
+faculty_semesters <- semesters |>
+  left_join(students, join_by(student_id)) |>
+  filter(faculty == params$faculty)
+```
+
+This report describes the `r n_distinct(faculty_semesters$student_id)` students
+of the Faculty of `r params$faculty`.
+
+```{r}
+faculty_semesters |>
+  summarise(Students = n_distinct(student_id),
+            Wellbeing = mean(wellbeing, na.rm = TRUE),
+            .by = semester) |>
+  knitr::kable(digits = 1, col.names = c("Semester", "Students", "Average wellbeing"))
+```

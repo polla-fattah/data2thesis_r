@@ -1,0 +1,201 @@
+---
+title: "Playground: Chapter 15"
+subtitle: Time Series Forecasting
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - counselling_visits.csv
+  - chapter15.zip
+webr:
+  resources:
+    - counselling_visits.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+The fable packages are large for a browser, so these exercises practise the ideas of Chapter 15 with functions that come with R: `ts()` for time series, `acf()` for autocorrelation, `stl()` for decomposition, and benchmark forecasts built by hand. The downloadable project at the bottom uses tsibble, fable, and feasts, exactly as in the chapter. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+counselling <- read.csv("counselling_visits.csv")
+visits <- ts(counselling$visits, frequency = 52, start = c(2020, 1))
+clinic <- c(12, 10, 9, 11, 7, 3, 2,   14, 11, 10, 12, 8, 4, 2)
+mae <- function(actual, forecast) mean(abs(actual - forecast))
+year_of <- function(k) counselling$visits[(k - 1) * 52 + 1:52]   # academic year k
+```
+
+## Benchmarks by hand
+
+### Exercise 1: Three benchmark forecasts
+
+The setup code has created the chapter's clinic series: two weeks of daily visits, starting on a Monday. Calculate the forecasts for the next seven days with the mean, naive, and seasonal naive methods.
+
+```{webr}
+#| exercise: ex1
+mean_fc   <- rep(mean(clinic), 7)
+naive_fc  <- rep(clinic[length(clinic)], 7)
+snaive_fc <- clinic[______:14]        # the last full week
+rbind(mean_fc, naive_fc, snaive_fc)
+```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The last full week is the last seven days: days 8 to 14.
+:::
+:::
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+snaive_fc <- clinic[8:14]
+```
+
+The same numbers as fable produced in the chapter: 8.2 every day for the mean, 2 every day for the naive method (the last Sunday), and last week's pattern for the seasonal naive method.
+:::
+:::
+
+## Patterns
+
+### Exercise 2: A time plot
+
+`visits` is a `ts` object, R's built-in time series format, with 52 observations per year (`frequency = 52`). Plot it, and add a horizontal line at the average.
+
+```{webr}
+#| exercise: ex2
+plot(visits, ylab = "Visits per week", xlab = "Year of the series")
+abline(h = mean(______), lty = "dashed")
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+abline(h = mean(visits), lty = "dashed")
+```
+
+The series swings far above and below its average every year: a forecast of the average would be badly wrong most of the time. The time axis counts years from the start of the series, 2020.
+:::
+:::
+
+### Exercise 3: Autocorrelation
+
+Calculate the autocorrelation of the series at lags 1 and 52. (`acf()` also returns lag 0, which is always 1, so lag $k$ is element $k + 1$.)
+
+```{webr}
+#| exercise: ex3
+autocorrelations <- acf(visits, lag.max = 60, plot = FALSE)$acf
+autocorrelations[c(2, ______)]
+```
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+autocorrelations[c(2, 53)]
+```
+
+About 0.69 at lag 1 and 0.68 at lag 52, as in the chapter: each week is like the week before, and like the same week a year earlier.
+:::
+:::
+
+### Exercise 4: The unusual week
+
+Decompose the series with `stl()`, find the week with the largest remainder, and show its date and number of visits.
+
+```{webr}
+#| exercise: ex4
+decomposition <- stl(visits, s.window = "periodic", robust = TRUE)
+plot(decomposition)
+remainder <- decomposition$time.series[, "______"]
+biggest <- which.max(abs(remainder))
+counselling[biggest, ]
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+remainder <- decomposition$time.series[, "remainder"]
+```
+
+The week of 23 October 2023, with 71 visits: the mental health awareness week. `s.window = "periodic"` makes the seasonal pattern exactly the same every year, a simpler version of the chapter's STL.
+:::
+:::
+
+## Forecasting the test year
+
+### Exercise 5: Seasonal naive on the test year
+
+Forecast the fifth academic year with the seasonal naive method (a copy of the fourth year) and with the mean of the first four years, and compare their MAEs. (`year_of(k)` returns the 52 weeks of academic year `k`.)
+
+```{webr}
+#| exercise: ex5
+actual <- year_of(5)
+snaive_fc <- year_of(______)
+mean_fc <- mean(counselling$visits[1:208])
+c(snaive = mae(actual, snaive_fc), mean = mae(actual, mean_fc))
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+snaive_fc <- year_of(4)
+```
+
+An MAE of about 7.0 visits a week for the seasonal naive forecast, and about 16.3 for the mean: the same values as fable gave in the chapter.
+:::
+:::
+
+### Exercise 6: A better benchmark
+
+The seasonal naive forecast copies one year's noise, including the awareness week. Average the third and fourth years instead, then multiply by 1.06 to allow for about 6% growth a year. How does the MAE compare with the chapter's STL and ETS model (5.6)?
+
+```{webr}
+#| exercise: ex6
+actual <- year_of(5)
+average_fc <- (year_of(3) + year_of(4)) / 2
+growth_fc <- average_fc * ______
+c(average = mae(actual, average_fc), with_growth = mae(actual, growth_fc))
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+growth_fc <- average_fc * 1.06
+```
+
+About 5.9 for the average of two years, and about 5.7 with growth: almost as good as the STL and ETS model. Averaging smooths away one-off weeks, and the growth factor adds the trend, which is essentially what the model does, estimated from the data rather than chosen by hand.
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 15 project
+
+The project uses tsibble, fable, and feasts, as in the chapter: time plots, STL decomposition, benchmark, ETS, and ARIMA forecasts, accuracy on a test year, and simulated yearly totals, with exercises and solutions.
+
+- [Download chapter15.zip](chapter15.zip), unzip it, and double-click `chapter15.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter15.zip")
+```
+:::

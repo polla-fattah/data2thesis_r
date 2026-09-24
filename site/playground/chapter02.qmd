@@ -1,0 +1,278 @@
+---
+title: "Playground: Chapter 2"
+subtitle: Data Structures in R
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - chapter02.zip
+webr:
+  resources:
+    - students.csv
+    - semesters.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+These exercises practise the ideas from Chapter 2: vectors, factors, data frames, matrices, and lists. Edit the code in any box and press **Run Code**. Where you see `______`, replace it with your own code.
+
+## Vectors and factors
+
+### Exercise 1: Picking values with a condition
+
+Here are the ages of five students. Show only the ages over 30, then count how many there are.
+
+```{webr}
+#| exercise: ex1
+ages <- c(24, 31, 28, 45, 26)
+ages[______]
+sum(______)
+```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The condition is `ages > 30`. Put it inside the brackets to select, and inside `sum()` to count.
+:::
+:::
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+ages <- c(24, 31, 28, 45, 26)
+ages[ages > 30]
+sum(ages > 30)
+```
+
+Two students are over 30: those aged 31 and 45.
+:::
+:::
+
+### Exercise 2: A whole vector at once
+
+Elaf's sleep over five nights is stored below. Convert it to minutes, and find the share of nights shorter than 7 hours.
+
+```{webr}
+#| exercise: ex2
+sleep <- c(6.5, 7, 5.5, 8, 6)
+sleep * ______
+mean(sleep ______ 7)
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+sleep <- c(6.5, 7, 5.5, 8, 6)
+sleep * 60
+mean(sleep < 7)
+```
+
+`mean()` of a `TRUE`/`FALSE` vector is the share of `TRUE` values: 0.6, or 60% of nights.
+:::
+:::
+
+### Exercise 3: Ordered categories
+
+Make a factor from these answers whose levels run from `"Disagree"` through `"Neutral"` to `"Agree"`, and check the order with `table()`.
+
+```{webr}
+#| exercise: ex3
+answers <- factor(c("Agree", "Disagree", "Neutral", "Agree"),
+                  levels = ______)
+table(answers)
+```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`levels` takes a vector of the categories in the order you want: `c("Disagree", ______, ______)`.
+:::
+:::
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+answers <- factor(c("Agree", "Disagree", "Neutral", "Agree"),
+                  levels = c("Disagree", "Neutral", "Agree"))
+table(answers)
+```
+:::
+:::
+
+## Elaf's data
+
+```{webr}
+#| setup: true
+#| exercise: [ex4, ex5, ex6]
+students <- read.csv("students.csv")
+```
+
+### Exercise 4: Selecting rows
+
+How many students study part-time **and** have children? Fill in the second condition.
+
+```{webr}
+#| exercise: ex4
+both <- students[students$study_mode == "Part-time" & ______, ]
+nrow(both)
+```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The variable is `has_children`, and its values are `"Yes"` and `"No"`. Remember `==` for "is equal to".
+:::
+:::
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+both <- students[students$study_mode == "Part-time" & students$has_children == "Yes", ]
+nrow(both)
+```
+:::
+:::
+
+### Exercise 5: Adding a column
+
+Add a column called `over_30` that is `TRUE` for students older than 30, then count them. Run it first as it is: why is the answer `NA`?
+
+```{webr}
+#| exercise: ex5
+students$over_30 <- students$age > 30
+sum(students$over_30)
+```
+
+::: { .hint exercise="ex5" }
+::: { .callout-note collapse="false"}
+## Hint
+
+One student's age is missing, so one value of `over_30` is `NA`. `sum()` has an `na.rm` argument, just like `mean()`.
+:::
+:::
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+students$over_30 <- students$age > 30
+sum(students$over_30, na.rm = TRUE)
+table(students$over_30)   # table() leaves NA out unless you ask for it
+```
+:::
+:::
+
+### Exercise 6: Categories as a factor
+
+Turn `faculty` into a factor and list its levels. How many levels are there?
+
+```{webr}
+#| exercise: ex6
+students$faculty <- ______(students$faculty)
+levels(students$faculty)
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+students$faculty <- factor(students$faculty)
+levels(students$faculty)
+length(levels(students$faculty))   # 5 faculties
+```
+:::
+:::
+
+## Matrices and lists
+
+```{webr}
+#| setup: true
+#| exercise: [ex7, ex8]
+semesters <- read.csv("semesters.csv")
+```
+
+### Exercise 7: A correlation matrix
+
+Calculate the correlations between GPA, sleep, and wellbeing, round them to two decimal places, and pick out the correlation between sleep and wellbeing.
+
+```{webr}
+#| exercise: ex7
+vars <- semesters[, c("gpa", "sleep_hours", "wellbeing")]
+correlations <- cor(vars, use = "complete.obs")
+round(correlations, 2)
+correlations["______", "______"]
+```
+
+::: { .solution exercise="ex7" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+vars <- semesters[, c("gpa", "sleep_hours", "wellbeing")]
+correlations <- cor(vars, use = "complete.obs")
+round(correlations, 2)
+correlations["sleep_hours", "wellbeing"]
+```
+:::
+:::
+
+### Exercise 8: Results are lists
+
+Run a t-test asking whether students sleep 7 hours on average in their first semester. The result is a list: list its parts with `names()`, then pick out the p-value.
+
+```{webr}
+#| exercise: ex8
+first_semester <- semesters[semesters$semester == 1, ]
+result <- t.test(first_semester$sleep_hours, mu = 7)
+names(result)
+result$______
+```
+
+::: { .solution exercise="ex8" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+first_semester <- semesters[semesters$semester == 1, ]
+result <- t.test(first_semester$sleep_hours, mu = 7)
+names(result)
+result$p.value
+```
+
+The p-value is tiny: students sleep clearly less than 7 hours on average. Chapter 6 explains what a p-value means.
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 2 project
+
+The project contains the data (including the Excel and SPSS files), these exercises, an extra exercise on importing the SPSS file, and the solutions.
+
+- [Download chapter02.zip](chapter02.zip), unzip it, and double-click `chapter02.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter02.zip")
+```
+:::

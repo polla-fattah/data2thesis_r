@@ -1,0 +1,225 @@
+---
+title: "Playground: Chapter 18"
+subtitle: Putting It All Together
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - questionnaire.csv
+  - chapter18.zip
+webr:
+  packages:
+    - dplyr
+  resources:
+    - students.csv
+    - semesters.csv
+    - questionnaire.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+The main practice for Chapter 18 is Elaf's complete project, which you can download at the bottom of this page and run on your own computer: from the raw survey export to a results chapter. The exercises below practise the small pieces that make a results chapter: helper functions for reporting, a sample table, and sentences with numbers taken from models. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+library(dplyr)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+scores <- questionnaire |>
+  mutate(
+    stress_4 = 6 - stress_4,
+    stress   = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    support  = rowMeans(pick(support_1:support_6), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, support)
+study <- students |>
+  left_join(scores, join_by(student_id)) |>
+  left_join(semesters |> filter(semester == 1), join_by(student_id))
+```
+
+## Helper functions for reporting
+
+### Exercise 1: Mean and SD in one string
+
+Theses report "mean (SD)" with one decimal place. Complete the function, and use it on the students' ages.
+
+```{webr}
+#| exercise: ex1
+mean_sd <- function(x) {
+  sprintf("%.1f (%.1f)", mean(x, na.rm = TRUE), ______(x, na.rm = TRUE))
+}
+mean_sd(study$age)
+mean_sd(study$wellbeing)
+```
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+mean_sd <- function(x) {
+  sprintf("%.1f (%.1f)", mean(x, na.rm = TRUE), sd(x, na.rm = TRUE))
+}
+```
+
+"29.7 (4.8)" and "60.5 (12.0)". Written once, the function formats every mean in the thesis the same way.
+:::
+:::
+
+### Exercise 2: Formatting p-values
+
+APA style writes p-values without a leading zero, with three decimals, and "p < .001" for very small values. Complete the function and test it.
+
+```{webr}
+#| exercise: ex2
+format_p <- function(p) {
+  if (p < ______) "p < .001" else paste("p =", sub("^0", "", sprintf("%.3f", p)))
+}
+format_p(0.0004)
+format_p(0.0321)
+format_p(0.5)
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+format_p <- function(p) {
+  if (p < 0.001) "p < .001" else paste("p =", sub("^0", "", sprintf("%.3f", p)))
+}
+```
+
+"p < .001", "p = .032", and "p = .500". `sub("^0", "", ...)` removes the zero at the start of the text.
+:::
+:::
+
+## The sample table
+
+### Exercise 3: One column of Table 1
+
+`describe()` builds one column of a sample table for any group of students. Use it for the PhD students.
+
+```{webr}
+#| exercise: ex3
+mean_sd <- function(x) sprintf("%.1f (%.1f)", mean(x, na.rm = TRUE), sd(x, na.rm = TRUE))
+percent <- function(x) sprintf("%.0f%%", 100 * mean(x, na.rm = TRUE))
+describe <- function(d) {
+  data.frame(
+    Characteristic = c("Students", "Age, mean (SD)", "Women", "Part-time"),
+    Value = c(nrow(d), mean_sd(d$age), percent(d$gender == "Female"),
+              percent(d$study_mode == "Part-time"))
+  )
+}
+describe(filter(study, programme == "______"))
+```
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+describe(filter(study, programme == "PhD"))
+```
+
+174 PhD students, with an average age of 34.2 (SD 5.1). Running `describe(study)` gives the column for all students, with no copied code.
+:::
+:::
+
+## Sentences from models
+
+### Exercise 4: The effect of sleep on GPA
+
+Fit the chapter's regression, then report the sleep coefficient and its 95% confidence interval in a sentence.
+
+```{webr}
+#| exercise: ex4
+gpa_model <- lm(gpa ~ sleep_hours + study_hours + stress + support, data = study)
+b  <- coef(gpa_model)["sleep_hours"]
+ci <- confint(gpa_model)["______", ]
+sprintf("Each extra hour of sleep was associated with a GPA %.2f points higher (95%% CI %.2f to %.2f).",
+        b, ci[1], ci[2])
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+ci <- confint(gpa_model)["sleep_hours", ]
+```
+
+"Each extra hour of sleep was associated with a GPA 0.11 points higher (95% CI 0.08 to 0.13)." In `sprintf()`, `%%` writes a single percent sign.
+:::
+:::
+
+### Exercise 5: An odds ratio in a sentence
+
+Fit the logistic regression for considering dropout and report the odds ratio for stress.
+
+```{webr}
+#| exercise: ex5
+dropout_model <- glm(I(considering_dropout == "Yes") ~ stress + support + financial_worry,
+                     data = study, family = binomial)
+odds_ratio <- exp(coef(dropout_model)["______"])
+sprintf("Each one-point increase in stress multiplied the odds of considering dropout by %.1f.",
+        odds_ratio)
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+odds_ratio <- exp(coef(dropout_model)["stress"])
+```
+
+About 3.8 with this simpler model (the chapter's model, which also includes employment and study mode, gives 3.6). Always say which variables the model adjusted for.
+:::
+:::
+
+### Exercise 6: Check before you report
+
+Before reporting a model, check how many students it used. `nobs()` gives the number of observations; compare it with the number of students.
+
+```{webr}
+#| exercise: ex6
+gpa_model <- lm(gpa ~ sleep_hours + study_hours + stress + support, data = study)
+nobs(gpa_model)
+nrow(study) - ______
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+nrow(study) - nobs(gpa_model)
+```
+
+13 students were left out because at least one of the model's variables was missing. A thesis reports the number of students each model used (*n* = 587 here), and Chapter 5 discusses whether leaving them out could bias the results.
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 18 project
+
+Elaf's complete project: the raw export in `data-raw/`, the numbered scripts in `R/` (cleaning, then analysis), and `results.qmd`, which renders the results chapter with every number taken from the code. `exercises.txt` suggests changes to make, and the last exercise starts your own project with the same structure.
+
+- [Download chapter18.zip](chapter18.zip), unzip it, and double-click `chapter18.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter18.zip")
+```
+:::

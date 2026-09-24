@@ -1,0 +1,5 @@
+::: {.callout-warning}
+## Results not yet available
+
+The language model's results appear here once the coding script has been run. The script, `data-raw/run_ai_coding.R`, needs an API key, so it is run once by the author and its output is saved in the book's repository; this section then compares the model's coding with Elaf's hand coding (accuracy, Cohen's kappa, and the confusion matrix), with the keyword method, and with the model's own second attempt.
+:::

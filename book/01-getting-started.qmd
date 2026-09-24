@@ -1,23 +1,405 @@
 # Getting Started with R {#sec-ch01}
 
-::: {.callout-note appearance="simple"}
-## This chapter is being rewritten
+```{r}
+#| label: setup
+#| include: false
+library(data2thesis)
+```
 
-The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+Elaf has just finished collecting the first round of data for her Master's thesis. Six hundred graduate students answered her survey, and their semester records are ready. She has used Excel for coursework, and she once clicked through an SPSS menu in a statistics class, but she has never written a line of code. Her supervisor suggests R.
+
+This chapter is Elaf's first day with R, and yours. By the end of it, you will have R running on your computer, you will know your way around the program you use to write R, and you will have opened Elaf's data and answered a first, simple question about it.
+
+::: {.callout-tip appearance="simple"}
+## By the end of this chapter you will be able to
+
+- Explain why researchers use R, and install R and RStudio.
+- Find your way around RStudio and run code in the Console and in a script.
+- Store values in objects and recognise the basic types of data.
+- Use functions and their arguments, and get help when you are stuck.
+- Organise your work in an RStudio Project and install packages.
+- Open Elaf's data and answer a first question about it.
 :::
 
-## Elaf's question
+## Why R?
 
-Elaf opens her data for the first time: how many students, which variables, and a first question.
+R is a free program for working with data: cleaning it, analysing it, and turning it into tables and graphs. It began in the early 1990s at the University of Auckland, where two statisticians, Ross Ihaka and Robert Gentleman, wrote it for teaching [@ihaka1996]. Its first stable version appeared in 2000. Today it is used in universities, hospitals, governments, and companies around the world.
 
-## What this chapter will cover
+For a researcher, four things make R worth learning:
 
-- Installing and setting up R and RStudio.
-- Exploring the RStudio interface: Source, Console, Environment, and Plots panes.
-- Writing and executing R scripts.
-- Organizing your work with RStudio Projects and reliable file paths (`here`).
-- Overview of R libraries and packages.
+- **It is made for data.** Statistical tests, models, and graphs are part of the language, not add-ons.
+- **It is free and open source.** You, your students, and anyone who wants to check your work can use it without buying a licence.
+- **Your analysis is written down.** Instead of clicking through menus, you write instructions. The instructions are a complete record of what you did, so you, your supervisor, or an examiner can repeat the analysis exactly. This is called **reproducible** research, and Chapter 16 returns to it.
+- **It is shared by a large community.** Thousands of researchers publish free **packages**: add-ons that give R new abilities. Whatever method your field uses, someone has probably written a package for it.
 
-## Practise
+The price is that R asks you to type instead of click. That feels slow at first. It becomes fast surprisingly quickly, and it pays you back every time you need to repeat, correct, or extend an analysis.
 
-The exercises for this chapter are in the [playground](../playground/chapter01.html).
+::: {.callout-note}
+## Coming from SPSS or Excel?
+
+In SPSS or Excel, you click, and the program changes your data or produces output. In R, you write an instruction, and R carries it out. The instructions are saved in a file, so the next time you need the same analysis, you run the file instead of clicking through the menus again. Chapter 2 shows how familiar SPSS and Excel tasks map to R.
+:::
+
+## Installing R and RStudio
+
+You need two programs:
+
+- **R** is the engine that does the work.
+- **RStudio** is where you drive it: a program for writing R code, running it, and seeing the results. You will almost never open R itself; you open RStudio, and RStudio uses R for you.
+
+Install them in this order:
+
+1. **R**: download it from [cran.r-project.org](https://cran.r-project.org/), choosing the version for your operating system (Windows, macOS, or Linux), and install it like any other program.
+2. **RStudio Desktop**: download the free version from [posit.co](https://posit.co/download/rstudio-desktop/) and install it.
+
+Appendix A walks through both installations step by step, with solutions to common problems.
+
+::: {.callout-note}
+## Other editors
+
+RStudio is the most widely used editor for R, and this book uses it throughout. **Positron**, a newer editor from the same company, works with R and Python in one window and is a good alternative if you plan to use both languages. Everything in this book works in either.
+:::
+
+::: {.callout-tip}
+## Not ready to install anything?
+
+The exercises for this chapter run in your web browser. Try them in the [playground](../playground/chapter01.html) first, and install R when you are ready.
+:::
+
+## A tour of RStudio
+
+When you open RStudio, the window is divided into panes. With a script open (you will open one shortly), there are four:
+
+| Where | Pane | What it is for |
+|---|---|---|
+| Top left | **Source** | Where you write and save your code, in files called scripts. |
+| Bottom left | **Console** | Where R runs code and shows the results. |
+| Top right | **Environment** | The objects you have created, such as your data. |
+| Bottom right | **Files, Plots, Packages, Help** | Your files, your graphs, your installed packages, and R's help pages. |
+
+: The four panes of RStudio {#tbl-panes}
+
+You can type code directly into the Console. Click in it, type `2 + 2`, and press Enter. R answers straight away. The `[1]` at the start of the answer simply means "this is the first value of the result"; you can ignore it for now.
+
+## R as a calculator
+
+Elaf starts small. She kept a note of how long she slept on three nights last week: 6.5, 7, and 5.5 hours. What was her average?
+
+```{r}
+(6.5 + 7 + 5.5) / 3
+```
+
+R follows the usual order of operations: multiplication and division before addition and subtraction, and brackets first of all. Without the brackets, R would divide only the last number by 3:
+
+```{r}
+6.5 + 7 + 5.5 / 3
+```
+
+The usual arithmetic symbols work as you would expect: `+`, `-`, `*` (multiply), `/` (divide), and `^` (power).
+
+## Storing values in objects
+
+Typing the same numbers again and again is tiresome and invites mistakes. Instead, you can store a value under a name. The stored value is called an **object**, and you create it with the **assignment arrow** `<-`, which you can read as "gets":
+
+```{r}
+nights <- 3
+```
+
+Nothing is printed, but R now remembers that `nights` is 3. The object appears in the Environment pane, and you can use it by name:
+
+```{r}
+nights
+nights * 7
+```
+
+To store several values in one object, combine them with `c()`, which stands for *combine*:
+
+```{r}
+sleep <- c(6.5, 7, 5.5)
+sleep
+```
+
+Chapter 2 explains these collections, called **vectors**, in detail. For now, notice how much clearer the code becomes when the numbers have a name:
+
+```{r}
+sum(sleep) / nights
+```
+
+A few rules for names:
+
+- A name starts with a letter and can contain letters, numbers, dots, and underscores: `sleep`, `sleep_week1`, `avg.sleep`.
+- A name cannot contain spaces. Use an underscore instead: `sleep_hours`, not `sleep hours`.
+- R is case-sensitive: `Sleep` and `sleep` are two different objects.
+- Choose names that say what the object holds. `sleep_hours` is better than `x`, and your future self will thank you.
+
+If you assign a new value to an existing name, the old value is replaced without warning:
+
+```{r}
+nights <- 4
+nights
+```
+
+## Types of data
+
+Research data is not all numbers. Elaf's survey records numbers (hours of sleep), words (the student's faculty), and yes-or-no answers (was the student invited to the workshop?). R keeps track of the **type** of every value, because the type decides what you can do with it: you can average hours of sleep, but not faculty names.
+
+The types you will meet most often are:
+
+| Type | Holds | Example |
+|---|---|---|
+| numeric | numbers, with or without decimals | `6.5`, `600` |
+| character | text, written inside quotes | `"Education"` |
+| logical | `TRUE` or `FALSE` | `TRUE` |
+
+: The most common types of data in R {#tbl-types}
+
+The function `class()` tells you the type of an object:
+
+```{r}
+hours   <- 6.5
+faculty <- "Education"
+invited <- TRUE
+
+class(hours)
+class(faculty)
+class(invited)
+```
+
+Text must be inside quotes. Without them, R thinks you mean an object with that name:
+
+```{r}
+#| error: true
+faculty <- Education
+```
+
+This is one of the most common errors for beginners. The message says exactly what went wrong: R looked for an object called `Education` and did not find one.
+
+### Missing values
+
+Real data always has gaps. A student skips a question, or a value is lost. R marks a missing value with `NA`, short for *not available*. `NA` is not zero and not empty text; it means "we do not know":
+
+```{r}
+sleep_with_gap <- c(6.5, NA, 5.5)
+mean(sleep_with_gap)
+```
+
+If one value is unknown, the average is unknown too, so R returns `NA` rather than guessing. You will see shortly how to tell R to leave missing values out.
+
+## Functions
+
+You have already used several **functions**: `c()`, `sum()`, `mean()`, and `class()`. A function takes some input, does something with it, and returns a result. You call a function by writing its name followed by brackets, with the input inside:
+
+```{r}
+mean(sleep)
+max(sleep)
+length(sleep)
+```
+
+Many functions accept more than one input. The inputs are called **arguments**, and they are separated by commas. `round()`, for example, takes a number and the number of decimal places to keep:
+
+```{r}
+round(6.333333, digits = 1)
+```
+
+Arguments have names. You can leave the names out if you give the arguments in the expected order, so `round(6.333333, 1)` gives the same result, but writing the names makes your code easier to read.
+
+Now the missing value from before. `mean()` has an argument called `na.rm`, short for "NA remove". Set it to `TRUE`, and R calculates the average of the values it does know:
+
+```{r}
+mean(sleep_with_gap, na.rm = TRUE)
+```
+
+You can also put one function inside another. R works from the inside out:
+
+```{r}
+round(mean(sleep), digits = 1)
+```
+
+### Getting help
+
+Every function has a help page. Type a question mark before its name in the Console:
+
+```r
+?mean
+```
+
+The page opens in the Help pane. Help pages are written for experienced users, so they can look dense at first. Start with three parts: **Usage** (how to call the function), **Arguments** (what each input means), and **Examples** at the bottom, which you can copy and run.
+
+When a search engine or an AI assistant suggests code, treat it like advice from a knowledgeable stranger: often right, sometimes wrong, and always worth checking. Chapter 17 shows how to use AI tools well.
+
+## Writing scripts
+
+Code typed in the Console is gone once you close RStudio. For real work, write your code in a **script**: a plain text file, ending in `.R`, that holds your instructions in order.
+
+- Create a new script with **File > New File > R Script**. It opens in the Source pane.
+- Type your code, one instruction per line.
+- Run the current line (or the lines you have selected) with **Ctrl+Enter** (**Cmd+Enter** on a Mac). The code is sent to the Console, and the result appears there.
+- Save the script with **Ctrl+S** (**Cmd+S**).
+
+Lines that start with `#` are **comments**. R ignores them; they are notes for people. Use them to explain *why* you did something:
+
+```{r}
+# Elaf's sleep last week, in hours per night
+sleep <- c(6.5, 7, 5.5)
+
+# Average, rounded for reporting
+round(mean(sleep), digits = 1)
+```
+
+A script is your analysis written down. Months later, when your supervisor asks how you got a number, the script is the answer.
+
+## Organising your work with RStudio Projects
+
+Research involves many files: data, scripts, graphs, and drafts. An **RStudio Project** keeps everything for one piece of work together in one folder, and makes sure R looks for files in that folder.
+
+Create one with **File > New Project > New Directory > New Project**, give it a name (for example, `elaf-thesis`), and choose where to put it. RStudio creates the folder, with a file ending in `.Rproj` inside. From then on, double-click that file to open the project, and RStudio starts in the right place with the right files.
+
+The folder R looks in for files is called the **working directory**. In a project, it is the project folder, so a file stored there can be opened by its name alone:
+
+```r
+students <- read.csv("students.csv")
+```
+
+As a project grows, you will want subfolders, such as `data/` for data and `figures/` for graphs. The **here** package builds file paths that start from the project folder, so the same code works on any computer:
+
+```r
+library(here)
+students <- read.csv(here("data", "students.csv"))
+```
+
+::: {.callout-warning}
+## Avoid `setwd()`
+
+Older tutorials start scripts with `setwd("C:/Users/Elaf/Documents/thesis")`. That line works only on the computer where it was written. Use a project, and your code works for your supervisor too.
+:::
+
+## Packages
+
+R comes with a lot built in, but much of its power comes from **packages**. Using a package takes two steps:
+
+1. **Install it once** on your computer, with `install.packages()`. This downloads it from CRAN, R's official collection of packages:
+
+   ```r
+   install.packages("here")
+   ```
+
+2. **Load it** in every session where you want to use it, with `library()`:
+
+   ```r
+   library(here)
+   ```
+
+A useful comparison: installing a package is like buying a book and putting it on your shelf; loading it is taking it off the shelf to read. You buy it once, but you take it down every time you need it.
+
+Elaf's data comes as a package too, called **data2thesis**. It is not on CRAN, so you install it from this book's website:
+
+```r
+install.packages("https://polla-fattah.github.io/R4NTR/downloads/data2thesis_1.1.0.tar.gz",
+                 repos = NULL, type = "source")
+```
+
+## Elaf's data: a first look
+
+Everything is ready. Elaf loads her data:
+
+```{r}
+library(data2thesis)
+```
+
+The package contains several **data frames**: tables with one row per case and one column per variable, like a spreadsheet. The main one is `students`, with one row per student. Two functions tell her its size:
+
+```{r}
+nrow(students)
+ncol(students)
+```
+
+So there are `r nrow(students)` students and `r ncol(students)` variables. `head()` shows the first six rows:
+
+```{r}
+head(students)
+```
+
+The names of the variables are listed by `names()`. The help page, `?students`, describes each one.
+
+```{r}
+names(students)
+```
+
+To pick out one variable, write the data frame's name, a dollar sign, and the variable's name. `students$age` is the age of every student. Elaf's first question is simple: how old are the students in her study?
+
+```{r}
+mean(students$age)
+```
+
+`NA`. One student's age is missing, and R will not guess. Elaf now knows what to do:
+
+```{r}
+mean(students$age, na.rm = TRUE)
+```
+
+```{r}
+#| include: false
+mean_age <- mean(students$age, na.rm = TRUE)
+missing_age <- sum(is.na(students$age))
+```
+
+The students are `r round(mean_age, 1)` years old on average. `is.na()` marks each missing value as `TRUE`, and `sum()` counts them, because R counts every `TRUE` as 1:
+
+```{r}
+sum(is.na(students$age))
+```
+
+Only `r missing_age` age is missing. It is worth knowing: Chapter 3 shows why it is missing, and what to do about it.
+
+Finally, `table()` counts how many times each value appears. How many students come from each faculty, and how many were invited to the wellbeing workshop?
+
+```{r}
+table(students$faculty)
+table(students$workshop)
+```
+
+Exactly `r sum(students$workshop == "Invited")` students, half of the study, were invited. That is not a coincidence: Elaf chose them at random, and Chapter 6 shows why that matters.
+
+::: {.callout-note icon="false"}
+## In your field: agriculture
+
+R comes with dozens of real datasets for practice. `PlantGrowth` records the dried weight of plants grown under a control condition and two different treatments, from a classic experiment comparing crop yields. The same functions work on it:
+
+```{r}
+head(PlantGrowth)
+table(PlantGrowth$group)
+mean(PlantGrowth$weight)
+```
+
+Type `data()` in the Console to see the full list of built-in datasets, and `?PlantGrowth` to read about this one.
+:::
+
+## Chapter review
+
+### Summary
+
+- R is a free language made for working with data. You write instructions instead of clicking, which makes your analysis a written, repeatable record.
+- You write R in RStudio. The Source pane holds your scripts, the Console runs the code, the Environment pane lists your objects, and the fourth pane shows files, plots, packages, and help.
+- `<-` stores a value in an object. `c()` combines several values.
+- Every value has a type. The most common are numeric, character (in quotes), and logical (`TRUE` or `FALSE`). `NA` marks a missing value.
+- Functions take arguments inside brackets. `?` opens a function's help page.
+- Write your code in scripts, keep each piece of work in an RStudio Project, install packages once with `install.packages()`, and load them each session with `library()`.
+
+### Key terms
+
+R, RStudio, Console, script, comment, object, assignment, vector, data type, missing value (`NA`), function, argument, package, data frame, working directory, RStudio Project, reproducible research.
+
+## Exercises
+
+These short exercises check your understanding. The [playground](../playground/chapter01.html) has more, with hints and solutions, which you can run in your browser or download as an RStudio project.
+
+1. Elaf's supervisor sleeps 8, 7.5, 6, and 7 hours on four nights. Store the numbers in an object called `supervisor_sleep` and find the average, rounded to one decimal place.
+2. What type is `"600"`? What about `600`? Check your answers with `class()`, and explain the difference.
+3. Explain in your own words why `mean(c(4, NA, 6))` returns `NA`. How do you get the average of the two known values?
+4. Using `students`, find the youngest and the oldest student. (Hint: `min()` and `max()` also have an `na.rm` argument.)
+5. Using `table()`, find out how many students are studying part-time (the variable is `study_mode`).
+
+## Further reading
+
+- *R for Data Science* [@wickham2023], chapters "Workflow: basics", "Workflow: scripts and projects", and "Workflow: getting help", covers the same ground with a different dataset.
+- The [RStudio User Guide](https://docs.posit.co/ide/user/) describes every part of RStudio.

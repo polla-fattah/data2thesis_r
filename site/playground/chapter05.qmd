@@ -1,0 +1,246 @@
+---
+title: "Playground: Chapter 5"
+subtitle: Descriptive Statistics and Exploratory Data Analysis
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - questionnaire.csv
+  - chapter05.zip
+webr:
+  packages:
+    - dplyr
+  resources:
+    - students.csv
+    - semesters.csv
+    - questionnaire.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+These exercises practise the ideas from Chapter 5: centre, spread, shape, unusual values, missing data, and correlation. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+library(dplyr)
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
+```
+
+## Centre, spread, and shape
+
+### Exercise 1: Four summaries
+
+Calculate the mean, median, SD, and IQR of first-semester `study_hours`. Are the mean and median close? Which pair of summaries would you report?
+
+```{webr}
+#| exercise: ex1
+first_sem |>
+  summarise(
+    mean   = mean(study_hours, na.rm = TRUE),
+    median = ______(study_hours, na.rm = TRUE),
+    sd     = ______(study_hours, na.rm = TRUE),
+    iqr    = ______(study_hours, na.rm = TRUE)
+  )
+```
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+first_sem |>
+  summarise(
+    mean   = mean(study_hours, na.rm = TRUE),
+    median = median(study_hours, na.rm = TRUE),
+    sd     = sd(study_hours, na.rm = TRUE),
+    iqr    = IQR(study_hours, na.rm = TRUE)
+  )
+```
+
+The mean (about 28 hours) is a little above the median (26 hours): study hours are only mildly skewed. The mean and SD are acceptable here; the median and IQR would also be fine.
+:::
+:::
+
+### Exercise 2: Is wellbeing normal?
+
+Draw a Q-Q plot of first-semester `wellbeing` with base R's `qqnorm()`, and add the reference line with `qqline()`. Do the points follow the line?
+
+```{webr}
+#| exercise: ex2
+qqnorm(first_sem$______)
+qqline(first_sem$______)
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+qqnorm(first_sem$wellbeing)
+qqline(first_sem$wellbeing)
+```
+
+The points follow the line closely: wellbeing is approximately normal.
+:::
+:::
+
+## Unusual values and missing data
+
+### Exercise 3: The box plot rule
+
+How many students have unusually high first-semester `study_hours` by the box plot rule (above $Q_3 + 1.5 \times IQR$)?
+
+```{webr}
+#| exercise: ex3
+x  <- first_sem$study_hours
+q3 <- quantile(x, 0.75, na.rm = TRUE)
+fence <- q3 + 1.5 * ______(x, na.rm = TRUE)
+fence
+sum(x > ______, na.rm = TRUE)
+```
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+x  <- first_sem$study_hours
+q3 <- quantile(x, 0.75, na.rm = TRUE)
+fence <- q3 + 1.5 * IQR(x, na.rm = TRUE)
+fence
+sum(x > fence, na.rm = TRUE)
+```
+
+Just one: the upper fence is 65.5 hours, and one student studies 67 hours a week. Study hours have almost no outliers, unlike caffeine.
+:::
+:::
+
+### Exercise 4: Who left the study?
+
+Compare the first-semester sleep of students who later left the study with those who stayed. Is there a difference?
+
+```{webr}
+#| exercise: ex4
+left_ids <- setdiff(students$student_id,
+                    semesters$student_id[semesters$semester == 3])
+first_sem |>
+  mutate(left_study = student_id %in% ______) |>
+  summarise(mean_sleep = mean(sleep_hours, na.rm = TRUE), students = n(),
+            .by = ______)
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+left_ids <- setdiff(students$student_id,
+                    semesters$student_id[semesters$semester == 3])
+first_sem |>
+  mutate(left_study = student_id %in% left_ids) |>
+  summarise(mean_sleep = mean(sleep_hours, na.rm = TRUE), students = n(),
+            .by = left_study)
+```
+
+Almost no difference: about 6.4 hours for those who left and 6.5 for those who stayed. The students who left differed in wellbeing and in thoughts of dropping out (as the chapter showed), but not in sleep. Missing data can be related to some variables and not others, so check each one you use.
+:::
+:::
+
+## Relationships
+
+### Exercise 5: Support and satisfaction
+
+Calculate each student's support and satisfaction scores, then the correlation between them. Using Cohen's guidelines (0.1 small, 0.3 medium, 0.5 large), how strong is it?
+
+```{webr}
+#| exercise: ex5
+scores <- questionnaire |>
+  mutate(
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(______), na.rm = TRUE)
+  )
+cor(scores$support, scores$______, use = "complete.obs")
+```
+
+::: { .hint exercise="ex5" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The satisfaction items are `satisfaction_1` to `satisfaction_4`: `pick(satisfaction_1:satisfaction_4)`.
+:::
+:::
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+scores <- questionnaire |>
+  mutate(
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  )
+cor(scores$support, scores$satisfaction, use = "complete.obs")
+```
+
+About 0.4: a medium-to-large correlation. Students who feel supported by their supervisor are more satisfied with their programme. But this does not show that support *causes* satisfaction: satisfied students might also see their supervisors more positively, or something else might affect both.
+:::
+:::
+
+### Exercise 6: Describe the sample
+
+Complete the summary of Elaf's sample: the number of students, the percentage who study part-time, and the mean and SD of age.
+
+```{webr}
+#| exercise: ex6
+first_sem |>
+  summarise(
+    students      = n(),
+    part_time_pct = 100 * mean(study_mode == ______),
+    age_mean      = mean(age, na.rm = TRUE),
+    age_sd        = ______
+  )
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+first_sem |>
+  summarise(
+    students      = n(),
+    part_time_pct = 100 * mean(study_mode == "Part-time"),
+    age_mean      = mean(age, na.rm = TRUE),
+    age_sd        = sd(age, na.rm = TRUE)
+  )
+```
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 5 project
+
+The project contains the data, these exercises, an extra exercise building a full descriptive table for a thesis, and the solutions.
+
+- [Download chapter05.zip](chapter05.zip), unzip it, and double-click `chapter05.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter05.zip")
+```
+:::

@@ -1,0 +1,191 @@
+---
+title: "Playground: Chapter 9"
+subtitle: Mixed-Effects Models
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - chapter09.zip
+webr:
+  packages:
+    - dplyr
+    - lme4
+  resources:
+    - students.csv
+    - semesters.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+These exercises practise mixed-effects models with the lme4 package. lme4 is a large package, so **the first run on this page can take a minute** while your browser downloads it. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5]
+library(dplyr)
+library(lme4)
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+panel <- semesters |>
+  left_join(students, join_by(student_id)) |>
+  mutate(time = semester - 1)
+```
+
+## Random intercepts and slopes
+
+### Exercise 1: A first mixed model
+
+Using `sleepstudy` (it comes with lme4), fit a random intercept model of reaction time on days, and calculate the ICC.
+
+```{webr}
+#| exercise: ex1
+model <- lmer(Reaction ~ Days + (1 | ______), data = sleepstudy)
+vc <- as.data.frame(VarCorr(model))
+vc$vcov[1] / sum(vc$vcov)
+```
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+model <- lmer(Reaction ~ Days + (1 | Subject), data = sleepstudy)
+vc <- as.data.frame(VarCorr(model))
+vc$vcov[1] / sum(vc$vcov)
+```
+
+The ICC is about 0.59: most of the variation in reaction times is due to stable differences between people.
+:::
+:::
+
+### Exercise 2: Does sleep change over the semesters?
+
+Fit a random intercept model for `sleep_hours` over `time`. What is the ICC? Does sleep change? Use a confidence interval to decide.
+
+```{webr}
+#| exercise: ex2
+sleep_ri <- lmer(______ ~ time + (1 | student_id), data = panel)
+vc <- as.data.frame(VarCorr(sleep_ri))
+vc$vcov[1] / sum(vc$vcov)
+confint(sleep_ri, parm = "beta_", method = "Wald")
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+sleep_ri <- lmer(sleep_hours ~ time + (1 | student_id), data = panel)
+vc <- as.data.frame(VarCorr(sleep_ri))
+vc$vcov[1] / sum(vc$vcov)
+confint(sleep_ri, parm = "beta_", method = "Wald")
+```
+
+The ICC is about 0.83: students differ a lot in how much they sleep, but each student sleeps about the same from semester to semester. The confidence interval for `time` includes zero: sleep does not change over the two years.
+:::
+:::
+
+### Exercise 3: Is a random slope worth it?
+
+Add a random slope of `time` to the model from Exercise 2, and compare the two models with `anova()`.
+
+```{webr}
+#| exercise: ex3
+sleep_ri <- lmer(sleep_hours ~ time + (1 | student_id), data = panel)
+sleep_rs <- lmer(sleep_hours ~ time + (______ | student_id), data = panel)
+anova(sleep_ri, sleep_rs)
+```
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+sleep_rs <- lmer(sleep_hours ~ time + (time | student_id), data = panel)
+anova(sleep_ri, sleep_rs)
+```
+
+The random slope improves the model a little (p ≈ 0.02, and a slightly lower AIC), but the spread of the slopes is tiny (an SD of about 0.05 hours per semester; see `VarCorr(sleep_rs)`). Statistically worth keeping, practically unimportant: students' sleep is very stable.
+:::
+:::
+
+## Interactions and levels
+
+### Exercise 4: Do part-time students change differently?
+
+Fit `wellbeing ~ time * study_mode + (time | student_id)`. Do part-time students start at a different level? Do they change at a different rate?
+
+```{webr}
+#| exercise: ex4
+wb_mode <- lmer(wellbeing ~ time * ______ + (time | student_id), data = panel)
+round(summary(wb_mode)$coefficients, 2)
+confint(wb_mode, parm = "beta_", method = "Wald")
+```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`study_modePart-time` is the difference in level at time 0 (semester 1). `time:study_modePart-time` is the difference in slope. Check which confidence intervals include zero.
+:::
+:::
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+wb_mode <- lmer(wellbeing ~ time * study_mode + (time | student_id), data = panel)
+round(summary(wb_mode)$coefficients, 2)
+confint(wb_mode, parm = "beta_", method = "Wald")
+```
+
+Part-time students start almost 4 points lower (the interval excludes zero), but their wellbeing declines at the same rate as full-time students' (the interaction's interval includes zero). The gap is present from the start and stays about the same.
+:::
+:::
+
+### Exercise 5: Do supervisors matter for study hours?
+
+Fit a model for `study_hours` with random intercepts for supervisors and students, and calculate the share of variation at each level.
+
+```{webr}
+#| exercise: ex5
+study_levels <- lmer(study_hours ~ time + (1 | ______) + (1 | student_id), data = panel)
+vc <- as.data.frame(VarCorr(study_levels))
+data.frame(level = vc$grp, share = round(vc$vcov / sum(vc$vcov), 3))
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+study_levels <- lmer(study_hours ~ time + (1 | supervisor_id) + (1 | student_id), data = panel)
+vc <- as.data.frame(VarCorr(study_levels))
+data.frame(level = vc$grp, share = round(vc$vcov / sum(vc$vcov), 3))
+```
+
+The supervisor share is zero, and R reports a singular fit: supervisors make no difference to how much students study. (They did matter for wellbeing.) Almost all the variation, about 91%, is between students.
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 9 project
+
+The project contains the data, these exercises, an extra exercise with a Poisson mixed model for supervisor meetings, and the solutions.
+
+- [Download chapter09.zip](chapter09.zip), unzip it, and double-click `chapter09.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter09.zip")
+```
+:::

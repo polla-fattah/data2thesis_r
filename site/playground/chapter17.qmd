@@ -1,0 +1,235 @@
+---
+title: "Playground: Chapter 17"
+subtitle: Using AI with R
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - open_responses.csv
+  - open_responses_coded.csv
+  - chapter17.zip
+webr:
+  packages:
+    - dplyr
+    - stringr
+  resources:
+    - students.csv
+    - open_responses.csv
+    - open_responses_coded.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+Calling a language model needs an API key, so it is practised in the downloadable project at the bottom of this page. The exercises below practise everything around it, in your browser: checking code that an assistant might suggest, working with text, a keyword method as a baseline, and measuring agreement between two coders with Cohen's kappa. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+library(dplyr)
+library(stringr)
+students <- read.csv("students.csv")
+open_responses <- read.csv("open_responses.csv")
+open_responses_coded <- read.csv("open_responses_coded.csv")
+
+keywords <- c(
+  Supervision = "\\b(supervis|feedback|guidance|meeting)",
+  Workload    = "\\b(time|deadline|workload|too much|assignment|reading|busy)",
+  Finances    = "\\b(money|fee|scholarship|rent|afford|salary|income|funding|stipend|loan)",
+  Family      = "\\b(famil|child|kid|son\\b|daughter|baby|parent|mother|father|husband|wife)",
+  Health      = "\\b(sleep|tired|stress|anxi|health|ill\\b|burnout|headache|coffee|exhaust)",
+  Isolation   = "\\b(lonel|alone|friends|outsider|miss (home|my)|far from|know no one)",
+  Other       = "\\b(ethic|participant|statistic|library|procedure|english|power cut|laptop|internet|software)"
+)
+code_by_keywords <- function(answer) {
+  hits <- sapply(keywords, \(pattern) str_count(str_to_lower(answer), pattern))
+  if (all(hits == 0)) "Other" else names(keywords)[which.max(hits)]
+}
+```
+
+## Checking an assistant's code
+
+### Exercise 1: Find the mistake
+
+An assistant suggested this code for "the percentage of students in each faculty who considered dropping out". Run it, then check it by another route: count the students in each faculty and answer, and calculate one faculty's percentage yourself. Then fix the code.
+
+```{webr}
+#| exercise: ex1
+students |>
+  summarise(percent = 100 * sum(considering_dropout == "Yes") / nrow(students),
+            .by = faculty)
+
+students |> count(faculty, ______)
+```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`nrow(students)` is the number of *all* students. Within `summarise(.by = faculty)`, `n()` is the number of students in each faculty, and `mean(considering_dropout == "Yes")` is the share of them who answered Yes.
+:::
+:::
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+students |> count(faculty, considering_dropout)
+
+students |>
+  summarise(percent = 100 * mean(considering_dropout == "Yes"),
+            .by = faculty)
+```
+
+The counts show, for example, how many of the Education students answered Yes; dividing by the number of Education students gives about 11%, not the 2.7% of the suggested code. The suggestion divided by all 600 students. It ran without an error, which is exactly why it had to be checked.
+:::
+:::
+
+## Working with text
+
+### Exercise 2: Short and long answers
+
+How long are the answers? Count their characters with `nchar()`, and show the five shortest.
+
+```{webr}
+#| exercise: ex2
+open_responses |>
+  mutate(length = nchar(biggest_challenge)) |>
+  arrange(______) |>
+  head(5)
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+  arrange(length) |>
+```
+
+Some answers are a single word or two, such as "Time.", "sleep", or "no time". Short answers are the hardest to code, for people and machines alike: "no time" could be about workload or about family.
+:::
+:::
+
+### Exercise 3: Who mentions their supervisor?
+
+What share of all answers mention a supervisor? `str_detect()` returns TRUE for answers that match a pattern; `str_to_lower()` makes the match ignore capital letters.
+
+```{webr}
+#| exercise: ex3
+mentions <- str_detect(str_to_lower(open_responses$biggest_challenge), "______")
+mean(mentions)
+head(open_responses$biggest_challenge[mentions], 3)
+```
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+mentions <- str_detect(str_to_lower(open_responses$biggest_challenge), "supervis")
+```
+
+`"supervis"` matches "supervisor", "supervisors", and "supervision". Notice that some answers that mention a supervisor are mainly about something else, which is why counting a word is not the same as coding a theme.
+:::
+:::
+
+## Measuring agreement
+
+### Exercise 4: Keyword coding
+
+The setup code has the chapter's keyword dictionary and `code_by_keywords()`. Code every hand-coded answer with it, and calculate the share on which it agrees with Elaf.
+
+```{webr}
+#| exercise: ex4
+check <- open_responses_coded |>
+  mutate(keyword_theme = sapply(biggest_challenge, code_by_keywords))
+mean(check$theme == check$______)
+table(Elaf = check$theme, keywords = check$keyword_theme)
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+mean(check$theme == check$keyword_theme)
+```
+
+About 61%, as in the chapter. The table shows where the disagreements are: many answers that Elaf coded as Workload end up as Other, because none of their words is in the dictionary, and Isolation answers are scattered across almost every theme.
+:::
+:::
+
+### Exercise 5: Cohen's kappa by hand
+
+Kappa compares the observed agreement, $p_o$, with the agreement expected by chance, $p_e$: $\kappa = (p_o - p_e) / (1 - p_e)$. For each theme, the chance that both coders pick it is the product of the two coders' shares of that theme; $p_e$ is the sum over the themes.
+
+```{webr}
+#| exercise: ex5
+check <- open_responses_coded |>
+  mutate(keyword_theme = sapply(biggest_challenge, code_by_keywords))
+themes <- names(keywords)
+p_o <- mean(check$theme == check$keyword_theme)
+share_elaf     <- table(factor(check$theme, levels = themes)) / nrow(check)
+share_keywords <- table(factor(check$keyword_theme, levels = themes)) / nrow(check)
+p_e <- sum(share_elaf * ______)
+(p_o - p_e) / (1 - p_e)
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+p_e <- sum(share_elaf * share_keywords)
+```
+
+About 0.51, the same as yardstick's `kap()` in the chapter: moderate agreement. Chance agreement is high here because both coders use Supervision and Workload a lot, and kappa discounts it.
+:::
+:::
+
+### Exercise 6: Improve the dictionary, carefully
+
+Add one or two words of your choice to the Workload pattern (this replaces the setup's version), and see how the agreement changes. Why is it risky to keep adjusting the dictionary until the agreement with these 200 answers is as high as possible?
+
+```{webr}
+#| exercise: ex6
+keywords["Workload"] <- "\\b(time|deadline|workload|too much|assignment|reading|busy|______)"
+check <- open_responses_coded |>
+  mutate(keyword_theme = sapply(biggest_challenge, code_by_keywords))
+mean(check$theme == check$keyword_theme)
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+For example, adding `work late|weekend` to Workload:
+
+```r
+keywords["Workload"] <- "\\b(time|deadline|workload|too much|assignment|reading|busy|work late|weekend)"
+```
+
+Small changes move the agreement up or down a little. Tuning the dictionary on the same 200 answers used to judge it is the overfitting of Chapter 10: it would look better on these answers than on the 335 it has not seen. A fair test needs answers that were not used to build the dictionary.
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 17 project
+
+The project contains the chapter's keyword method, the ellmer code to code answers with a language model (you need your own API key; see `README.txt`), and the code to compare the model with Elaf's hand coding, with exercises and solutions.
+
+- [Download chapter17.zip](chapter17.zip), unzip it, and double-click `chapter17.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter17.zip")
+```
+:::

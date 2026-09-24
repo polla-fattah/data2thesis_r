@@ -11,7 +11,7 @@ Choose one of these. Both install the same package.
 **From the book's website** (needs nothing else):
 
 ```r
-install.packages("https://polla-fattah.github.io/R4NTR/downloads/data2thesis_1.0.0.tar.gz",
+install.packages("https://polla-fattah.github.io/R4NTR/downloads/data2thesis_1.1.0.tar.gz",
                  repos = NULL, type = "source")
 ```
 

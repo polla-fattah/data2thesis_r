@@ -14,5 +14,22 @@ Try each exercise yourself before you open the hints or the solution. Making mis
 | Chapter | Playground |
 |---|---|
 | 1. Getting Started with R | [Practise Chapter 1](chapter01.qmd) |
+| 2. Data Structures in R | [Practise Chapter 2](chapter02.qmd) |
+| 3. Data Manipulation | [Practise Chapter 3](chapter03.qmd) |
+| 4. Data Visualization | [Practise Chapter 4](chapter04.qmd) |
+| 5. Descriptive Statistics and EDA | [Practise Chapter 5](chapter05.qmd) |
+| 6. Hypothesis Testing and Statistical Inference | [Practise Chapter 6](chapter06.qmd) |
+| 7. ANOVA and Regression | [Practise Chapter 7](chapter07.qmd) |
+| 8. Multivariate Statistical Methods | [Practise Chapter 8](chapter08.qmd) |
+| 9. Mixed-Effects Models | [Practise Chapter 9](chapter09.qmd) |
+| 10. Introduction to Machine Learning in R | [Practise Chapter 10](chapter10.qmd) |
+| 11. Classification Models | [Practise Chapter 11](chapter11.qmd) |
+| 12. Predictive Regression | [Practise Chapter 12](chapter12.qmd) |
+| 13. Advanced Clustering | [Practise Chapter 13](chapter13.qmd) |
+| 14. Neural Networks | [Practise Chapter 14](chapter14.qmd) |
+| 15. Time Series Forecasting | [Practise Chapter 15](chapter15.qmd) |
+| 16. Reproducible Research | [Practise Chapter 16](chapter16.qmd) |
+| 17. Using AI with R | [Practise Chapter 17](chapter17.qmd) |
+| 18. Putting It All Together | [Practise Chapter 18](chapter18.qmd) |
 
-More chapters are added as the book is written.
+Every chapter of the book has a playground page.

@@ -16,7 +16,7 @@ Every chapter answers one of her research questions. You learn each method the w
 - Run the code yourself. Everything you need is in the `data2thesis` package:
 
 ```r
-install.packages("https://polla-fattah.github.io/R4NTR/downloads/data2thesis_1.0.0.tar.gz",
+install.packages("https://polla-fattah.github.io/R4NTR/downloads/data2thesis_1.1.0.tar.gz",
                  repos = NULL, type = "source")
 ```
 

@@ -11,7 +11,8 @@ function copy(from: string, to: string) {
 
 // Playground pages read the data from their own folder, exactly as the
 // downloadable chapter projects do: read.csv("students.csv")
-for (const file of ["students.csv", "semesters.csv"]) {
+for (const file of ["students.csv", "semesters.csv", "questionnaire.csv", "supervisors.csv",
+                     "counselling_visits.csv", "open_responses.csv", "open_responses_coded.csv"]) {
   copy(`${repo}/data/${file}`, `playground/${file}`);
 }
 

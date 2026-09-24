@@ -1,18 +1,448 @@
 # Data Visualization {#sec-ch04}
 
-::: {.callout-note appearance="simple"}
-## This chapter is being rewritten
+```{r}
+#| label: setup
+#| include: false
+library(data2thesis)
+```
 
-The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+Elaf's data is clean. Before she runs a single statistical test, her supervisor gives her one piece of advice: *look at it first*. A good graph shows in seconds what a table of numbers hides: where most values lie, which values are unusual, how groups differ, and how one variable moves with another.
+
+This chapter answers Elaf's first research question, **what does graduate student life look like?** (RQ1), with graphs. It uses **ggplot2**, the most widely used package for graphics in R, and the tool behind the figures in thousands of published papers.
+
+::: {.callout-tip appearance="simple"}
+## By the end of this chapter you will be able to
+
+- Explain the grammar of graphics: data, aesthetic mappings, and geometric layers.
+- Draw histograms, bar charts, box plots, scatter plots, and line charts.
+- Tell the difference between mapping a variable to colour and setting a fixed colour.
+- Add titles and labels, and control axes, colours, and themes, including colour-blind-friendly palettes.
+- Use facets, density plots, and heat maps.
+- Export figures at the size and resolution a journal or thesis requires.
 :::
 
-## Elaf's question
+## The grammar of graphics
 
-What does graduate student life look like? (RQ1)
+Every ggplot2 graph is built from the same three parts:
 
-## What this chapter will cover
+1. **Data**: a data frame.
+2. **Aesthetic mappings**, written inside `aes()`: which variable goes on the x axis, which on the y axis, which decides the colour, and so on.
+3. **Geometric layers**, called *geoms*: what shape represents the data, such as points, bars, or lines.
 
-- Creating basic visualizations: bar plots, histograms, scatter plots, and box plots.
-- Customizing plots: themes, annotations, and advanced styling.
-- Advanced visualizations: heatmaps, faceting, and density plots.
-- Exporting publication-quality plots.
+You build a graph by adding these parts together with `+`. To see how, take five students from a pilot study:
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+pilot <- tibble(
+  student = c("S1", "S2", "S3", "S4", "S5"),
+  sleep   = c(6.5, 7.5, 5.5, 8, 6),
+  stress  = c(3.2, 2.1, 4.5, 1.8, 3.9),
+  invited = c("Yes", "No", "Yes", "No", "Yes")
+)
+```
+
+`ggplot()` with the data and the mappings sets up an empty canvas with the axes:
+
+```{r}
+#| label: fig-canvas
+#| fig-cap: "Data and mappings alone give an empty canvas with the axes."
+#| fig-alt: "An empty plot with sleep on the x axis and stress on the y axis, and no data points."
+#| fig-width: 5
+#| fig-height: 3.2
+ggplot(pilot, aes(x = sleep, y = stress))
+```
+
+Adding a geom draws the data. `geom_point()` draws one point per row:
+
+```{r}
+#| label: fig-points
+#| fig-cap: "Adding a layer of points: students who sleep less report more stress."
+#| fig-alt: "Scatter plot of five points showing that stress falls as sleep rises."
+#| fig-width: 5
+#| fig-height: 3.2
+ggplot(pilot, aes(x = sleep, y = stress)) +
+  geom_point(size = 3)
+```
+
+Every further detail is another `+`: another layer, a label, a colour scale, a theme. That is the whole idea. Once you understand it, every graph in this chapter, however complex it looks, is just more of the same.
+
+For Elaf's data, one row per student makes most graphs simplest. The code below combines each student's first-semester record with their background information:
+
+```{r}
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
+```
+
+## The basic graphs
+
+Which graph you need depends on what you want to show. @tbl-which-graph is a starting point.
+
+| To show | Use | geom |
+|---|---|---|
+| The distribution of one numeric variable | Histogram | `geom_histogram()` |
+| How many cases fall in each category | Bar chart | `geom_bar()` |
+| A numeric variable across groups | Box plot | `geom_boxplot()` |
+| The relationship between two numeric variables | Scatter plot | `geom_point()` |
+| Change over time | Line chart | `geom_line()` |
+
+: Choosing a graph {#tbl-which-graph}
+
+### Histograms: the shape of one variable
+
+How long do graduate students sleep? A **histogram** divides the values into ranges, called *bins*, and shows how many cases fall into each:
+
+```{r}
+#| label: fig-sleep-hist
+#| fig-cap: "Hours of sleep per night in the first semester."
+#| fig-alt: "Histogram of sleep hours, roughly bell-shaped, centred just above 6 hours, ranging from about 3.5 to 10."
+#| fig-width: 6
+#| fig-height: 3.5
+ggplot(first_sem, aes(x = sleep_hours)) +
+  geom_histogram(binwidth = 0.5)
+```
+
+```{r}
+#| include: false
+share_short <- mean(first_sem$sleep_hours < 7, na.rm = TRUE)
+```
+
+@fig-sleep-hist shows a roughly symmetrical, bell-shaped distribution, centred a little above 6 hours. Most students sleep less than the recommended 7 hours: `r round(100 * share_short)`% of them in the first semester. A few sleep very little, under 4.5 hours. Chapter 5 looks at such unusual values.
+
+`binwidth` sets the width of each bin, here half an hour. Try a few widths: too wide hides the shape, too narrow makes it noisy.
+
+### Bar charts: counting categories
+
+A **bar chart** shows how many cases fall into each category. `geom_bar()` does the counting for you:
+
+```{r}
+#| label: fig-faculty-bar
+#| fig-cap: "Number of students in each faculty."
+#| fig-alt: "Bar chart of students per faculty: Health Sciences and Education have the most, Natural Sciences and Humanities the fewest."
+#| fig-width: 6
+#| fig-height: 3.5
+ggplot(students, aes(x = faculty)) +
+  geom_bar()
+```
+
+When you have already calculated the heights yourself, for example averages, use `geom_col()` instead, and map the calculated value to `y`.
+
+### Box plots: comparing groups
+
+A **box plot** summarises a numeric variable for each group. The box covers the middle half of the values, the line inside is the median, the whiskers reach out to the typical range, and points beyond the whiskers mark unusual values. Does wellbeing differ between full-time and part-time students?
+
+```{r}
+#| label: fig-wellbeing-box
+#| fig-cap: "Wellbeing in the first semester, by study mode."
+#| fig-alt: "Two box plots: part-time students' wellbeing is a few points lower than full-time students', with much overlap."
+#| fig-width: 5
+#| fig-height: 3.5
+ggplot(first_sem, aes(x = study_mode, y = wellbeing)) +
+  geom_boxplot()
+```
+
+Part-time students' wellbeing is a little lower, but the boxes overlap a lot: many part-time students are doing better than many full-time students. Whether the difference is larger than chance is a question for Chapter 7.
+
+### Scatter plots: two numeric variables
+
+Do students who sleep more get better grades? A **scatter plot** puts one variable on each axis. With 600 students, points pile on top of each other, so `alpha` makes them partly transparent, and darker areas show where many students are:
+
+```{r}
+#| label: fig-sleep-gpa
+#| fig-cap: "Sleep and GPA in the first semester, with a straight trend line."
+#| fig-alt: "Scatter plot of GPA against sleep hours with a rising straight line: students who sleep more tend to have slightly higher GPAs, with much scatter."
+#| fig-width: 6
+#| fig-height: 4
+ggplot(first_sem, aes(x = sleep_hours, y = gpa)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm")
+```
+
+`geom_smooth(method = "lm")` adds a straight trend line, with a grey band showing its uncertainty. The line rises: students who sleep more tend to have slightly higher GPAs. But look how widely the points scatter around it. Sleep is related to GPA, but it is far from the whole story. Chapter 7 measures this relationship.
+
+### Line charts: change over time
+
+Elaf followed her students for four semesters. A **line chart** shows how the average changed. First calculate the averages (Chapter 3), then plot them, with one line per workshop group:
+
+```{r}
+#| label: fig-wellbeing-lines
+#| fig-cap: "Average wellbeing over four semesters, by workshop group."
+#| fig-alt: "Two lines over semesters 1 to 4. They start level; from semester 2 the invited group is about 5 points higher, and the gap narrows by semester 4."
+#| fig-width: 6
+#| fig-height: 3.8
+wellbeing_by_sem <- semesters |>
+  left_join(students, join_by(student_id)) |>
+  summarise(mean_wellbeing = mean(wellbeing), .by = c(semester, workshop))
+
+ggplot(wellbeing_by_sem, aes(x = semester, y = mean_wellbeing, colour = workshop)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5)
+```
+
+@fig-wellbeing-lines tells the story of Elaf's workshop at a glance: the groups start level, the invited students pull ahead in semester 2, and the gap narrows afterwards. Chapters 6 and 9 test whether this pattern is real.
+
+## Mapping and setting
+
+In @fig-wellbeing-lines, `colour = workshop` sat inside `aes()`. That **maps** colour to a variable: each workshop group gets its own colour, and ggplot2 adds a legend to explain them.
+
+To make everything one fixed colour, **set** the colour *outside* `aes()`:
+
+```{r}
+#| label: fig-setting
+#| fig-cap: "Setting a fixed colour outside aes(): all bars are the same colour, and there is no legend."
+#| fig-alt: "Histogram of sleep hours with all bars filled in a single dark blue colour."
+#| fig-width: 6
+#| fig-height: 3.2
+ggplot(first_sem, aes(x = sleep_hours)) +
+  geom_histogram(binwidth = 0.5, fill = "steelblue", colour = "white")
+```
+
+A very common mistake is to put a fixed colour inside `aes()`. ggplot2 then treats `"steelblue"` as a variable with one value, colours it with its first default colour (a salmon pink), and adds a pointless legend:
+
+```{r}
+#| label: fig-mapping-mistake
+#| fig-cap: "The mistake: a fixed colour inside aes() is treated as data."
+#| fig-alt: "Histogram with salmon-pink bars and a legend containing the single entry 'steelblue'."
+#| fig-width: 6
+#| fig-height: 3.2
+ggplot(first_sem, aes(x = sleep_hours, fill = "steelblue")) +
+  geom_histogram(binwidth = 0.5)
+```
+
+The rule: *inside* `aes()` for anything that should depend on the data, *outside* for anything that should be the same everywhere.
+
+Note the difference between `fill` and `colour`, too: `fill` is the inside of a shape such as a bar or box, and `colour` is its outline, or the colour of points and lines.
+
+## Making graphs ready to share
+
+The graphs so far are fine for exploring. A graph for a thesis or paper needs more care: clear labels, sensible scales, readable colours, and a clean look.
+
+### Labels
+
+`labs()` sets the title, subtitle, axis labels, legend title, and caption. Axis labels should say what was measured, with units:
+
+```{r}
+#| label: fig-labelled
+#| fig-cap: "The line chart with clear labels."
+#| fig-alt: "The wellbeing line chart with a title, axis labels 'Semester' and 'Average wellbeing (0 to 100)', and legend titled 'Workshop'."
+#| fig-width: 6.5
+#| fig-height: 4
+p <- ggplot(wellbeing_by_sem, aes(x = semester, y = mean_wellbeing, colour = workshop)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5) +
+  labs(
+    title    = "Wellbeing over the two years",
+    subtitle = "Average score per semester, by workshop group",
+    x        = "Semester",
+    y        = "Average wellbeing (0 to 100)",
+    colour   = "Workshop"
+  )
+p
+```
+
+Storing the graph in an object, here `p`, lets you add to it step by step without repeating the code.
+
+### Scales and colours
+
+**Scales** control how data values become positions, colours, and sizes. Each has a `scale_` function. Here, the x axis should show only whole semesters, and the colours should come from a palette that people with colour vision deficiency can tell apart. The **viridis** palettes, built into ggplot2, are designed for exactly that, and they also print well in greyscale:
+
+```{r}
+#| label: fig-scales
+#| fig-cap: "Whole-number semesters on the x axis and a colour-blind-friendly palette."
+#| fig-alt: "The wellbeing line chart with semesters 1 to 4 on the x axis and the two lines in dark purple and yellow-green."
+#| fig-width: 6.5
+#| fig-height: 4
+p <- p +
+  scale_x_continuous(breaks = 1:4) +
+  scale_colour_viridis_d(end = 0.8)
+p
+```
+
+To choose colours yourself, use `scale_colour_manual(values = c("Invited" = "#1b9e77", "Not invited" = "#7570b3"))`. Whatever you choose, never let colour be the *only* way to tell groups apart in a printed figure: add different shapes or line types, or label the lines directly.
+
+### Themes
+
+A **theme** controls everything that is not data: the background, grid lines, fonts, and the position of the legend. ggplot2 comes with several complete themes. `theme_minimal()` and `theme_bw()` give a clean look that suits most journals, and `base_size` sets the font size. `theme()` then adjusts individual details:
+
+```{r}
+#| label: fig-theme
+#| fig-cap: "A clean theme, larger text, and the legend below the graph."
+#| fig-alt: "The finished wellbeing line chart on a white background with light grid lines, larger text, and the legend at the bottom."
+#| fig-width: 6.5
+#| fig-height: 4.2
+p <- p +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+p
+```
+
+Compare @fig-theme with @fig-wellbeing-lines: the same data, but now it is ready for a thesis.
+
+::: {.callout-warning}
+## Watch the axis range
+
+Look at the y axis of @fig-theme: it runs only from about 58 to 66, because ggplot2 zooms in on the data. That makes a 5-point gap look dramatic. Zooming in is fine for showing change, but readers should not be misled. Either say so in the caption, or show the full range of the scale with `coord_cartesian(ylim = c(0, 100))` and let readers judge the size of the difference for themselves.
+:::
+
+### Annotations
+
+Sometimes a graph needs a note: a reference line, a label on an important value. `geom_vline()` and `geom_hline()` draw reference lines, and `annotate()` places text:
+
+```{r}
+#| label: fig-annotated
+#| fig-cap: "Sleep in the first semester, with the recommended 7 hours marked."
+#| fig-alt: "Histogram of sleep hours with a dashed vertical line at 7 hours, labelled 'Recommended: 7 hours'; most of the distribution lies to the left of the line."
+#| fig-width: 6.5
+#| fig-height: 3.8
+ggplot(first_sem, aes(x = sleep_hours)) +
+  geom_histogram(binwidth = 0.5, fill = "steelblue", colour = "white") +
+  geom_vline(xintercept = 7, linetype = "dashed") +
+  annotate("text", x = 7.1, y = Inf, label = "Recommended: 7 hours", hjust = 0, vjust = 1.5) +
+  labs(x = "Hours of sleep per night", y = "Number of students") +
+  theme_minimal(base_size = 13)
+```
+
+`y = Inf` places the text at the top of the plot, whatever the height of the bars; `hjust = 0` makes it start just right of the line, and `vjust = 1.5` moves it slightly down from the edge.
+
+## Beyond the basics
+
+### Facets: small multiples
+
+**Facets** split one graph into a panel for each group, all with the same axes, so the groups are easy to compare. `facet_wrap()` takes the variable to split by:
+
+```{r}
+#| label: fig-facets
+#| fig-cap: "Sleep and GPA in the first semester, one panel per programme."
+#| fig-alt: "Two scatter plots side by side, for Master's and PhD students, each with a rising trend line of GPA against sleep."
+#| fig-width: 7
+#| fig-height: 3.6
+ggplot(first_sem, aes(x = sleep_hours, y = gpa)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ programme) +
+  labs(x = "Hours of sleep per night", y = "GPA") +
+  theme_minimal(base_size = 12)
+```
+
+The relationship looks similar in both programmes. For two grouping variables, `facet_grid(rows ~ columns)` makes a grid of panels.
+
+### Density plots
+
+A **density plot** is a smoothed histogram. Its advantage is that several distributions can be drawn on top of each other and compared. Here, `fill` is mapped to the workshop group and `alpha` lets the two curves show through each other:
+
+```{r}
+#| label: fig-density
+#| fig-cap: "Distribution of wellbeing in the second semester, by workshop group."
+#| fig-alt: "Two overlapping bell-shaped density curves; the curve for invited students sits a few points to the right of the curve for students not invited."
+#| fig-width: 6.5
+#| fig-height: 3.8
+semesters |>
+  filter(semester == 2) |>
+  left_join(students, join_by(student_id)) |>
+  ggplot(aes(x = wellbeing, fill = workshop)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_viridis_d(end = 0.8) +
+  labs(x = "Wellbeing (0 to 100)", y = "Density", fill = "Workshop") +
+  theme_minimal(base_size = 13)
+```
+
+Notice that the data flows straight into `ggplot()` through the pipe. The two curves have the same shape, but the invited group's is shifted to the right: the whole distribution moved, not just a few students.
+
+### Heat maps
+
+A **heat map** shows a table of numbers as coloured tiles. It suits correlation matrices well. In Chapter 2, you calculated the correlations between four of Elaf's variables. To plot them, turn the matrix into a long table with one row per pair (Chapter 3), then draw a tile for each pair with `geom_tile()` and write the value on it with `geom_text()`:
+
+```{r}
+#| label: fig-heatmap
+#| fig-cap: "Correlations between four semester measurements."
+#| fig-alt: "A 4 by 4 grid of coloured tiles showing correlations between GPA, sleep, study hours, and wellbeing, each tile labelled with its value; the strongest is a negative correlation of -0.54 between sleep and study hours."
+#| fig-width: 5.5
+#| fig-height: 4.5
+library(tidyr)
+
+correlations <- semesters |>
+  select(gpa, sleep_hours, study_hours, wellbeing) |>
+  cor(use = "complete.obs")
+
+correlations |>
+  as.data.frame() |>
+  mutate(var1 = rownames(correlations)) |>
+  pivot_longer(-var1, names_to = "var2", values_to = "r") |>
+  ggplot(aes(x = var1, y = var2, fill = r)) +
+  geom_tile() +
+  geom_text(aes(label = round(r, 2))) +
+  scale_fill_gradient2(limits = c(-1, 1)) +
+  labs(x = NULL, y = NULL, fill = "Correlation") +
+  theme_minimal(base_size = 12)
+```
+
+`scale_fill_gradient2()` uses two colours for negative and positive values, with white at zero, so the direction and strength of each correlation are visible at once. Students who study more hours sleep less (a negative correlation), and students who sleep more report higher wellbeing (positive). Chapter 5 explains how to read correlations.
+
+## Exporting figures
+
+`ggsave()` saves the most recent graph, or one you name, to a file. The file type follows from the file name:
+
+```r
+ggsave("figures/wellbeing-lines.png", plot = p, width = 16, height = 10, units = "cm", dpi = 300)
+ggsave("figures/wellbeing-lines.pdf", plot = p, width = 16, height = 10, units = "cm")
+```
+
+A few rules make figures look professional in print:
+
+- **Set the size in the units of your page.** A figure for a single column of a journal is often about 8 cm wide; a full page about 16 cm. Setting the size when saving, rather than stretching the image later, keeps text readable and proportions right.
+- **Use at least 300 dpi** (dots per inch) for images such as PNG files, which is what most journals require.
+- **Prefer vector formats** (PDF or SVG) when the journal accepts them. They stay sharp at any size.
+- **Check the text size** at the final size. Fonts that look fine on screen are often too small in print; `base_size` in the theme fixes that.
+
+Keep the code that makes each figure in your analysis script. When your supervisor asks for a larger font or a different colour, you change one line and save again.
+
+::: {.callout-note icon="false"}
+## In your field: economics and business
+
+ggplot2 includes `economics`, real monthly data on the US economy from 1967 to 2015. The same line chart shows the rise and fall of unemployment, with each recession visible as a peak:
+
+```{r}
+#| label: fig-economics
+#| fig-cap: "US unemployment, 1967 to 2015 (ggplot2's economics data)."
+#| fig-alt: "Line chart of the number of unemployed people in the United States, in thousands, from 1967 to 2015, with several peaks, the highest around 2010."
+#| fig-width: 6.5
+#| fig-height: 3.5
+ggplot(economics, aes(x = date, y = unemploy)) +
+  geom_line() +
+  labs(x = NULL, y = "Unemployed (thousands)") +
+  theme_minimal(base_size = 12)
+```
+:::
+
+## Chapter review
+
+### Summary
+
+- Every ggplot2 graph combines data, aesthetic mappings in `aes()`, and geometric layers, joined with `+`.
+- Histograms show the shape of one variable, bar charts count categories, box plots compare groups, scatter plots show relationships, and line charts show change over time.
+- *Map* a colour inside `aes()` when it should depend on the data; *set* it outside `aes()` when it should be fixed.
+- `labs()` adds labels, `scale_` functions control axes and colours (viridis palettes are colour-blind-friendly), and themes control the look.
+- Facets split a graph into comparable panels; density plots compare distributions; heat maps show tables of numbers.
+- `ggsave()` exports figures. Set the size in page units, use at least 300 dpi for images, and prefer PDF or SVG when accepted.
+
+### Key terms
+
+Grammar of graphics, aesthetic mapping, geom, layer, histogram, bin, bar chart, box plot, median, scatter plot, overplotting, trend line, line chart, mapping, setting, scale, theme, annotation, facet, density plot, heat map, dpi, vector format.
+
+## Exercises
+
+The [playground](../playground/chapter04.html) has these and more, with hints and solutions.
+
+1. Draw a histogram of `study_hours` in the first semester. Try binwidths of 1, 5, and 10. Which shows the shape best?
+2. Draw a bar chart of how many students have each level of `employment`. Make the bars a single colour of your choice.
+3. Draw box plots of first-semester GPA for each faculty, with clear axis labels.
+4. Draw a scatter plot of caffeine against sleep in the first semester, with a trend line. What does it suggest? (Chapter 7 returns to this relationship.)
+5. Take any graph from this chapter and save it as a PNG file, 16 cm wide and 10 cm high, at 300 dpi.
+
+## Further reading
+
+- *R for Data Science* [@wickham2023]: chapters "Data visualization", "Layers", and "Communication".
+- *ggplot2: Elegant Graphics for Data Analysis* [@wickham2016ggplot2], by the author of ggplot2, explains the grammar of graphics in depth.
+- The [ggplot2 website](https://ggplot2.tidyverse.org) has a reference page, with examples, for every function.

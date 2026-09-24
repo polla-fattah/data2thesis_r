@@ -1,0 +1,88 @@
+```{r}
+#| include: false
+ai <- read.csv(ai_file)
+ai_meta <- read.csv(ai_meta_file)
+
+kappa_label <- function(k) {
+  cut(k, c(-Inf, 0.2, 0.4, 0.6, 0.8, Inf),
+      labels = c("slight", "fair", "moderate", "substantial", "almost perfect")) |>
+    as.character()
+}
+```
+
+Elaf's script used `r ai_meta$model` on `r format(as.Date(ai_meta$date), "%d %B %Y")`. The `r ai_meta$requests` requests cost about `r sprintf("$%.2f", ai_meta$cost_usd)` in total. The results are joined to her hand-coded answers:
+
+```{r}
+ai <- read.csv(ai_file)
+
+ai_check <- open_responses_coded |>
+  left_join(ai, join_by(student_id)) |>
+  mutate(across(c(theme, ai_theme, ai_theme_rerun), \(x) factor(x, levels = themes)))
+
+ai_check |> accuracy(truth = theme, estimate = ai_theme)
+ai_check |> kap(truth = theme, estimate = ai_theme)
+```
+
+```{r}
+#| include: false
+ai_acc <- accuracy(ai_check, theme, ai_theme)$.estimate
+ai_kap <- kap(ai_check, theme, ai_theme)$.estimate
+rerun_agree <- mean(ai_check$ai_theme == ai_check$ai_theme_rerun, na.rm = TRUE)
+rerun_kap <- kap(ai_check, ai_theme, ai_theme_rerun)$.estimate
+```
+
+The model agrees with Elaf on `r round(100 * ai_acc)`% of the answers, with a kappa of `r sprintf("%.2f", ai_kap)` (`r kappa_label(ai_kap)` agreement), against `r round(100 * kw_acc)`% and `r sprintf("%.2f", kw_kap)` for the keywords. The confusion matrix of Chapter 11 shows where the two disagree:
+
+```{r}
+ai_check |> conf_mat(truth = theme, estimate = ai_theme)
+```
+
+The diagonal holds the answers on which Elaf and the model agree. The disagreements are worth reading one by one, because they show whether the model is wrong, the codebook is unclear, or the answer is genuinely ambiguous:
+
+```{r}
+ai_check |>
+  filter(theme != ai_theme) |>
+  select(Answer = biggest_challenge, Elaf = theme, Model = ai_theme) |>
+  head(5) |>
+  knitr::kable()
+```
+
+Look especially at answers that mention two challenges. If the model and Elaf chose different ones as the main challenge, that is a question for the codebook, not only for the model: a clearer rule ("code the challenge mentioned first") helps both human and machine coders.
+
+Asked a second time, the model gave the same theme for `r round(100 * rerun_agree)`% of the answers (kappa `r sprintf("%.2f", rerun_kap)`). Even with a temperature of 0, a language model is not guaranteed to be perfectly repeatable, which is why the outputs are saved and analysed from the file.
+
+### What the students said
+
+With its agreement checked, Elaf uses the model's coding for all `r nrow(ai)` answers:
+
+```{r}
+#| label: fig-ai-themes
+#| fig-cap: "Main challenge described by the students, coded by a language model."
+#| fig-alt: "Horizontal bar chart of the share of answers in each of seven themes, sorted from most to least common."
+#| fig-width: 6.5
+#| fig-height: 3.5
+ai |>
+  count(ai_theme) |>
+  mutate(share = n / sum(n)) |>
+  ggplot(aes(x = share, y = reorder(ai_theme, share))) +
+  geom_col(fill = "#1f6f8b") +
+  scale_x_continuous(labels = scales::label_percent()) +
+  labs(x = "Share of answers", y = NULL) +
+  theme_minimal(base_size = 12)
+```
+
+Because the themes are now data, they can be linked to the rest of the study. Students whose main challenge is supervision should report less supervisor support in the questionnaire:
+
+```{r}
+q_support <- questionnaire |>
+  mutate(support = rowMeans(pick(support_1:support_6), na.rm = TRUE)) |>
+  select(student_id, support)
+
+ai |>
+  left_join(q_support, join_by(student_id)) |>
+  summarise(students = n(), support = round(mean(support, na.rm = TRUE), 2),
+            .by = ai_theme) |>
+  arrange(support)
+```
+
+This is a check of **validity**: the text and the numbers tell the same story. It also answers RQ11 in a way neither source could alone: what students struggle with, in their own words, and how that relates to their situation.

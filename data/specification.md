@@ -1,6 +1,6 @@
 # Dataset Specification: The Graduate Wellbeing Study
 
-**Status:** approved by the author. **Version 1.0.0 generated** by `data-raw/generate_wellbeing.R`; all 72 checks in `data-raw/check_wellbeing.R` pass (results in `data-raw/check_results.txt`). Numbers in section 5 are the values in the generated data.
+**Status:** approved by the author. **Version 1.1.0 generated** by `data-raw/generate_wellbeing.R` (1.1.0 rewrote the open-ended answers with a much larger phrase bank, `data-raw/answer_bank.R`; every other value is identical to 1.0.0); all 72 checks in `data-raw/check_wellbeing.R` pass (results in `data-raw/check_results.txt`). Numbers in section 5 are the values in the generated data.
 
 This document specifies the simulated dataset that runs through the book as its case study. It is based on the 2025 lecture notes *Data Analysis for Research* (where the student was called Sara; `graduate_student_wellbeing.csv`) and extends them so the data supports every chapter.
 
@@ -52,8 +52,8 @@ A two-year **longitudinal study** at one university. The university and country 
 | RQ8 | How do wellbeing and GPA change over the two years, and how much do supervisors matter? | 9 |
 | RQ9 | Which students are at risk of considering dropout, and can we predict them? | 7, 11 |
 | RQ10 | Can we predict final GPA from year-1 information? | 12 |
-| RQ11 | What challenges do students describe in their own words? | 16 |
-| RQ12 | *(Internal analysis for the counselling service, not part of the thesis)* How does demand for the counselling service vary through the year, and how many visits should it expect next year? | 14 |
+| RQ11 | What challenges do students describe in their own words? | 17 |
+| RQ12 | *(Internal analysis for the counselling service, not part of the thesis)* How does demand for the counselling service vary through the year, and how many visits should it expect next year? | 15 |
 
 ---
 
@@ -65,9 +65,9 @@ A two-year **longitudinal study** at one university. The university and country 
 | `questionnaire.csv` | 600 | One row per student: the 22 baseline questionnaire items | Ch 8, scale scores elsewhere |
 | `semesters.csv` | about 2,330 | One row per student per semester (long format); fewer than 2,400 because some students leave | Ch 3, 6, 7, 9, 12 |
 | `supervisors.csv` | 120 | One row per supervisor | Ch 3 (joins), Ch 9 |
-| `open_responses.csv` | about 540 | One row per student who answered the final survey | Ch 16 |
-| `open_responses_coded.csv` | 200 | A subset hand-coded into themes, to check AI coding against | Ch 16 |
-| `counselling_visits.csv` | 260 | Weekly visits to the university counselling service over 5 years, analysed for the service as an internal analysis | Ch 14 |
+| `open_responses.csv` | about 540 | One row per student who answered the final survey | Ch 17 |
+| `open_responses_coded.csv` | 200 | A subset hand-coded into themes, to check AI coding against | Ch 17 |
+| `counselling_visits.csv` | 260 | Weekly visits to the university counselling service over 5 years, analysed for the service as an internal analysis | Ch 15 |
 | `wellbeing_raw.xlsx` | 615 | The messy "survey export": one wide sheet as it came from the online survey tool | Ch 2, 3 |
 | `wellbeing.sav` | 600 | SPSS version of `students` and `questionnaire`, with variable and value labels | Ch 2 |
 
@@ -136,7 +136,7 @@ Scale scores (the average of each scale's items, after reversing `stress_4`) are
 | `biggest_challenge` | Free-text answer (1–3 sentences) to "What has been your biggest challenge during your studies?" |
 | `theme` | *(coded file only)* Hand-coded theme: Supervision, Workload, Finances, Family, Health, Isolation, Other |
 
-Answers are written to reflect each student's data (a student with low supervisor support is more likely to mention supervision), so text themes connect to the numbers. They vary in length, tone, and spelling, like real answers.
+Answers are written to reflect each student's data (a student with low supervisor support is more likely to mention supervision), so text themes connect to the numbers. They vary in length, tone, and spelling, like real answers: each is built from a large phrase bank (about 90 core statements with interchangeable details, follow-up sentences, mentions of a second theme, openers, and closers), and about 7% are very short ("Money.", "no time"). The hand-coded theme is the main theme of the answer.
 
 ### 4.6 `counselling_visits.csv`
 | Variable | Description |
@@ -181,7 +181,7 @@ Semester GPA depends on:
 ### 5.4 Questionnaire structure (RQ6; Ch 8)
 - Four underlying factors (stress, burnout, support, satisfaction), with stress and burnout correlated (about 0.6), so factor analysis has to separate related constructs.
 - Item loadings mostly 0.6–0.8; `burnout_3` cross-loads on stress; `stress_4` is reverse-worded and loads negatively until reversed.
-- Reliability (Cronbach's alpha) about 0.86–0.89 per scale.
+- Reliability (Cronbach's alpha) about 0.76–0.85 per scale. (An earlier version of the check script wrongly included the scale score among the items, which inflated alpha to 0.86–0.89; fixed.)
 
 ### 5.5 Student profiles (RQ7; Ch 8, 13)
 Four profiles are built in, with overlap between them (as in real data):
@@ -223,7 +223,7 @@ Four profiles are built in, with overlap between them (as in real data):
 - Semester measurements in wide format (`gpa_s1`, `gpa_s2`, …), to reshape to long format.
 - Test responses at the start of the file (e.g. `student_id` = `TEST`).
 
-### 5.10 Counselling visits (RQ12; Ch 14)
+### 5.10 Counselling visits (RQ12; Ch 15)
 - **Story:** the doctors at the university counselling service hear about Elaf's wellbeing study and ask her to analyse their weekly visit records as an **internal analysis**, to help them plan staffing. It is not part of her thesis, which is why it is a time series while her thesis data is a survey. It also shows readers a common situation: being asked to analyse someone else's data because you know how.
 - Weekly visits over 5 academic years with a clear **seasonal pattern** (peaks before exams, drops during breaks), a gentle upward **trend**, and random noise.
 - This keeps time series inside the case study (**decided**, instead of a built-in dataset such as `AirPassengers`).
@@ -264,10 +264,11 @@ Other data supports the case rather than replacing it:
 | 11 | Classification models for dropout risk |
 | 12 | Predicting final GPA; regularisation; boosting |
 | 13 | Gaussian mixtures and DBSCAN on student profiles |
-| 14 | Time series of counselling visits; a neural network on dropout risk |
-| 15 | Elaf's reproducible thesis report; a Shiny wellbeing dashboard |
-| 16 | AI coding of open-ended answers, validated against the hand-coded subset |
-| 17 | The complete project from raw data to thesis chapter |
+| 14 | A neural network on dropout risk |
+| 15 | Time series of counselling visits |
+| 16 | Elaf's reproducible thesis report; a Shiny wellbeing dashboard |
+| 17 | AI coding of open-ended answers, validated against the hand-coded subset |
+| 18 | The complete project from raw data to thesis chapter |
 
 ---
 

@@ -1,0 +1,80 @@
+# R functions for Appendix B.
+# One entry per line:  group | function | package | description
+# The chapters are found automatically, by searching the code chunks of each
+# chapter for the function name followed by "(".
+
+Getting started | install.packages | base R | Install a package from CRAN (once)
+Getting started | library | base R | Load an installed package (every session)
+Getting started | c | base R | Combine values into a vector
+Getting started | round | base R | Round numbers to a number of decimal places
+Getting started | head | base R | Show the first rows of a data frame or first values of a vector
+Getting started | str | base R | Show the structure of an object
+Getting started | summary | base R | Summarise a data frame or a model
+Getting started | here | here | Build a file path from the project's folder
+Importing and exporting | read.csv | base R | Read a CSV file
+Importing and exporting | read_excel | readxl | Read an Excel file
+Importing and exporting | read_sav | haven | Read an SPSS file, with its labels
+Importing and exporting | write_csv | readr | Save a data frame as a CSV file
+Importing and exporting | factor | base R | Create a categorical variable with levels
+Cleaning and reshaping | filter | dplyr | Keep the rows that meet a condition
+Cleaning and reshaping | select | dplyr | Keep or drop columns
+Cleaning and reshaping | arrange | dplyr | Sort rows
+Cleaning and reshaping | mutate | dplyr | Create or change columns
+Cleaning and reshaping | summarise | dplyr | Calculate summaries, optionally by group (`.by`)
+Cleaning and reshaping | count | dplyr | Count the rows in each group
+Cleaning and reshaping | case_when | dplyr | Recode values with a series of conditions
+Cleaning and reshaping | left_join | dplyr | Add columns from another table by matching a key
+Cleaning and reshaping | distinct | dplyr | Remove duplicate rows
+Cleaning and reshaping | pivot_longer | tidyr | Reshape from wide to long format
+Cleaning and reshaping | pivot_wider | tidyr | Reshape from long to wide format
+Cleaning and reshaping | str_detect | stringr | Test whether text matches a pattern
+Cleaning and reshaping | parse_number | readr | Extract a number from text
+Visualising | ggplot | ggplot2 | Start a plot from data and aesthetic mappings
+Visualising | geom_histogram | ggplot2 | Draw a histogram
+Visualising | geom_point | ggplot2 | Draw points (a scatter plot)
+Visualising | geom_boxplot | ggplot2 | Draw box plots
+Visualising | geom_smooth | ggplot2 | Add a trend line
+Visualising | facet_wrap | ggplot2 | Split a plot into panels by group
+Visualising | labs | ggplot2 | Set titles and axis labels
+Visualising | ggsave | ggplot2 | Save a plot to a file
+Describing | mean | base R | Mean
+Describing | median | base R | Median
+Describing | sd | base R | Standard deviation
+Describing | quantile | base R | Quantiles, such as quartiles
+Describing | cor | base R | Correlation coefficients
+Describing | scale | base R | Convert to z-scores
+Testing | set.seed | base R | Make random results repeatable
+Testing | t.test | base R | One-sample, two-sample, and paired t-tests
+Testing | chisq.test | base R | Chi-square tests
+Testing | wilcox.test | base R | Mann-Whitney and Wilcoxon signed-rank tests
+Modelling | aov | base R | Analysis of variance
+Modelling | TukeyHSD | base R | Tukey's post-hoc comparisons
+Modelling | lm | base R | Linear regression
+Modelling | glm | base R | Logistic and other generalised linear models
+Modelling | confint | base R | Confidence intervals for model coefficients
+Modelling | predict | base R | Predictions from a model
+Modelling | tidy | broom | Model results as a data frame
+Modelling | lmer | lme4 | Linear mixed-effects model
+Modelling | glmer | lme4 | Generalised linear mixed-effects model
+Many variables | prcomp | base R | Principal component analysis
+Many variables | fa | psych | Exploratory factor analysis
+Many variables | kmeans | base R | k-means clustering
+Many variables | hclust | base R | Hierarchical clustering
+Many variables | Mclust | mclust | Gaussian mixture model
+Many variables | dbscan | dbscan | DBSCAN clustering
+Machine learning | initial_split | rsample (tidymodels) | Split data into training and test sets
+Machine learning | vfold_cv | rsample (tidymodels) | Create cross-validation folds
+Machine learning | recipe | recipes (tidymodels) | Start a data preparation recipe
+Machine learning | workflow | workflows (tidymodels) | Combine a recipe and a model
+Machine learning | fit | parsnip (tidymodels) | Fit a model or workflow
+Machine learning | tune_grid | tune (tidymodels) | Tune hyperparameters with cross-validation
+Machine learning | last_fit | tune (tidymodels) | Fit on the training set and evaluate once on the test set
+Machine learning | roc_auc | yardstick (tidymodels) | Area under the ROC curve
+Machine learning | conf_mat | yardstick (tidymodels) | Confusion matrix
+Time series | as_tsibble | tsibble | Create a time series data frame
+Time series | model | fabletools | Fit one or more forecasting models
+Time series | forecast | fabletools | Forecast from fitted models
+Reporting and sharing | kable | knitr | Format a table for a report
+Reporting and sharing | citation | base R | How to cite R or a package
+Reporting and sharing | shinyApp | shiny | Create a Shiny app from a user interface and server
+Reporting and sharing | chat_anthropic | ellmer | Start a chat with a language model (Claude)

@@ -1,18 +1,587 @@
 # Data Manipulation {#sec-ch03}
 
-::: {.callout-note appearance="simple"}
-## This chapter is being rewritten
+```{r}
+#| label: setup
+#| include: false
+library(data2thesis)
+```
 
-The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+At the end of Chapter 2, Elaf opened the export from her survey tool and found a mess: test responses, duplicated rows, the same answer spelled four ways, ages stored as text, and missing values coded as `99`. None of that is unusual. Every researcher who collects data meets it, and cleaning data often takes longer than analysing it.
+
+This chapter gives Elaf the tools to clean her data and reshape it for analysis, and then uses them on her real survey export, step by step. The tools come from the **tidyverse**, a family of packages designed to work together, with verbs that read almost like sentences.
+
+::: {.callout-tip appearance="simple"}
+## By the end of this chapter you will be able to
+
+- Chain steps together with the pipe `|>`.
+- Filter rows, select columns, sort, create new variables, and summarise, overall and by group.
+- Reshape data between wide and long formats.
+- Join tables that share an identifier.
+- Clean a real survey export: remove test and duplicate rows, rename variables, fix inconsistent categories, convert text to numbers, and handle missing codes and impossible values.
+- Compute questionnaire scale scores, including reversed items.
 :::
 
-## Elaf's question
+## The tidyverse
 
-The survey export is messy. Elaf cleans it, computes the questionnaire scale scores, reshapes the semester records, and joins the tables.
+The tidyverse is a collection of packages that share one way of working. This chapter uses four of them:
 
-## What this chapter will cover
+- **dplyr** for working with rows and columns,
+- **tidyr** for reshaping data,
+- **stringr** for working with text,
+- **readr** for turning text into numbers (and for reading and writing files).
 
-- Filtering, arranging, and summarizing data.
-- Grouped operations with the `%>%` pipeline.
-- Reshaping data: pivoting and joining datasets.
-- Hands-on data cleaning and preparation techniques.
+You can install and load them one at a time, or install the whole collection at once with `install.packages("tidyverse")` and load it with `library(tidyverse)`. This book loads only the packages each chapter needs:
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(readr)
+```
+
+### Tidy data
+
+The tidyverse works best with **tidy** data, which follows three simple rules:
+
+1. Each variable is a column.
+2. Each observation is a row.
+3. Each value is a cell.
+
+Elaf's `students` table is tidy: one row per student, one column per variable. Her survey export is not, as you will see: it has four semesters of measurements squeezed side by side into one row per student. Much of cleaning is about making data tidy, because once it is tidy, every tool in this chapter works on it.
+
+## The pipe
+
+Analysis is a series of steps: take the data, keep some rows, calculate something, round the result. In Chapter 1, you wrote such steps by putting functions inside each other:
+
+```{r}
+sleep <- c(6.5, 7, 5.5, 8, 6)
+round(mean(sleep), 1)
+```
+
+This reads from the inside out, which gets hard to follow as the steps multiply. The **pipe**, written `|>`, lets you write the steps in the order they happen. It takes the result on its left and passes it as the first argument to the function on its right:
+
+```{r}
+sleep |> mean() |> round(1)
+```
+
+Read `|>` as "and then": take `sleep`, *and then* take the mean, *and then* round it to one decimal place. In RStudio, **Ctrl+Shift+M** (**Cmd+Shift+M** on a Mac) types the pipe for you.
+
+::: {.callout-note}
+## `%>%` in older code
+
+Before R had its own pipe, the tidyverse used `%>%`, from the magrittr package. You will see it in many tutorials and older scripts. For everything in this book, it does the same job as `|>`.
+:::
+
+## Working with rows and columns: dplyr
+
+dplyr gives you a small set of **verbs**, each doing one job. Every verb takes a data frame first and returns a data frame, so verbs can be chained with the pipe.
+
+To see what each verb does, start with a tiny table. `tibble()` builds one; a **tibble** is the tidyverse's version of a data frame, which prints more neatly:
+
+```{r}
+pilot <- tibble(
+  student = c("S1", "S2", "S3", "S4", "S5"),
+  faculty = c("Education", "Humanities", "Education", "Health Sciences", "Humanities"),
+  sleep   = c(6.5, 7.5, 5.5, 8, 6),
+  stress  = c(3.2, 2.1, 4.5, 1.8, 3.9)
+)
+pilot
+```
+
+### `filter()`: keep rows
+
+`filter()` keeps the rows that meet a condition:
+
+```{r}
+pilot |> filter(sleep < 7)
+```
+
+Several conditions separated by commas must all be true:
+
+```{r}
+pilot |> filter(sleep < 7, faculty == "Education")
+```
+
+To keep rows matching any of several values, use `%in%`:
+
+```{r}
+pilot |> filter(faculty %in% c("Education", "Humanities"))
+```
+
+### `select()`: keep columns
+
+`select()` keeps the columns you name, in the order you name them. A minus sign drops a column instead:
+
+```{r}
+pilot |> select(student, sleep)
+pilot |> select(-faculty)
+```
+
+### `arrange()`: sort rows
+
+`arrange()` sorts rows by one or more columns. `desc()` sorts from largest to smallest:
+
+```{r}
+pilot |> arrange(desc(stress))
+```
+
+### `mutate()`: create or change columns
+
+`mutate()` adds new columns calculated from existing ones, or changes existing ones:
+
+```{r}
+pilot |> mutate(
+  sleep_minutes = sleep * 60,
+  short_sleep   = sleep < 7
+)
+```
+
+To sort values into categories, `case_when()` checks conditions in order and uses the first one that is true. `.default` catches everything else:
+
+```{r}
+pilot |> mutate(
+  stress_level = case_when(
+    stress >= 4 ~ "High",
+    stress >= 2.5 ~ "Medium",
+    .default = "Low"
+  )
+)
+```
+
+### `summarise()`: calculate summaries
+
+`summarise()` reduces a table to one row of summaries:
+
+```{r}
+pilot |> summarise(
+  mean_sleep = mean(sleep),
+  students   = n()
+)
+```
+
+`n()` counts rows. The real power comes with groups. The `.by` argument calculates the summary separately for each group:
+
+```{r}
+pilot |> summarise(
+  mean_sleep = mean(sleep),
+  students   = n(),
+  .by = faculty
+)
+```
+
+For simple counts, `count()` is a shortcut:
+
+```{r}
+pilot |> count(faculty)
+```
+
+::: {.callout-note}
+## `group_by()`
+
+In many tutorials you will see `group_by(faculty) |> summarise(...)` instead of the `.by` argument. Both give the same result. `.by` is newer and keeps each step self-contained, so this book uses it.
+:::
+
+### Putting the verbs together on Elaf's data
+
+Each verb is simple, but chained together they answer real questions. Elaf wants to know how average wellbeing changed over the four semesters, separately for students who were and were not invited to the workshop. The semester records are in `semesters`, and the workshop group is in `students`, so she first adds the workshop group to the semester records. (The `left_join()` in the first line is explained in @sec-joins.)
+
+```{r}
+semesters |>
+  left_join(students |> select(student_id, workshop), join_by(student_id)) |>
+  summarise(
+    mean_wellbeing = mean(wellbeing),
+    students       = n(),
+    .by = c(semester, workshop)
+  ) |>
+  arrange(semester, workshop)
+```
+
+Read the code aloud: take the semester records, *and then* add each student's workshop group, *and then* calculate the average wellbeing and the number of students for each semester and workshop group, *and then* sort the result. In semester 1, before the workshop, the two groups are almost level. From semester 2, the invited students are ahead. Chapter 6 tests whether that difference is larger than chance.
+
+Notice also that the number of students drops in semesters 3 and 4. Some students left the study, which is worth remembering: it returns later in this chapter and in Chapter 5.
+
+## Reshaping data: tidyr
+
+The same data can be laid out in two ways. In **wide** format, repeated measurements sit side by side, one column per occasion. In **long** format, each measurement has its own row. Here are wellbeing scores for three students over two semesters, in wide format:
+
+```{r}
+wide <- tibble(
+  student     = c("S1", "S2", "S3"),
+  wellbeing_1 = c(58, 71, 64),
+  wellbeing_2 = c(63, 70, 69)
+)
+wide
+```
+
+Spreadsheets and SPSS often use wide format. For analysis in R, long format is usually easier, because each variable (student, semester, wellbeing) is then one column. `pivot_longer()` turns wide into long:
+
+```{r}
+long <- wide |>
+  pivot_longer(
+    cols         = c(wellbeing_1, wellbeing_2),
+    names_to     = "semester",
+    names_prefix = "wellbeing_",
+    values_to    = "wellbeing"
+  )
+long
+```
+
+The arguments say which columns to stack (`cols`), where the old column names should go (`names_to`), which part of the names to drop (`names_prefix`), and where the values should go (`values_to`).
+
+`pivot_wider()` does the opposite. It is especially useful for presenting results, because a wide table is easier to read:
+
+```{r}
+long |> pivot_wider(names_from = semester, values_from = wellbeing)
+```
+
+For Elaf, the average wellbeing table from the previous section is easier to read with one column per workshop group:
+
+```{r}
+semesters |>
+  left_join(students |> select(student_id, workshop), join_by(student_id)) |>
+  summarise(mean_wellbeing = round(mean(wellbeing), 1), .by = c(semester, workshop)) |>
+  pivot_wider(names_from = workshop, values_from = mean_wellbeing)
+```
+
+## Joining tables {#sec-joins}
+
+Research data is often spread over several tables that share an identifier. Elaf has students in one table, their semester records in another, and their supervisors in a third. **Joins** combine tables by matching the identifier.
+
+Take two small tables:
+
+```{r}
+people <- tibble(
+  student = c("S1", "S2", "S3"),
+  faculty = c("Education", "Humanities", "Education")
+)
+scores <- tibble(
+  student = c("S1", "S1", "S2", "S4"),
+  wellbeing = c(58, 63, 71, 66)
+)
+```
+
+`left_join()` keeps every row of the first table and adds the matching information from the second:
+
+```{r}
+scores |> left_join(people, join_by(student))
+```
+
+`join_by(student)` names the column that links the two tables. Student `S4` has a score but no entry in `people`, so their faculty is `NA`.
+
+`anti_join()` does the opposite: it keeps the rows of the first table that have *no* match in the second. It is the quickest way to find what is missing. Which students have no scores?
+
+```{r}
+people |> anti_join(scores, join_by(student))
+```
+
+On Elaf's data, joins answer questions no single table can. Each student's supervisor has an academic rank, stored in `supervisors`. Are students of professors less likely to consider dropping out?
+
+```{r}
+students |>
+  left_join(supervisors |> select(supervisor_id, rank), join_by(supervisor_id)) |>
+  summarise(
+    considering_dropout = mean(considering_dropout == "Yes"),
+    students            = n(),
+    .by = rank
+  )
+```
+
+The shares differ a little, from about 12% for professors' students to about 18% for assistant professors' students. Differences this small could easily be chance; Chapter 6 shows how to test that. And which students have no records for semester 3?
+
+```{r}
+left <- students |>
+  anti_join(semesters |> filter(semester == 3), join_by(student_id))
+nrow(left)
+left |> count(considering_dropout)
+```
+
+```{r}
+#| include: false
+left_yes <- sum(left$considering_dropout == "Yes")
+```
+
+`r nrow(left)` students have no semester 3 record: they left the study after the first year. And `r left_yes` of them had said they were considering dropping out. The students who left are not a random selection, which matters when Elaf analyses the later semesters. Chapter 5 returns to this.
+
+## Cleaning Elaf's survey export
+
+Now Elaf has everything she needs to clean the export from her survey tool. The steps below are the ones you will use on almost any survey data. Each step is short. What matters is doing them in a sensible order, and checking the result after each one.
+
+### Step 1: Look at the problems
+
+```{r}
+library(readxl)
+raw <- read_excel(data2thesis_example("wellbeing_raw.xlsx"))
+dim(raw)
+```
+
+The file has `r nrow(raw)` rows, although there are only 600 students. A few lines of code show what needs fixing:
+
+```{r}
+raw |> count(Q3_Gender)
+raw |> filter(str_detect(str_to_upper(`Q1_Student ID`), "TEST")) |> select(1:4)
+```
+
+Gender is spelled six ways (`F`, `female`, `Female`, and so on), plus a blank from a test response, and there are test responses from when the survey was set up. (The raw file also contains `"Female "` with a trailing space; `read_excel()` removes such spaces automatically, but other import functions do not, which is why the cleaning below still uses `str_trim()`.) Column names such as `Q1_Student ID` contain spaces, so they must be written inside backticks (`` ` ``) in code. And as Chapter 2 showed, many numeric columns arrived as text.
+
+### Step 2: Remove test responses and duplicates
+
+Test responses have a student ID starting with "TEST", in upper or lower case. `str_to_upper()` makes the case irrelevant, and `str_detect()` checks for the pattern. `distinct()` removes rows that are exact copies of another row. The response ID is different for each submission, even for duplicates, so it is dropped first:
+
+```{r}
+responses <- raw |>
+  filter(!str_detect(str_to_upper(`Q1_Student ID`), "^TEST")) |>
+  select(-`Response ID`) |>
+  distinct()
+nrow(responses)
+```
+
+`!` means "not", and `^` in the pattern means "at the start". Exactly 600 rows are left: one per student.
+
+### Step 3: Give the variables usable names
+
+`rename()` changes names, new name first. The 22 questionnaire items, `Q11_1` to `Q11_22`, are renamed in one go with `rename_with()`, using the scale each item belongs to:
+
+```{r}
+item_names <- c(paste0("stress_", 1:6), paste0("burnout_", 1:6),
+                paste0("support_", 1:6), paste0("satisfaction_", 1:4))
+
+responses <- responses |>
+  rename(
+    student_id          = `Q1_Student ID`,
+    age                 = Q2_Age,
+    gender              = Q3_Gender,
+    faculty             = Q4_Faculty,
+    programme           = Q5_Programme,
+    study_mode          = `Q6_Study mode`,
+    employment          = `Q7_Paid work`,
+    has_children        = Q8_Children,
+    lives_away          = `Q9_Moved away from family`,
+    financial_worry     = `Q10_How worried are you about money? (1-5)`,
+    workshop            = `Workshop group`,
+    workshop_sessions   = `Workshop sessions attended`,
+    considering_dropout = `Y1_Considered leaving?`
+  ) |>
+  rename_with(~ item_names, .cols = Q11_1:Q11_22)
+```
+
+`paste0("stress_", 1:6)` builds the names `stress_1` to `stress_6`, which saves typing them all.
+
+### Step 4: Fix inconsistent categories
+
+Categories are fixed by looking for a pattern rather than listing every spelling. `str_to_lower()` and `str_trim()` remove differences in case and stray spaces first:
+
+```{r}
+responses <- responses |>
+  mutate(
+    gender = if_else(str_starts(str_to_lower(str_trim(gender)), "f"), "Female", "Male"),
+    faculty = case_when(
+      str_detect(str_to_lower(faculty), "educ")    ~ "Education",
+      str_detect(str_to_lower(faculty), "health")  ~ "Health Sciences",
+      str_detect(str_to_lower(faculty), "humanit") ~ "Humanities",
+      str_detect(str_to_lower(faculty), "social")  ~ "Social Sciences",
+      str_detect(str_to_lower(faculty), "natural|^sciences$") ~ "Natural Sciences"
+    ),
+    programme  = if_else(str_detect(str_to_lower(programme), "ph"), "PhD", "Master's"),
+    study_mode = if_else(str_detect(str_to_lower(study_mode), "part"), "Part-time", "Full-time"),
+    employment = if_else(str_to_lower(employment) %in% c("none", "no job"), "None", employment),
+    across(c(has_children, lives_away, considering_dropout),
+           ~ if_else(str_starts(str_to_lower(.x), "y"), "Yes", "No"))
+  )
+responses |> count(gender)
+responses |> count(faculty)
+```
+
+Two details deserve attention. The order of conditions in `case_when()` matters: "social sciences" also contains "sciences", so Social Sciences is checked before Natural Sciences. And `across()` applies the same change to several columns at once, here turning `Yes`, `yes`, and `Y` into `Yes`.
+
+After each fix, count the categories again, as above. If a spelling was missed, it shows up immediately.
+
+### Step 5: Missing codes and numbers stored as text
+
+Survey tools often mark missing answers with codes such as `99` or `-9`. These codes must become `NA` before any calculation, or R will treat them as real values: one `99` among answers from 1 to 5 would badly distort an average. `na_if()` turns a code into `NA`, and `as.integer()` then turns the text into whole numbers:
+
+```{r}
+responses <- responses |>
+  mutate(
+    financial_worry = financial_worry |> na_if("99") |> na_if("-9") |> as.integer(),
+    across(all_of(item_names), ~ as.integer(na_if(.x, "99"))),
+    workshop_sessions = as.integer(workshop_sessions),
+    age = parse_number(age)
+  )
+```
+
+::: {.callout-warning}
+## Do not replace `99` everywhere
+
+It is tempting to turn every `99` in the file into `NA` in one go. But a `99` is not always a code. In a wellbeing score from 0 to 100, it is a perfectly real value. Replace missing codes only in the columns where you know they are codes.
+:::
+
+`parse_number()` from readr reads the number out of a text value, ignoring extra text around it. It is useful for the sleep columns, where some students typed `"7 hrs"`. But look what it does with a decimal comma:
+
+```{r}
+parse_number(c("7 hrs", "6.5", "6,5"))
+```
+
+`"6,5"` becomes 65, not 6.5, because in English a comma separates thousands. The comma has to be changed to a point first:
+
+```{r}
+parse_number(str_replace(c("7 hrs", "6.5", "6,5"), ",", "."))
+```
+
+Mistakes like this produce no error message. The only protection is to check your data after each step.
+
+### Step 6: Impossible values
+
+A few values cannot be true: an age of 250, 26 hours of sleep a night. They are typing mistakes, and since the true value cannot be known, the honest fix is to set them to `NA`:
+
+```{r}
+responses |> filter(age > 100) |> select(student_id, age)
+responses <- responses |> mutate(age = if_else(age > 100, NA, age))
+```
+
+This is where the missing age in Chapter 1 came from.
+
+### Step 7: The questionnaire and its scale scores
+
+Each questionnaire scale is scored as the average of its items. One stress item, `stress_4` ("I feel confident handling problems in my studies"), is worded in the opposite direction to the others: agreeing with it means *less* stress. Before averaging, it must be **reversed**, so that 1 becomes 5, 2 becomes 4, and so on. On a 1-to-5 scale, subtracting from 6 does exactly that:
+
+```{r}
+questionnaire_clean <- responses |>
+  select(student_id, all_of(item_names))
+
+scores <- questionnaire_clean |>
+  mutate(
+    stress_4           = 6 - stress_4,
+    stress_score       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    burnout_score      = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+    support_score      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction_score = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  ) |>
+  select(student_id, ends_with("_score"))
+head(scores)
+```
+
+`pick()` selects the columns of one scale, and `rowMeans()` averages each student's answers across them. `na.rm = TRUE` means a student who skipped one item still gets a score from the items they answered. (Whether that is acceptable, and how many skipped items is too many, is a decision to report in your thesis. Chapter 8 checks that the items really do measure four separate scales.)
+
+Keep the original items in your data and store the scores separately, as here. You will need the items again for checking the scales.
+
+### Step 8: The semester records, from wide to long
+
+The semester measurements sit side by side: `GPA_S1`, `Sleep_S1`, ..., `Wellbeing_S4`, 28 columns in all. For analysis, Elaf wants one row per student per semester. This is a `pivot_longer()` with one extra idea: each column name holds two pieces of information, the variable (`GPA`) and the semester (`1`), separated by `_S`. The special name `.value` tells R to use the first piece as a column name:
+
+```{r}
+semesters_clean <- responses |>
+  select(student_id, matches("_S[1-4]$")) |>
+  pivot_longer(
+    cols      = -student_id,
+    names_to  = c(".value", "semester"),
+    names_sep = "_S"
+  )
+head(semesters_clean)
+```
+
+`matches("_S[1-4]$")` selects the columns whose names end in `_S1` to `_S4`. The rest is cleaning you already know: tidy names, text to numbers (with the decimal-comma fix for sleep), impossible values to `NA`, and finally removing the empty rows of students who had left the study:
+
+```{r}
+semesters_clean <- semesters_clean |>
+  rename(gpa = GPA, sleep_hours = Sleep, study_hours = Study,
+         exercise_days = Exercise, caffeine_mg = Caffeine,
+         supervisor_meetings = Meetings, wellbeing = Wellbeing) |>
+  mutate(
+    semester    = as.integer(semester),
+    sleep_hours = parse_number(str_replace(sleep_hours, ",", ".")),
+    across(c(gpa, study_hours, exercise_days, caffeine_mg, supervisor_meetings, wellbeing),
+           parse_number),
+    sleep_hours = if_else(sleep_hours > 24, NA, sleep_hours),
+    study_hours = if_else(study_hours > 168, NA, study_hours),
+    gpa         = if_else(gpa > 4, NA, gpa)
+  ) |>
+  filter(!if_all(gpa:wellbeing, is.na))
+nrow(semesters_clean)
+```
+
+`if_all(gpa:wellbeing, is.na)` is `TRUE` for rows where every measurement is missing, and `!` keeps the others.
+
+### Step 9: Check the result
+
+How much is still missing? `across()` inside `summarise()` counts the `NA`s in every column at once:
+
+```{r}
+semesters_clean |> summarise(across(everything(), ~ sum(is.na(.x))))
+```
+
+About 20 values per measurement are still missing: answers students really did not give, and the impossible values set to `NA`. These are genuine gaps, and Chapter 5 discusses how to handle them.
+
+Finally, the most satisfying check of all. The clean tables in the `data2thesis` package were produced from this same export, so Elaf's cleaned data should match them exactly:
+
+```{r}
+same <- function(mine, theirs) {
+  mine   <- as.data.frame(mine)[, names(mine)]
+  theirs <- as.data.frame(theirs)[, names(mine)]
+  isTRUE(all.equal(mine, theirs, check.attributes = FALSE))
+}
+same(questionnaire_clean |> arrange(student_id),
+     questionnaire |> arrange(student_id))
+same(semesters_clean |> arrange(student_id, semester),
+     semesters |> arrange(student_id, semester))
+```
+
+Both are `TRUE`. Elaf's cleaning is complete, and from here on the book uses the clean tables from the package.
+
+::: {.callout-tip}
+## Save your cleaning as a script
+
+Put all of these steps in one script, for example `01-clean-data.R`, that starts from the raw file and ends by saving the clean tables:
+
+```r
+write_csv(semesters_clean, here::here("data", "semesters_clean.csv"))
+```
+
+Never edit the raw file by hand. If you find a new problem next month, you fix it in the script and run it again, and every step stays on record.
+:::
+
+::: {.callout-note icon="false"}
+## In your field: environmental and public health
+
+`airquality` is a real dataset that comes with R: daily air measurements in New York from May to September 1973. Like most real data, it has gaps. The same verbs summarise it by month:
+
+```{r}
+airquality |>
+  summarise(
+    mean_ozone   = mean(Ozone, na.rm = TRUE),
+    missing_days = sum(is.na(Ozone)),
+    .by = Month
+  )
+```
+
+Ozone levels peak in July and August, and June has the most missing days, a pattern worth knowing before any analysis.
+:::
+
+## Chapter review
+
+### Summary
+
+- The tidyverse packages share one way of working. Tidy data has one variable per column and one observation per row.
+- The pipe `|>` passes a result to the next function: read it as "and then".
+- dplyr verbs: `filter()` rows, `select()` columns, `arrange()` rows, `mutate()` new columns, `summarise()` with `.by` for group summaries, and `count()`. `case_when()` sorts values into categories.
+- `pivot_longer()` and `pivot_wider()` reshape data between wide and long formats.
+- `left_join()` combines tables by an identifier; `anti_join()` finds rows without a match.
+- Cleaning survey data: remove test and duplicate rows, rename variables, fix categories by pattern, turn missing codes into `NA` column by column, convert text to numbers (watch decimal commas), set impossible values to `NA`, reverse reversed items before computing scale scores, and check after every step.
+
+### Key terms
+
+Tidyverse, tidy data, tibble, pipe, verb, grouped summary, wide format, long format, join, identifier, missing code, reversed item, scale score.
+
+## Exercises
+
+The [playground](../playground/chapter03.html) has these and more, with hints and solutions.
+
+1. Using `students`, find the average age of students in each faculty, sorted from oldest to youngest. (Remember `na.rm = TRUE`.)
+2. Add a column to `semesters` that is `"Short"` when `sleep_hours` is under 6, `"Recommended"` when it is 7 or more, and `"Moderate"` otherwise. Count the semester records in each category.
+3. Using `semesters`, make a table of average GPA with one row per student and one column per semester, using `pivot_wider()`. Show the first rows.
+4. Join `semesters` to `students` and compare the average semester GPA of full-time and part-time students.
+5. Explain why the `stress_4` item must be reversed before the stress score is calculated. What would happen to the scores if it were not?
+
+## Further reading
+
+- *R for Data Science* [@wickham2023]: chapters "Data transformation", "Data tidying", "Joins", "Strings", and "Missing values".
+- The [dplyr](https://dplyr.tidyverse.org) and [tidyr](https://tidyr.tidyverse.org) websites, with a reference page for every function.

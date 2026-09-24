@@ -1,0 +1,207 @@
+---
+title: "Playground: Chapter 4"
+subtitle: Data Visualization
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - chapter04.zip
+webr:
+  packages:
+    - ggplot2
+    - dplyr
+  resources:
+    - students.csv
+    - semesters.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+These exercises practise the graphs from Chapter 4. The first run takes a little longer while your browser downloads ggplot2. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+library(ggplot2)
+library(dplyr)
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
+```
+
+## The basic graphs
+
+### Exercise 1: A histogram
+
+Draw a histogram of `study_hours` in the first semester. Try binwidths of 1, 5, and 10. Which shows the shape best?
+
+```{webr}
+#| exercise: ex1
+ggplot(first_sem, aes(x = ______)) +
+  geom_histogram(binwidth = 5)
+```
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+ggplot(first_sem, aes(x = study_hours)) +
+  geom_histogram(binwidth = 5)
+```
+
+A binwidth of 1 hour is noisy, 10 hours hides the shape, and about 5 hours shows it best: most students study between about 10 and 45 hours a week, and only a few study 55 hours or more.
+:::
+:::
+
+### Exercise 2: A bar chart in one colour
+
+Draw a bar chart of how many students have each level of `employment`, with all bars in a colour of your choice. Should the colour go inside or outside `aes()`?
+
+```{webr}
+#| exercise: ex2
+ggplot(students, aes(x = employment)) +
+  geom_bar(______)
+```
+
+::: { .hint exercise="ex2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+A fixed colour is *set*, outside `aes()`: `geom_bar(fill = "darkorange")`.
+:::
+:::
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+ggplot(students, aes(x = employment)) +
+  geom_bar(fill = "darkorange")
+```
+:::
+:::
+
+### Exercise 3: Box plots with labels
+
+Draw box plots of first-semester GPA for each faculty, with the axis labels "Faculty" and "GPA (0 to 4)".
+
+```{webr}
+#| exercise: ex3
+ggplot(first_sem, aes(x = faculty, y = gpa)) +
+  geom_boxplot() +
+  labs(x = ______, y = ______)
+```
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+ggplot(first_sem, aes(x = faculty, y = gpa)) +
+  geom_boxplot() +
+  labs(x = "Faculty", y = "GPA (0 to 4)")
+```
+:::
+:::
+
+### Exercise 4: A scatter plot with a trend line
+
+Draw caffeine against sleep in the first semester, with partly transparent points and a straight trend line. What does it suggest?
+
+```{webr}
+#| exercise: ex4
+ggplot(first_sem, aes(x = caffeine_mg, y = sleep_hours)) +
+  geom_point(alpha = ______) +
+  geom_smooth(method = ______)
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+ggplot(first_sem, aes(x = caffeine_mg, y = sleep_hours)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm")
+```
+
+Students who take more caffeine sleep less. Chapter 7 shows why this matters when you study caffeine and grades.
+:::
+:::
+
+## Making graphs ready to share
+
+### Exercise 5: Mapping colour
+
+Draw a density plot of first-semester wellbeing with one curve per `study_mode`. This time the colour depends on the data, so where does `fill` go? Add `alpha = 0.5` so both curves are visible.
+
+```{webr}
+#| exercise: ex5
+ggplot(first_sem, aes(x = wellbeing, ______)) +
+  geom_density(alpha = 0.5)
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+ggplot(first_sem, aes(x = wellbeing, fill = study_mode)) +
+  geom_density(alpha = 0.5)
+```
+
+Colour that depends on a variable is *mapped*, inside `aes()`.
+:::
+:::
+
+### Exercise 6: Facets and a theme
+
+Redo your scatter plot from Exercise 4 with one panel per `programme`, clear labels, and `theme_minimal()`.
+
+```{webr}
+#| exercise: ex6
+ggplot(first_sem, aes(x = caffeine_mg, y = sleep_hours)) +
+  geom_point(alpha = 0.4) +
+  facet_wrap(~ ______) +
+  labs(x = "Caffeine per day (mg)", y = "Sleep per night (hours)") +
+  ______()
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+ggplot(first_sem, aes(x = caffeine_mg, y = sleep_hours)) +
+  geom_point(alpha = 0.4) +
+  facet_wrap(~ programme) +
+  labs(x = "Caffeine per day (mg)", y = "Sleep per night (hours)") +
+  theme_minimal()
+```
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 4 project
+
+The project contains the data, these exercises, an extra exercise on saving a figure with `ggsave()` at the size and resolution a journal asks for, and the solutions.
+
+- [Download chapter04.zip](chapter04.zip), unzip it, and double-click `chapter04.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter04.zip")
+```
+:::

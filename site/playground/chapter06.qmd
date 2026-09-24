@@ -1,0 +1,219 @@
+---
+title: "Playground: Chapter 6"
+subtitle: Hypothesis Testing and Statistical Inference
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - chapter06.zip
+webr:
+  packages:
+    - dplyr
+  resources:
+    - students.csv
+    - semesters.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+These exercises practise the ideas from Chapter 6: sampling distributions, confidence intervals, t-tests, effect sizes, and chi-square tests. Several of the answers are *not* significant. That is part of the lesson: a non-significant result is still a result. Where you see `______`, replace it with your own code.
+
+```{webr}
+#| setup: true
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+library(dplyr)
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
+```
+
+## Sampling and confidence
+
+### Exercise 1: Two sampling distributions
+
+Draw 1,000 samples of 10 students' first-semester study hours, and 1,000 samples of 50. Compare the spread (SD) of the two sets of averages. Which is smaller, and why?
+
+```{webr}
+#| exercise: ex1
+study <- first_sem$study_hours[!is.na(first_sem$study_hours)]
+set.seed(1)
+means_10 <- replicate(1000, mean(sample(study, 10)))
+means_50 <- replicate(1000, mean(sample(study, ______)))
+sd(means_10)
+sd(______)
+hist(means_50)
+```
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+study <- first_sem$study_hours[!is.na(first_sem$study_hours)]
+set.seed(1)
+means_10 <- replicate(1000, mean(sample(study, 10)))
+means_50 <- replicate(1000, mean(sample(study, 50)))
+sd(means_10)
+sd(means_50)
+hist(means_50)
+```
+
+The averages of 50 students vary much less (an SD of about 1.8 hours, against about 4.2 for samples of 10). Larger samples give more precise estimates: the standard error shrinks with $\sqrt{n}$.
+:::
+:::
+
+### Exercise 2: A confidence interval
+
+Calculate a 95% confidence interval for the average first-semester GPA.
+
+```{webr}
+#| exercise: ex2
+t.test(first_sem$______)$conf.int
+```
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+t.test(first_sem$gpa)$conf.int
+```
+
+The average GPA of graduate students is plausibly between about 3.08 and 3.13. The interval is narrow because 600 students give a precise estimate.
+:::
+:::
+
+## t-tests
+
+### Exercise 3: Is wellbeing different from 60?
+
+Test whether the average first-semester wellbeing is different from 60. What do you conclude?
+
+```{webr}
+#| exercise: ex3
+t.test(first_sem$wellbeing, mu = ______)
+```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+$H_0$: the average is 60. Look at the p-value and at whether the confidence interval includes 60.
+:::
+:::
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+t.test(first_sem$wellbeing, mu = 60)
+```
+
+The average is 60.5, the confidence interval (about 59.5 to 61.4) includes 60, and the p-value is about 0.35. There is no evidence that average wellbeing differs from 60. That does not prove it is exactly 60: only that the data is consistent with it.
+:::
+:::
+
+### Exercise 4: Full-time against part-time
+
+Do full-time and part-time students differ in first-semester GPA? Run a two-sample t-test, then calculate Cohen's *d*.
+
+```{webr}
+#| exercise: ex4
+t.test(gpa ~ ______, data = first_sem)
+
+full <- first_sem$gpa[first_sem$study_mode == "Full-time"]
+part <- first_sem$gpa[first_sem$study_mode == "Part-time"]
+(mean(full) - mean(part)) / sqrt((var(full) + var(______)) / 2)
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+t.test(gpa ~ study_mode, data = first_sem)
+
+full <- first_sem$gpa[first_sem$study_mode == "Full-time"]
+part <- first_sem$gpa[first_sem$study_mode == "Part-time"]
+(mean(full) - mean(part)) / sqrt((var(full) + var(part)) / 2)
+```
+
+Both groups average about 3.10, the p-value is about 0.9, and Cohen's *d* is almost exactly 0. Part-time students have lower *wellbeing* (Chapter 4), but not lower grades.
+:::
+:::
+
+## Categorical data
+
+### Exercise 5: Living away and dropout
+
+Is living away from family related to considering dropout? Make the table, look at the proportions, and run a chi-square test.
+
+```{webr}
+#| exercise: ex5
+away <- table(students$lives_away, students$______)
+away
+prop.table(away, margin = 1)
+chisq.test(away)
+```
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+away <- table(students$lives_away, students$considering_dropout)
+away
+prop.table(away, margin = 1)
+chisq.test(away)
+```
+
+17% of students who live away from family have considered dropping out, against 14% of those who do not, but the p-value is about 0.31: a difference this size could easily be chance. (For a 2 × 2 table, R applies a small correction, named in the output as Yates' continuity correction.)
+:::
+:::
+
+### Exercise 6: Check the expected counts
+
+Is the chi-square test from Exercise 5 reliable? Check that every expected count is at least 5.
+
+```{webr}
+#| exercise: ex6
+away <- table(students$lives_away, students$considering_dropout)
+chisq.test(away)$______
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+away <- table(students$lives_away, students$considering_dropout)
+chisq.test(away)$expected
+```
+
+The smallest expected count is about 38, far above 5, so the test is reliable.
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 6 project
+
+The project contains the data, these exercises, an extra exercise on bootstrap confidence intervals and non-parametric tests, and the solutions.
+
+- [Download chapter06.zip](chapter06.zip), unzip it, and double-click `chapter06.Rproj`.
+- Or type this one line in RStudio's Console:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter06.zip")
+```
+:::
