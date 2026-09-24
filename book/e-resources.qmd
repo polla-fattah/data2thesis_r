@@ -1,12 +1,56 @@
-# Further Learning Resources
+# Further Learning Resources {#sec-app-resources}
 
-::: {.callout-note appearance="simple"}
-## This appendix is being written
+This book is a starting point. This appendix suggests where to go next: books, courses, and communities, almost all of them free. The books cited in the chapters are listed first, by topic; the rest are chosen because they suit researchers who are not programmers.
 
-Until it is finished, this page shows what it will cover.
-:::
+## Books
 
-## What this appendix will cover
+### Getting started and data skills
 
-- Books, courses, and videos for going further, including Arabic-language resources.
-- Tyson Barrett's free *R for Researchers: An Introduction* as a shorter companion.
+- *R for Data Science* [@wickham2023], free at [r4ds.hadley.nz](https://r4ds.hadley.nz): the standard introduction to importing, cleaning, transforming, and visualising data with the tidyverse. The natural next book after Part 1 of this one.
+- *R for Researchers: An Introduction* by Tyson Barrett, free at [tysonbarrett.com/Rstats](https://tysonbarrett.com/Rstats/): a short, friendly introduction written for researchers in the social and health sciences, and a good companion to Chapters 1 to 7.
+- *ggplot2: Elegant Graphics for Data Analysis* [@wickham2016ggplot2], free at [ggplot2-book.org](https://ggplot2-book.org): everything about ggplot2, for when Chapter 4 leaves you wanting more.
+- *Happy Git and GitHub for the useR* by Jenny Bryan, free at [happygitwithr.com](https://happygitwithr.com): a gentle, practical guide to git and GitHub with RStudio (Chapter 16).
+
+### Statistics
+
+- *Introduction to Modern Statistics* [@cetinkaya2024ims], free at [openintro-ims.netlify.app](https://openintro-ims.netlify.app): a modern introductory statistics textbook built around simulation and real data, like Chapters 5 and 6.
+- *Learning Statistics with R* by Danielle Navarro, free at [learningstatisticswithr.com](https://learningstatisticswithr.com): a thorough, readable introduction to statistics for psychology and the social sciences, using R.
+- *Statistical Inference via Data Science (ModernDive)* by Chester Ismay and Albert Kim, free at [moderndive.com](https://moderndive.com): regression and inference with the tidyverse.
+- *Regression and Other Stories* [@gelman2020]: an excellent guide to building, checking, and interpreting regression models in real research, with a free PDF from the authors.
+- *Statistical Power Analysis for the Behavioral Sciences* [@cohen1988]: the classic reference on effect sizes and power.
+
+### Mixed models, machine learning, and forecasting
+
+- *Data Analysis Using Regression and Multilevel/Hierarchical Models* [@gelman2007]: multilevel models from the ground up (Chapter 9).
+- *An Introduction to Statistical Learning* [@james2021islr], free at [statlearning.com](https://www.statlearning.com): the clearest introduction to the ideas of machine learning (Chapters 10 to 14).
+- *Tidy Modeling with R* [@kuhn2022], free at [tmwr.org](https://www.tmwr.org): the tidymodels framework in depth.
+- *Forecasting: Principles and Practice* [@hyndman2021], free at [otexts.com/fpp3](https://otexts.com/fpp3/): the standard introduction to forecasting with fable (Chapter 15).
+- *Deep Learning with R* [@chollet2022]: for readers who want to go further with neural networks (Chapter 14).
+
+### Reporting and dashboards
+
+- The Quarto guide at [quarto.org](https://quarto.org): documentation and examples for every kind of document (Chapter 16).
+- *Mastering Shiny* [@wickham2021shiny], free at [mastering-shiny.org](https://mastering-shiny.org): the definitive guide to Shiny apps.
+
+The **Big Book of R** ([bigbookofr.com](https://www.bigbookofr.com)) indexes hundreds of free R books by topic, from psychology and ecology to economics and text analysis: a good way to find a book for your own field.
+
+## Courses and practice
+
+- **Posit Cheatsheets** ([posit.co/resources/cheatsheets](https://posit.co/resources/cheatsheets/)): one- or two-page summaries of dplyr, ggplot2, tidyr, Quarto, Shiny, and more, worth keeping next to you while you work. Several have been translated into other languages by volunteers.
+- **The Carpentries** ([carpentries.org](https://carpentries.org)): free, hands-on lessons for researchers, including *R for Social Scientists* and *R for Ecologists*, and two-day workshops held at universities around the world.
+- **swirl** ([swirlstats.com](https://swirlstats.com)): interactive lessons that run inside R itself: `install.packages("swirl")`, then `library(swirl)` and `swirl()`.
+- **TidyTuesday** ([github.com/rfordatascience/tidytuesday](https://github.com/rfordatascience/tidytuesday)): a new real dataset every week to practise on, with thousands of shared solutions to learn from.
+- This book's [playground](../playground/index.html): exercises for every chapter, in the browser and as downloadable projects.
+
+## Communities
+
+You do not have to learn alone, and the R community is known for welcoming beginners.
+
+- **Posit Community** ([forum.posit.co](https://forum.posit.co)): a friendly forum for questions about R, RStudio, the tidyverse, Quarto, and Shiny.
+- **Stack Overflow** ([stackoverflow.com/questions/tagged/r](https://stackoverflow.com/questions/tagged/r)): the largest archive of answered R questions; search it before asking, and include a small reproducible example when you ask (Appendix D).
+- **R-Ladies** ([rladies.org](https://rladies.org)): a worldwide organisation promoting gender diversity in the R community, with local chapters that run meetings and workshops open to learners.
+- **R user groups** meet in many cities and universities; the R Consortium lists them at [r-consortium.org](https://r-consortium.org).
+- **R Weekly** ([rweekly.org](https://rweekly.org)): a weekly digest of R news, tutorials, and new packages.
+- **useR!**, the annual international R conference, posts its talks online.
+
+Whatever you learn from, the most effective way to learn R is to use it on your own data, a little every day, one question at a time, as Elaf did.

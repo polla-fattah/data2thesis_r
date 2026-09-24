@@ -38,7 +38,7 @@ toc: false
     <h2>The book in four numbers</h2>
   </div>
   <div class="row">
-    <div class="col-6 col-md-3 metric"><div class="value">17</div><div class="label">chapters</div><div class="note">from a first R command to a finished thesis chapter</div></div>
+    <div class="col-6 col-md-3 metric"><div class="value">18</div><div class="label">chapters</div><div class="note">from a first R command to a finished thesis chapter</div></div>
     <div class="col-6 col-md-3 metric"><div class="value">600</div><div class="label">students</div><div class="note">in Elaf's study, followed over four semesters</div></div>
     <div class="col-6 col-md-3 metric"><div class="value">12</div><div class="label">research questions</div><div class="note">each one answered with a different method</div></div>
     <div class="col-6 col-md-3 metric"><div class="value">1</div><div class="label">R package</div><div class="note">with all the data: <code>data2thesis</code></div></div>
@@ -70,7 +70,7 @@ toc: false
     <div class="col-md-6 col-lg-3"><div class="path-card"><div class="tag">No experience needed</div><h3>The complete path</h3><p>All chapters in order, from installing R to presenting your results.</p></div></div>
     <div class="col-md-6 col-lg-3"><div class="path-card"><div class="tag">Used SPSS or Excel</div><h3>Coming from SPSS</h3><p>See how familiar tasks map to R, import your SPSS files with their labels, then move on to Part 2.</p></div></div>
     <div class="col-md-6 col-lg-3"><div class="path-card"><div class="tag">Classic statistics</div><h3>Statistics for your thesis</h3><p>Parts 1 and 2: describing data, hypothesis tests, ANOVA, regression, and mixed models.</p></div></div>
-    <div class="col-md-6 col-lg-3"><div class="path-card"><div class="tag">Know the basics</div><h3>Towards machine learning</h3><p>Part 3: prediction, classification, and clustering with tidymodels.</p></div></div>
+    <div class="col-md-6 col-lg-3"><div class="path-card"><div class="tag">Know the basics</div><h3>Towards machine learning</h3><p>Part 3: prediction, classification, clustering, neural networks, and forecasting.</p></div></div>
   </div>
 </section>
 
@@ -83,7 +83,7 @@ toc: false
       <div class="timeline">
         <div class="item"><div class="when">Part 1 · Chapters 1–4</div><h3>Foundations</h3><p>R and RStudio, data structures, cleaning and reshaping Elaf's messy survey export, and your first plots.</p></div>
         <div class="item"><div class="when">Part 2 · Chapters 5–9</div><h3>Statistical analysis for research</h3><p>Describing data, hypothesis tests, ANOVA and regression, questionnaire scales, and change over time.</p></div>
-        <div class="item"><div class="when">Part 3 · Chapters 10–15</div><h3>Machine learning with R</h3><p>Predicting who might drop out, finding student profiles, and forecasting.</p></div>
+        <div class="item"><div class="when">Part 3 · Chapters 10–15</div><h3>Machine learning with R</h3><p>Predicting who might drop out, finding student profiles, neural networks, and forecasting.</p></div>
         <div class="item"><div class="when">Part 4 · Chapters 16–18</div><h3>Reproducible research and applications</h3><p>Quarto reports, Shiny dashboards, using AI tools responsibly, and a complete project from raw data to thesis chapter.</p></div>
       </div>
     </div>

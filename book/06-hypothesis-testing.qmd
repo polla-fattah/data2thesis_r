@@ -443,7 +443,7 @@ flowchart TD
 Report each test with the statistic, its degrees of freedom (df, printed by R), the p-value, and, most importantly, the size of the effect with a confidence interval. Give exact p-values to two or three decimal places, and write "*p* < .001" for very small ones. For example:
 
 ::: {.callout-tip}
-## Example write-ups
+## Writing it up
 
 **One-sample t-test.** Students slept less than the recommended 7 hours (*M* = `r f2(sleep_test$estimate)`, 95% CI [`r f2(sleep_test$conf.int[1])`, `r f2(sleep_test$conf.int[2])`]), *t*(`r sleep_test$parameter`) = `r f2(sleep_test$statistic)`, *p* < .001.
 

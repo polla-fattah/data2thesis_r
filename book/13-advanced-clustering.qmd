@@ -317,7 +317,7 @@ profiles |>
 
 The profiles differ clearly in how many students consider dropping out, although dropout played no part in finding them. That is good evidence that they capture something real about students' situations.
 
-::: {.callout-warning}
+::: {.callout-important}
 ## Report the choices, not just the clusters
 
 A clustering depends on choices: which variables, how they are scaled, which method, how many clusters, and settings such as `eps`. Different reasonable choices can give different answers. In a thesis, report each choice and why it was made, show the evidence for the number of clusters (BIC, silhouette), say how clearly students fit (for example, the share with a membership probability above 0.8), and describe how robust the profiles are to other reasonable choices.

@@ -25,7 +25,7 @@ That is a **prediction** question, and it changes what counts as a good model. F
 
 **Machine learning** covers methods that learn patterns from data in order to make predictions or find structure. The two main kinds are:
 
-- **Supervised learning**: the data includes the outcome you want to predict, and the model learns the relationship between the predictors and that outcome. If the outcome is a category, such as "considering dropout: yes or no", it is a **classification** problem; if it is a number, such as next semester's GPA, it is a **regression** problem. Chapters 10 to 12 are about supervised learning.
+- **Supervised learning**: the data includes the outcome you want to predict, and the model learns the relationship between the predictors and that outcome. If the outcome is a category, such as "considering dropout: yes or no", it is a **classification** problem; if it is a number, such as next semester's GPA, it is a **regression** problem. Chapters 10 to 12 and Chapter 14 are about supervised learning.
 - **Unsupervised learning**: there is no outcome; the model looks for structure in the data itself. The clustering of Chapter 8 is unsupervised, and Chapter 13 returns to it.
 
 Many machine learning methods are familiar statistics. Logistic regression is both a statistical model and one of the most useful classifiers. What changes is the goal, and with it the way models are judged:

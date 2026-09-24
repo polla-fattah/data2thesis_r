@@ -171,7 +171,7 @@ Effect sizes below are targets; the check script (section 8) confirms the genera
 ### 5.3 Explaining GPA (RQ5; Ch 7, 12)
 Semester GPA depends on:
 - **Sleep** (positive): about +0.10 GPA per extra hour.
-- **Study hours** (positive, with **diminishing returns**: little gain beyond about 35 hours/week), so tree-based models in Chapter 12 can outperform a straight-line model.
+- **Study hours** (positive, with **diminishing returns**: little gain beyond about 35 hours/week; shown with a quadratic term in Chapter 7). In Chapter 12's prediction of final GPA, tree-based models do *not* beat regularised regression, because year-one GPA already carries this effect; Chapter 12 shows boosting winning on the concrete data instead. (Updated 2026-09-24 to match the generated data.)
 - **Stress score** (negative) and **support score** (positive): small to moderate.
 - **Caffeine: a confounding lesson.** Caffeine correlates negatively with GPA on its own, but only because high-caffeine students sleep less; once sleep is in the model, caffeine has no effect.
 - **Interaction:** supervisor support matters more for PhD students than for Master's students (for Chapter 7's interaction section).
@@ -193,7 +193,7 @@ Four profiles are built in, with overlap between them (as in real data):
 | Isolated | about 20% | Low supervisor support and meetings, low satisfaction, lives away |
 | Disengaged | about 15% | Low study hours, low satisfaction, moderate stress |
 
-- The profiles are not perfectly round or equal in size, so Gaussian mixture models (Ch 13) fit better than k-means (Ch 8).
+- The profiles are not perfectly round or equal in size. **In the generated data, with the profile variables used in Chapters 8 and 13, no method separates the isolated and disengaged profiles**: a Gaussian mixture model (Ch 13) finds three clear profiles (balanced, overloaded, and disengaged or isolated), and k-means with four clusters (Ch 8) splits the overloaded students instead. The chapters report three profiles. (Updated 2026-09-24 to match the generated data.)
 - About 10 unusual students do not fit any profile, so DBSCAN (Ch 13) can flag them as noise.
 
 ### 5.6 Change over time and supervisors (RQ8; Ch 9)

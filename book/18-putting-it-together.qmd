@@ -344,7 +344,7 @@ Real projects rarely go as planned. Some problems are almost universal, and the 
 
 - **Messy data.** Every real dataset needs cleaning, and cleaning takes longer than analysis. Do it in code, check after every step, and keep the raw file untouched (Chapter 3).
 - **Missing data.** Ask *why* data is missing before deciding what to do; dropping incomplete cases can bias results when the missing data is not random, as with the students who left Elaf's programme (Chapter 5).
-- **Small samples.** Small samples give wide confidence intervals and low power, and make complex models overfit. Report effect sizes with intervals, keep models simple, and plan the sample size before collecting data (Chapters 6 and 12).
+- **Small samples.** Small samples give wide confidence intervals and low power (Chapter 6), and make complex models overfit (Chapter 12). Report effect sizes with intervals, keep models simple, and plan the sample size before collecting data, with a power analysis (the pwr package does this for common tests).
 - **Many tests.** The more tests you run, the more false alarms. Decide your main analyses in advance, correct for multiple comparisons where needed, and report exploratory results as exploratory (Chapters 6, 7, and 16).
 - **Assumptions.** Check them with plots rather than with tests alone, and know the alternatives: robust tests, non-parametric tests, transformations, and mixed models (Chapters 6, 7, and 9).
 - **Correlation and causation.** Observational data rarely proves causes. Think about confounders, such as sleep behind the caffeine effect, and use randomised designs where you can, as Elaf's workshop did (Chapters 5 and 7).
@@ -368,7 +368,7 @@ This book is a beginning. Depending on your field, the next methods to learn may
 
 : Topics for further study {#tbl-next}
 
-Some of the best resources are free online: *R for Data Science* [@wickham2023] for data skills, *Regression and Other Stories* [@gelman2020] for regression, *An Introduction to Statistical Learning* [@james2021islr] and *Tidy Modeling with R* [@kuhn2022] for machine learning, *Forecasting: Principles and Practice* [@hyndman2021] for time series, and *Mastering Shiny* [@wickham2021shiny] for dashboards. Appendix E lists more, including courses and videos in Arabic.
+Some of the best resources are free online: *R for Data Science* [@wickham2023] for data skills, *Regression and Other Stories* [@gelman2020] for regression, *An Introduction to Statistical Learning* [@james2021islr] and *Tidy Modeling with R* [@kuhn2022] for machine learning, *Forecasting: Principles and Practice* [@hyndman2021] for time series, and *Mastering Shiny* [@wickham2021shiny] for dashboards. Appendix E lists more.
 
 You do not have to learn alone. The R community is known for being welcoming to beginners: the Posit Community forum and Stack Overflow answer questions; **R-Ladies** and local R user groups run meetings around the world; **TidyTuesday** publishes a new dataset every week for people to practise on and share their plots; and *R Weekly* collects news and tutorials. Asking a clear question, with a small reproducible example, is itself a skill, and the same skill that makes an AI assistant useful (Chapter 17).
 

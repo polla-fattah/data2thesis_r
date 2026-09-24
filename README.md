@@ -209,6 +209,6 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 
 - **Appendix A:** Installation and Setup: R on Windows, macOS, and Linux; RStudio (and Positron); recommended settings; the book's packages and the data2thesis package; common problems and keeping R up to date.
 - **Appendix B:** Glossary: every key term from the chapter reviews with a plain-language definition and chapter references, and a table of frequently used R functions.
-- **Appendix C:** Recommended R Packages and Libraries.
-- **Appendix D:** Common Errors in R and How to Fix Them.
-- **Appendix E:** Further Learning Resources: videos and courses, including Arabic-language resources.
+- **Appendix C:** R Packages: every package used in the book, what it is for, the chapters that use it, and its version; finding, judging, and citing packages.
+- **Appendix D:** Common Errors and How to Fix Them: real messages (errors, warnings, and silent mistakes) from starting out, files, data, plots, tests and models, and machine learning, with what each means and how to fix it; what to do when stuck.
+- **Appendix E:** Further Learning Resources: free books by topic (including Tyson Barrett's *R for Researchers*), courses and practice, and communities.
