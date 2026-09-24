@@ -3,3 +3,12 @@ _draft/
 .jekyll-cache/
 
 .codegpt
+# Quarto prototype: build output and temporary files
+quarto/_site/
+quarto/**/.quarto/
+quarto/**/site_libs/
+quarto/site/index.html
+quarto/site/playground/*.html
+quarto/site/playground/*.csv
+quarto/site/playground/*.zip
+quarto/site/downloads/

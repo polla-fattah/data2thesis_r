@@ -1,0 +1,254 @@
+---
+title: "Playground: Chapter 1"
+subtitle: Getting Started with R
+format:
+  live-html:
+    theme:
+      light: [cosmo, ../styles/theme.scss]
+      dark: [darkly, ../styles/theme.scss]
+    toc: true
+engine: knitr
+resources:
+  - students.csv
+  - semesters.csv
+  - chapter01.zip
+webr:
+  resources:
+    - students.csv
+    - semesters.csv
+---
+
+{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+
+These exercises practise the ideas from Chapter 1: using R as a calculator, storing values in objects, calling functions, and taking a first look at Elaf's data.
+
+Edit the code in any box and press **Run Code**. R runs in your browser, so the first run can take a few seconds while R starts. Where you see `______`, replace it with your own code.
+
+## Warming up with a few numbers
+
+### Exercise 1: R as a calculator
+
+Elaf kept a note of how long she slept on three nights: 6.5, 7, and 5.5 hours. Use R to work out her average sleep. Then try changing the numbers.
+
+```{webr}
+#| exercise: ex1
+(6.5 + 7 + 5.5) / 3
+```
+
+::: { .solution exercise="ex1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+(6.5 + 7 + 5.5) / 3
+```
+
+R follows the usual order of operations, so the brackets matter. Without them, R divides only 5.5 by 3: try `6.5 + 7 + 5.5 / 3`.
+:::
+:::
+
+### Exercise 2: Storing values in an object
+
+Store the numbers in an object called `sleep` with `c()`, which combines values, then use `mean()`. Add a fourth night of 8 hours. What happens to the average?
+
+```{webr}
+#| exercise: ex2
+sleep <- c(6.5, 7, 5.5)
+sleep
+mean(sleep)
+```
+
+::: { .hint exercise="ex2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Add the new value inside `c()`, separated by a comma: `c(6.5, 7, 5.5, ______)`.
+:::
+:::
+
+::: { .solution exercise="ex2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+sleep <- c(6.5, 7, 5.5, 8)
+sleep
+mean(sleep)
+```
+
+The average rises from 6.33 to 6.75 hours.
+:::
+:::
+
+### Exercise 3: More functions
+
+Find the shortest and longest night and the number of nights, then round the average to one decimal place.
+
+```{webr}
+#| exercise: ex3
+sleep <- c(6.5, 7, 5.5, 8)
+min(sleep)
+______(sleep)
+______(sleep)
+round(mean(sleep), ______)
+```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The functions you need are `max()` and `length()`. The second argument of `round()` is the number of decimal places.
+:::
+:::
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+sleep <- c(6.5, 7, 5.5, 8)
+min(sleep)
+max(sleep)
+length(sleep)
+round(mean(sleep), 1)
+```
+:::
+:::
+
+## Elaf's data
+
+Now the same ideas on the real case study. The file `students.csv` has one row for each of the 600 students in Elaf's study.
+
+### Exercise 4: Opening the data
+
+Read the file into an object called `students`. How many students (rows) and variables (columns) are there? Use `head()` to see the first six rows.
+
+```{webr}
+#| exercise: ex4
+students <- read.csv("students.csv")
+nrow(students)
+ncol(students)
+head(students)
+```
+
+::: { .solution exercise="ex4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+students <- read.csv("students.csv")
+nrow(students)   # 600 students
+ncol(students)   # 14 variables
+head(students)
+names(students)  # the names of all the variables
+```
+:::
+:::
+
+### Exercise 5: A first question, and a first surprise
+
+What is the average age of the students? The `$` sign picks one column from the data. Run the code first as it is: the answer is `NA`, which means "not available". One student's age is missing, and R will not guess. Fill in the blank so that R ignores the missing value.
+
+```{webr}
+#| setup: true
+#| exercise: [ex5, ex6]
+students <- read.csv("students.csv")
+```
+
+```{webr}
+#| exercise: ex5
+mean(students$age)
+mean(students$age, ______)
+```
+
+::: { .hint exercise="ex5" }
+::: { .callout-note collapse="false"}
+## Hint 1
+
+`mean()` has an argument called `na.rm`, short for "NA remove".
+:::
+:::
+
+::: { .hint exercise="ex5" }
+::: { .callout-note collapse="false"}
+## Hint 2
+
+Set it to `TRUE`: `mean(students$age, na.rm = ______)`.
+:::
+:::
+
+::: { .solution exercise="ex5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+mean(students$age, na.rm = TRUE)
+sum(is.na(students$age))   # how many ages are missing
+```
+
+`na.rm = TRUE` tells R to remove missing values before calculating.
+:::
+:::
+
+### Exercise 6: Counting
+
+`table()` counts how many times each value appears. How many students come from each faculty? Then find out how many were invited to the wellbeing workshop (the variable is called `workshop`).
+
+```{webr}
+#| exercise: ex6
+table(students$faculty)
+table(students$______)
+```
+
+::: { .solution exercise="ex6" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+table(students$faculty)
+table(students$workshop)
+```
+
+Exactly half the students, 300, were invited: the invitation was random.
+:::
+:::
+
+### Challenge: Your first plot
+
+Elaf's semester records are in `semesters.csv`. Draw a histogram of how many hours students sleep with `hist()`. Can you add a title with the `main` argument?
+
+```{webr}
+#| exercise: ex7
+semesters <- read.csv("semesters.csv")
+hist(semesters$sleep_hours)
+```
+
+::: { .solution exercise="ex7" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+semesters <- read.csv("semesters.csv")
+hist(semesters$sleep_hours,
+     main = "How long do graduate students sleep?",
+     xlab = "Hours of sleep per night")
+```
+:::
+:::
+
+## Work on your own computer
+
+::: {.callout-note appearance="simple"}
+## Download the Chapter 1 project
+
+The project contains the data, these exercises, and their solutions, ready to open in RStudio.
+
+- [Download chapter01.zip](chapter01.zip), unzip it, and double-click `chapter01.Rproj`.
+- Or type this one line in RStudio's Console to download, unzip, and open it:
+
+```r
+usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter01.zip")
+```
+
+If R says there is no package called `usethis`, install it first with `install.packages("usethis")`.
+:::

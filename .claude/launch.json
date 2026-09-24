@@ -6,6 +6,12 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "bundle", "exec", "jekyll", "serve", "--port", "4000"],
       "port": 4000
+    },
+    {
+      "name": "quarto-prototype",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4200", "--directory", "quarto/_site"],
+      "port": 4200
     }
   ]
 }

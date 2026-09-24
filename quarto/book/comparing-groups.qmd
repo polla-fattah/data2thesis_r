@@ -1,0 +1,132 @@
+# Comparing Two Groups {#sec-comparing-groups}
+
+::: {.callout-note appearance="simple"}
+## Sample chapter
+
+This short sample shows the structure every chapter will follow. In the full book, this material belongs to Chapter 6.
+:::
+
+```{r}
+#| label: setup
+#| include: false
+library(data2thesis)
+library(ggplot2)
+```
+
+## Elaf's question
+
+Half of the 600 students in Elaf's study were invited, at random, to a six-week wellbeing workshop after their first semester. At the end of semester 2, Elaf wants to know:
+
+> **Did the workshop improve students' wellbeing?**
+
+The invited students' average wellbeing is higher than the others'. But averages always differ a little between any two groups, even when nothing real is going on. The question is whether the difference is bigger than chance alone would produce. A **t-test** answers exactly that question.
+
+## The idea on a handful of numbers
+
+Imagine only five students in each group, with these wellbeing scores (out of 100):
+
+```{r}
+invited     <- c(68, 72, 65, 75, 70)
+not_invited <- c(62, 66, 60, 69, 64)
+
+mean(invited)
+mean(not_invited)
+```
+
+The invited group is `r mean(invited) - mean(not_invited)` points higher on average. Is that more than chance? `t.test()` compares the two groups:
+
+```{r}
+small_test <- t.test(invited, not_invited)
+small_test
+```
+
+The important number is the **p-value**. It tells you how often a difference at least this large would appear by chance alone, if the workshop had no effect at all. Here it is `r round(small_test$p.value, 3)`: a difference this large would happen by chance about `r round(100 * small_test$p.value)` times in 100. By convention, researchers call a result **statistically significant** when the p-value is below 0.05.
+
+## Elaf's data
+
+Now the same test on the real study. First, combine each student's workshop group (in `students`) with their semester 2 wellbeing score (in `semesters`):
+
+```{r}
+semester2 <- merge(students, semesters[semesters$semester == 2, ],
+                   by = "student_id")
+nrow(semester2)
+```
+
+Always look at the data before testing it. @fig-workshop shows wellbeing in each group.
+
+```{r}
+#| label: fig-workshop
+#| fig-cap: "Wellbeing at the end of semester 2, by workshop group. Each box shows the middle half of the students; the line inside is the median."
+#| fig-alt: "Box plot of wellbeing scores for invited and not-invited students. The invited group's box sits a few points higher."
+#| fig-width: 6
+#| fig-height: 4
+ggplot(semester2, aes(x = workshop, y = wellbeing, fill = workshop)) +
+  geom_boxplot(show.legend = FALSE, width = 0.5) +
+  labs(x = NULL, y = "Wellbeing (0 to 100)") +
+  theme_minimal(base_size = 13)
+```
+
+The invited group sits a little higher, but the two groups overlap a lot. Now the test:
+
+```{r}
+result <- t.test(wellbeing ~ workshop, data = semester2)
+result
+```
+
+```{r}
+#| include: false
+means <- tapply(semester2$wellbeing, semester2$workshop, mean)
+gap <- means[["Invited"]] - means[["Not invited"]]
+```
+
+Invited students scored `r round(gap, 1)` points higher on average (`r round(means[["Invited"]], 1)` against `r round(means[["Not invited"]], 1)`), and the p-value is below 0.001. A difference this large would almost never appear by chance, so Elaf can conclude that the workshop improved wellbeing. Because students were invited **at random**, she can say the workshop *caused* the improvement, not just that it went with it.
+
+::: {.callout-tip}
+## Writing it up in a thesis
+
+"Students invited to the wellbeing workshop reported higher wellbeing at the end of semester 2 (M = `r round(means[["Invited"]], 1)`) than those not invited (M = `r round(means[["Not invited"]], 1)`), a difference of `r round(gap, 1)` points, *t*(`r round(result$parameter)`) = `r round(abs(result$statistic), 2)`, *p* < .001."
+:::
+
+Notice that the numbers in that sentence are not typed in: they come from the code. If the data changed, the text would update itself.
+
+## Which test when?
+
+The t-test is one of several tests for comparing groups. The diagram shows where it fits. Chapter 6 covers each of these.
+
+```{mermaid}
+flowchart TD
+  A[What are you comparing?] --> B{How many groups?}
+  B -->|Two| C{Same people measured twice?}
+  B -->|Three or more| F[ANOVA]
+  C -->|No, different people| D[Two-sample t-test]
+  C -->|Yes| E[Paired t-test]
+  D -.->|Data very skewed| G[Mann-Whitney U test]
+  E -.->|Data very skewed| H[Wilcoxon signed-rank test]
+```
+
+::: {.callout-note icon="false"}
+## In your field: health research
+
+The t-test was invented to analyse small medical experiments [@student1908]. R still includes one of the original datasets, `sleep`: the extra hours of sleep that 10 patients gained with each of two sleeping drugs. Because the *same* patients took both drugs, this calls for a **paired** t-test:
+
+```{r}
+drug1 <- sleep$extra[sleep$group == 1]
+drug2 <- sleep$extra[sleep$group == 2]
+t.test(drug2, drug1, paired = TRUE)
+```
+
+Patients slept on average 1.6 hours longer with the second drug.
+:::
+
+## Chapter review
+
+**Summary**
+
+- Two group averages almost always differ a little. A t-test asks whether the difference is larger than chance would produce.
+- The p-value is how often a difference at least this large would appear by chance if there were no real effect. Below 0.05 is usually called statistically significant.
+- Always plot the groups before testing them.
+- Random assignment, as in Elaf's workshop, lets you draw causal conclusions.
+
+**Key terms**: t-test, p-value, statistically significant, paired t-test, random assignment.
+
+**Practise**: the exercises for this chapter will be in the [playground](../playground/index.html).

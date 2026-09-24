@@ -1,0 +1,41 @@
+project:
+  type: book
+  # The book lives inside the website, at /book/
+  output-dir: ../_site/book
+
+book:
+  title: "From Data to Thesis"
+  subtitle: "Research Data Analysis with R"
+  author: "Polla Fattah"
+  site-url: https://polla-fattah.github.io/R4NTR/book
+  repo-url: https://github.com/polla-fattah/R4NTR
+  search: true
+  navbar:
+    left:
+      - text: Home
+        href: ../index.html
+      - text: Book
+        href: index.qmd
+      - text: Playground
+        href: ../playground/index.html
+  chapters:
+    - index.qmd
+    - part: "Statistical Analysis for Research"
+      chapters:
+        - comparing-groups.qmd
+    - references.qmd
+
+bibliography: references.bib
+
+execute:
+  freeze: auto
+  warning: false
+  message: false
+
+format:
+  html:
+    theme:
+      light: [cosmo, ../site/styles/theme.scss]
+      dark: [darkly, ../site/styles/theme.scss]
+    code-link: true
+    fig-align: center

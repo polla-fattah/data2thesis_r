@@ -1,0 +1,23 @@
+# Welcome {.unnumbered}
+
+::: {.callout-warning appearance="simple"}
+## Prototype
+
+This is a prototype of the book in Quarto, with one sample chapter. It shows how chapters will look and work: the code runs when the book is built, so every result and plot on these pages comes straight from the code above it.
+:::
+
+This book follows Elaf, a Master's student in Educational Psychology, through her thesis. She studies 600 graduate students over four semesters to learn how sleep, stress, and supervisor support relate to their wellbeing, grades, and thoughts of dropping out, and whether a short wellbeing workshop helps.
+
+Every chapter answers one of her research questions. You learn each method the way you will use it: first on a handful of numbers, then on Elaf's data, and then in your own field.
+
+## How to use this book
+
+- Read the chapters in order if you are new to R. Each one builds on the last.
+- Run the code yourself. Everything you need is in the `data2thesis` package:
+
+```r
+install.packages("https://polla-fattah.github.io/R4NTR/downloads/data2thesis_1.0.0.tar.gz",
+                 repos = NULL, type = "source")
+```
+
+- Practise in the [playground](../playground/index.html) after each chapter.

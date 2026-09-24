@@ -116,6 +116,7 @@ exclude:
   - data-raw
   - data2thesis
   - playground-src
+  - quarto
 
 page_width: 800px
 
