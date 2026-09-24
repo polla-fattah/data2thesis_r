@@ -108,6 +108,7 @@ exclude:
   - tmp
   - plan.md
   - Links.md
+  - data/specification.md
 
 page_width: 800px
 

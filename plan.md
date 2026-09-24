@@ -6,6 +6,25 @@ Most chapters are first drafts from 2025, and many sections were generated with 
 
 ---
 
+## 0. Running case study
+
+**Decided:** the book follows one research story: **Elaf's Master's thesis on graduate student wellbeing** (sleep, stress, study habits, supervisor support, GPA, burnout, and whether students consider dropping out). Each method is introduced as the answer to one of the student's research questions.
+
+The story comes from the author's lecture notes *Data Analysis for Research* (2025), which follow a Master's student in Educational Psychology (called Sara in the notes, renamed Elaf for the book):
+`UNi/Research/Books/R/Statics/StatisticsPresentation/` (`LectureNotesDataAnalysis.Rmd` and its PDF, the statistics notes `LectureNotes.Rmd`, and the data `graduate_student_wellbeing.csv`).
+
+**"In your field" boxes:** so readers outside education and psychology see their own research in each method, chapters include short boxes showing the same method in another field, e.g. health (patients measured at clinic visits), agriculture (crop trials over seasons), or business (employee satisfaction and turnover). Each box is a few lines of explanation and code on a small dataset.
+
+**Teaching pattern (decided):** Elaf's data is used from Chapter 1. Each new idea, data structure, or code block is first shown on a tiny example (a few values, close to the theme where possible), then applied to Elaf's data, as in the author's lecture notes. Real datasets appear in the "in your field" boxes.
+
+**Dataset:** specified in [data/specification.md](data/specification.md); the author's decisions are in its section 9 (unnamed university, GPA 0–4, randomly invited workshop, counselling visits for time series, 600 students, five faculties, data as both files and an R package).
+
+**Dataset specification:** approved by the author.
+
+**Rewrite, not repair (decided):** each chapter is rewritten around Elaf's study, in the author's voice. The current chapter drafts and both sets of lecture notes are source material: correct explanations and code are reused, everything else is replaced. The defects in section 3 are fixed as part of each rewrite, not in a separate pass over the old text.
+
+---
+
 ## 1. Book structure (17 chapters)
 
 | Part | Ch | Title | File | Status |
@@ -85,10 +104,10 @@ Chapter order comes from the file-name prefix; the website address comes from `s
 - Use RStudio Projects and `here::here()` for file paths; never assume a working directory.
 
 ### 2.6 Datasets
-- Prefer datasets that ship with R or install as packages (`palmerpenguins`, `datasets`, `mlbench`, `modeldata`, …), so readers need no downloads or accounts.
-- Where an external file is necessary, give a stable download link and instructions, or include the file with the book.
-- Avoid Kaggle datasets that need a login (Titanic, WHO life expectancy, retail sales), or provide a copy.
-- Replace the `Boston` housing dataset (it contains a race-based variable and has been dropped by many textbooks).
+- Use Elaf's dataset ([data/specification.md](data/specification.md)) for the case study in every chapter, from Chapter 1.
+- Tiny examples before each tool use a few typed-in values, close to the theme where possible.
+- "In your field" boxes and small real examples (e.g. `lme4::sleepstudy`) use datasets that ship with R or install as packages, so readers need no downloads or accounts.
+- Remove the Kaggle datasets that need a login (Titanic, WHO life expectancy, retail sales) and the `Boston` housing dataset (it contains a race-based variable and has been dropped by many textbooks).
 
 ### 2.7 Style
 - One consistent voice across the book, written for non-technical researchers: plain language, explain terms when first used.
@@ -100,7 +119,9 @@ Chapter order comes from the file-name prefix; the website address comes from `s
 
 ## 3. Known defects
 
-### Critical (fix first)
+These are fixed as part of each chapter's rewrite (section 0). They are listed so nothing is carried over into the new text.
+
+### Critical
 - [ ] **Chapters 4–15: code is not formatted as code.** About 180 code blocks are plain paragraphs under a lone `R` line, with escaped characters and output pasted as text. Inline code formatting was lost, leaving broken sentences (e.g. Ch 5: "mean() function performs this calculation.").
 - [ ] **Chapter 4 contains the chapter twice.** Lines 10–202 are an older, garbled copy (R comments render as headings); the real chapter starts at line 208 after a dashed separator.
 
@@ -156,12 +177,13 @@ Proposed, not yet in the outline:
 
 ## 6. Order of work
 
-1. [ ] **Fix formatting** in Chapters 4–15 (code blocks, escapes, broken inline code) and remove Chapter 4's duplicate. Partly scripted, then reviewed by hand chapter by chapter.
-2. [ ] **Fact-check and replace references**, one chapter at a time.
-3. [ ] **Restructure and update** each chapter using the template in 2.1, adding figures, diagrams, exercises, and chapter reviews.
-4. [ ] **Write the new chapters** (9, 16, 17) and appendices B–E.
-5. [ ] **Unify style** across the whole book.
-6. [ ] **Publish**: set `published: true` chapter by chapter as each one is finished.
+1. [x] **Write the dataset specification** ([data/specification.md](data/specification.md)). Approved.
+2. [ ] **Generate the dataset**: write `data-raw/generate_wellbeing.R` and `data-raw/check_wellbeing.R`, produce all files in the specification, and confirm every designed effect.
+3. [ ] **Build the data package** so readers can install the data as well as download the files.
+4. [ ] **Rewrite each chapter** around Elaf's study (section 0), using the template in 2.1 and following sections 2.2–2.7: tiny example first, then Elaf's data; fact-checked content and proper references; figures, diagrams, "in your field" boxes, exercises, and chapter reviews.
+5. [ ] **Write the new chapters** (9, 16, 17) and appendices B–E.
+6. [ ] **Unify style** across the whole book.
+7. [ ] **Publish**: set `published: true` chapter by chapter as each one is finished.
 
 ---
 
@@ -172,3 +194,8 @@ Proposed, not yet in the outline:
 - **Using AI with R** placed as Ch 16, before the final chapter, because its section on disclosing AI use builds on Reproducible Research.
 - **Renumbering** of files, slugs, section numbers, table numbers, and cross-references was done in one pass (chapters 9+ were unpublished, so no live links broke).
 - **Outside material** (the "Internet Links" bookmarks folder, EPIB607 course notes, YouTube channels) is used as suggestions, not as instructions.
+- **Running case study:** graduate student wellbeing (from the author's lecture notes), with "in your field" boxes for other fields. Alternatives considered: a diabetes clinic programme, a school reading programme, a wheat farming trial, employee wellbeing, and air quality and hospital visits. The student wellbeing study was chosen because nearly every reader is or was a graduate student, and the author's notes already exist.
+- **Student's name:** Elaf, chosen by a coin toss between Sidra and Elaf (the author's daughters' names). The 2025 lecture notes called her Sara.
+- **Dataset specification approved** ([data/specification.md](data/specification.md)), including the author's decisions in its section 9.
+- **Rewrite rather than repair:** chapters are rewritten around Elaf's study; existing drafts and lecture notes are source material.
+- **Time series:** counselling-service visits, kept after considering alternatives (survey answer timestamps, supervisor meetings, Elaf's research diary, daily check-ins, university withdrawal records). Story: the counselling doctors ask Elaf for an internal analysis, separate from her thesis.
