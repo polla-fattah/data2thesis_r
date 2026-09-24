@@ -25,7 +25,7 @@ webr:
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-Calling a language model needs an API key, so it is practised in the downloadable project at the bottom of this page. The exercises below practise everything around it, in your browser: checking code that an assistant might suggest, working with text, a keyword method as a baseline, and measuring agreement between two coders with Cohen's kappa. Where you see `______`, replace it with your own code.
+Calling a language model needs a local model on your computer (Ollama) or an API key, so it is practised in the downloadable project at the bottom of this page. The exercises below practise everything around it, in your browser: checking code that an assistant might suggest, working with text, a keyword method as a baseline, and measuring agreement between two coders with Cohen's kappa. Where you see `______`, replace it with your own code.
 
 ```{webr}
 #| setup: true
@@ -224,7 +224,7 @@ Small changes move the agreement up or down a little. Tuning the dictionary on t
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 17 project
 
-The project contains the chapter's keyword method, the ellmer code to code answers with a language model (you need your own API key; see `README.txt`), and the code to compare the model with Elaf's hand coding, with exercises and solutions.
+The project contains the chapter's keyword method, the ellmer code to code answers with a language model (with a free local model through Ollama, or an online model with your own API key; see `README.txt`), and the code to compare the model with Elaf's hand coding, with exercises and solutions.
 
 - [Download chapter17.zip](chapter17.zip), unzip it, and double-click `chapter17.Rproj`.
 - Or type this one line in RStudio's Console:

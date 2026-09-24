@@ -151,25 +151,32 @@ The keywords agree with Elaf's coding for `r round(100 * kw_acc)`% of the answer
 
 ### Calling a language model from R
 
-The **ellmer** package connects R to language models from many providers: `chat_anthropic()` for Claude, `chat_openai()` for ChatGPT's models, `chat_google_gemini()` for Gemini, and `chat_ollama()` for models that run on your own computer. Using a provider's models from code requires an **API key**, a secret password linked to your account, and each request costs a small amount. Store the key in your personal `.Renviron` file (`usethis::edit_r_environ()` opens it), never in a script that others may see:
+The **ellmer** package connects R to language models of two kinds.
+
+**Online models** from providers: `chat_anthropic()` for Claude, `chat_openai()` for ChatGPT's models, and `chat_google_gemini()` for Gemini. They are the most capable, but using them from code requires an **API key**, a secret password linked to your account, and each request costs a small amount. Store the key in your personal `.Renviron` file (`usethis::edit_r_environ()` opens it), never in a script that others may see:
 
 ```bash
 ANTHROPIC_API_KEY=your-key-here
 ```
 
-A chat then works much like the website, from R:
+**Local models**, which run on your own computer through **Ollama** ([ollama.com](https://ollama.com)), a free program that downloads and runs open models. They need no key and cost nothing, and the text never leaves your computer. Install Ollama, download a model once in the Terminal (for example `ollama pull gemma4:e4b`, a model of about 10 GB), and use `chat_ollama()`. A computer with a graphics card (GPU) makes them much faster.
+
+Either way, a chat then works much like a chat website, from R:
 
 ```r
 library(ellmer)
-chat <- chat_anthropic(model = "claude-sonnet-5")
+chat <- chat_ollama(model = "gemma4:e4b")              # local
+# chat <- chat_anthropic(model = "claude-sonnet-5")   # online, needs a key
 chat$chat("In one sentence, what does Cohen's kappa measure?")
 ```
 
-The `model` argument names the exact model. Always set it explicitly and record it: providers update and retire models, and different models give different answers.
+The `model` argument names the exact model. Always set it explicitly and record it: models are updated and retired, and different models give different answers.
+
+Elaf chooses a local model, Google's Gemma 4 (the `e4b` version), for two reasons: her students' answers never leave her laptop, and anyone can repeat her analysis for free.
 
 ### Structured answers for many texts
 
-For coding, Elaf needs two things that a chat on a website does not give: the same instructions for every answer, and a reply in a fixed format that R can use. The **system prompt** holds the instructions: the task and her codebook, with a definition of each theme. A **type** describes the required answer: here, an object with one field, `theme`, which must be one of the seven themes:
+For coding, Elaf needs two things that a chat on a website does not give: the same instructions for every answer, and a reply in a fixed format that R can use. The **system prompt** holds the instructions: the task and her codebook, with a definition of each theme. With an online model, a **type** describes the required answer: here, an object with one field, `theme`, which must be one of the seven themes:
 
 ```r
 codebook <- "
@@ -205,7 +212,19 @@ ai_codes <- parallel_chat_structured(
 
 `type_enum()` restricts the answer to the listed themes, so the model cannot invent a new one or reply with a paragraph. `temperature = 0` asks the model to choose its most likely answer every time, rather than sampling more freely, which makes the results as repeatable as possible. `parallel_chat_structured()` sends one request per answer, several at a time, and returns a data frame with one row per answer and a `theme` column.
 
-Elaf's full script, `data-raw/run_ai_coding.R` in the book's repository, also records the model, the date, the number of tokens, and the cost, and codes the `r nrow(open_responses_coded)` hand-coded answers a second time to check that the model gives the same answers when asked again. It was run once, and the results were saved to a file, so that this chapter can analyse them without calling the model again.
+Smaller local models do not always follow such a format. When Elaf tried `parallel_chat_structured()` with her local model, it answered correctly ("Finances", "Workload") but as plain words, not in the structured format, and ellmer could not read the replies. So she adds one line to the end of the codebook, "Reply with the name of the theme only", asks for plain text with `parallel_chat_text()`, and lets R check each reply against the list of themes:
+
+```r
+chat <- chat_ollama(system_prompt = codebook, model = "gemma4:e4b",
+                    params = params(temperature = 0))
+
+replies <- parallel_chat_text(chat, as.list(open_responses$biggest_challenge))
+ai_codes <- themes[match(tolower(gsub("[^A-Za-z]", "", replies)), tolower(themes))]
+```
+
+`gsub()` removes anything that is not a letter, such as a full stop, and `match()` finds the reply in the list of themes, ignoring capital letters. A reply that is not one of the themes becomes `NA`, so it is counted rather than silently accepted. Checking a model's output in code like this is good practice with any model.
+
+Elaf's full script, `data-raw/run_ai_coding.R` in the book's repository, also records the provider, the model, the date, the software versions, and the time taken, and codes the `r nrow(open_responses_coded)` hand-coded answers a second time to check that the model gives the same answers when asked again. It was run once, and the results were saved to a file, so that this chapter can analyse them without calling the model again.
 
 ### How well does it agree with Elaf?
 
@@ -228,7 +247,7 @@ Text sent to an online AI service leaves your computer and is processed, and pos
 - **Remove identifying information** before sending anything: names, places, and details that could identify a person (Chapter 16).
 - For sensitive data, use a **local model** that runs on your own computer, through Ollama and `chat_ollama()`. The data never leaves the machine. Local models are smaller and usually less accurate, so validate them in the same way.
 
-Elaf's answers are anonymous, and her consent form allowed processing by external services; your study may differ.
+Elaf's answers are anonymous, but she used a local model anyway, so they never left her laptop: the simplest way to stay within any consent form.
 
 ### Keep it reproducible
 
@@ -241,7 +260,7 @@ Language models can give different answers to the same question on different day
 
 ### Disclose it
 
-Journals and universities increasingly require authors to disclose how they used AI. The consensus of publishers and of the Committee on Publication Ethics (COPE) is that an AI tool cannot be an author, because it cannot take responsibility for the work, and that its use must be described. A methods section might say: "Answers were coded into seven themes by a large language model (Claude Sonnet 5, Anthropic, accessed through the ellmer R package, temperature 0) using the codebook in Appendix X. Agreement with the author's hand coding of a random sample of 200 answers was assessed with Cohen's kappa." For help with code or language, a sentence in the acknowledgements or methods is usually enough; check your university's and journal's policy.
+Journals and universities increasingly require authors to disclose how they used AI. The consensus of publishers and of the Committee on Publication Ethics (COPE) is that an AI tool cannot be an author, because it cannot take responsibility for the work, and that its use must be described. A methods section might say: "Answers were coded into seven themes by a large language model (Gemma 4, e4b version, run locally with Ollama and the ellmer R package, temperature 0) using the codebook in Appendix X. Agreement with the author's hand coding of a random sample of 200 answers was assessed with Cohen's kappa." For help with code or language, a sentence in the acknowledgements or methods is usually enough; check your university's and journal's policy.
 
 ### Be aware of bias
 

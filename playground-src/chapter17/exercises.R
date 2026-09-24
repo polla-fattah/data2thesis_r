@@ -57,7 +57,7 @@ keyword_check |> kap(truth = theme, estimate = keyword_theme)
 # Which theme do the keywords find most reliably? Which do they miss most often?
 
 
-# Exercise 5 (needs an API key): code 20 answers with a language model
+# Exercise 5 (needs Ollama or an API key): code 20 answers with a language model
 library(ellmer)
 codebook <- "
 You are helping a researcher code open-ended survey answers from graduate
@@ -74,15 +74,38 @@ Themes:
 - Health: physical or mental health, sleep, stress, anxiety, burnout, illness.
 - Isolation: loneliness, being far from home, no colleagues or friends.
 - Other: anything else, such as ethics approval, statistics, academic English.
+
+Reply with the name of the theme only, exactly as written above.
 "
-theme_type <- type_object(theme = type_enum(themes, "The single main theme of the answer."))
+
+# A local model through Ollama (free, no key; see README.txt), or set
+# use_local <- FALSE to use an online model with an API key in .Renviron.
+use_local <- TRUE
+make_chat <- function(prompt) {
+  if (use_local) {
+    chat_ollama(system_prompt = prompt, model = "gemma4:e4b", params = params(temperature = 0))
+  } else {
+    chat_anthropic(system_prompt = prompt, model = "claude-sonnet-5", params = params(temperature = 0))
+  }
+}
+model_available <- if (use_local) {
+  tryCatch({ models_ollama(); TRUE }, error = function(e) FALSE)
+} else {
+  Sys.getenv("ANTHROPIC_API_KEY") != ""
+}
+
+# Ask for the theme name as text, and check each reply against the list of themes
+code_answers <- function(chat, answers) {
+  replies <- parallel_chat_text(chat, as.list(answers))
+  themes[match(tolower(gsub("[^A-Za-z]", "", replies)), tolower(themes))]
+}
 sample20 <- open_responses_coded |> slice(1:20)
-# Create a chat with chat_anthropic() (or chat_openai()), with the codebook as
-# the system prompt and temperature 0, then code the 20 answers with
-# parallel_chat_structured(). How many agree with Elaf?
+
+# Code the 20 answers with code_answers(make_chat(codebook), ...).
+# How many agree with Elaf's theme?
 
 
-# Exercise 6 (needs an API key): change the codebook
+# Exercise 6 (needs Ollama or an API key): change the codebook
 # Change the rule for answers with two challenges (for example, "choose the
 # challenge the student describes in most detail") and code the 20 answers
 # again. How many answers change theme?

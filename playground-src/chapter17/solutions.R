@@ -63,7 +63,7 @@ keyword_check |> conf_mat(truth = theme, estimate = keyword_theme)
 # contain the dictionary's words.
 
 
-# Exercise 5 (needs an API key): code 20 answers with a language model
+# Exercise 5 (needs Ollama or an API key): code 20 answers with a language model
 library(ellmer)
 codebook <- "
 You are helping a researcher code open-ended survey answers from graduate
@@ -80,36 +80,55 @@ Themes:
 - Health: physical or mental health, sleep, stress, anxiety, burnout, illness.
 - Isolation: loneliness, being far from home, no colleagues or friends.
 - Other: anything else, such as ethics approval, statistics, academic English.
+
+Reply with the name of the theme only, exactly as written above.
 "
-theme_type <- type_object(theme = type_enum(themes, "The single main theme of the answer."))
+
+# A local model through Ollama (free, no key; see README.txt), or set
+# use_local <- FALSE to use an online model with an API key in .Renviron.
+use_local <- TRUE
+make_chat <- function(prompt) {
+  if (use_local) {
+    chat_ollama(system_prompt = prompt, model = "gemma4:e4b", params = params(temperature = 0))
+  } else {
+    chat_anthropic(system_prompt = prompt, model = "claude-sonnet-5", params = params(temperature = 0))
+  }
+}
+model_available <- if (use_local) {
+  tryCatch({ models_ollama(); TRUE }, error = function(e) FALSE)
+} else {
+  Sys.getenv("ANTHROPIC_API_KEY") != ""
+}
+
+# Ask for the theme name as text, and check each reply against the list of themes
+code_answers <- function(chat, answers) {
+  replies <- parallel_chat_text(chat, as.list(answers))
+  themes[match(tolower(gsub("[^A-Za-z]", "", replies)), tolower(themes))]
+}
 sample20 <- open_responses_coded |> slice(1:20)
 
-if (Sys.getenv("ANTHROPIC_API_KEY") != "") {
-  chat <- chat_anthropic(system_prompt = codebook, model = "claude-sonnet-5",
-                         params = params(temperature = 0))
-  ai20 <- parallel_chat_structured(chat, as.list(sample20$biggest_challenge),
-                                   type = theme_type)
-  sample20$ai_theme <- ai20$theme
-  print(mean(sample20$ai_theme == sample20$theme))
+if (model_available) {
+  sample20$ai_theme <- code_answers(make_chat(codebook), sample20$biggest_challenge)
+  print(mean(sample20$ai_theme == sample20$theme, na.rm = TRUE))
   print(sample20 |> filter(ai_theme != theme) |> select(biggest_challenge, theme, ai_theme))
 } else {
-  message("No ANTHROPIC_API_KEY found: exercises 5 and 6 are skipped.")
+  message("No model available (start Ollama, or set an API key): exercises 5 and 6 are skipped.")
 }
 # Compare the agreement with the keyword method (about 61%), and read the
 # disagreements as in exercise 3. Twenty answers are few, so the share is only
 # a rough guide.
 
 
-# Exercise 6 (needs an API key): change the codebook
-if (Sys.getenv("ANTHROPIC_API_KEY") != "") {
+# Exercise 6 (needs Ollama or an API key): change the codebook
+if (model_available) {
   codebook2 <- sub("choose the one the\nstudent presents first or as most important",
                    "choose the one the\nstudent describes in most detail", codebook)
-  chat2 <- chat_anthropic(system_prompt = codebook2, model = "claude-sonnet-5",
-                          params = params(temperature = 0))
-  ai20b <- parallel_chat_structured(chat2, as.list(sample20$biggest_challenge),
-                                    type = theme_type)
-  print(sum(ai20b$theme != sample20$ai_theme))
+  second_try <- code_answers(make_chat(codebook2), sample20$biggest_challenge)
+  print(sum(second_try != sample20$ai_theme, na.rm = TRUE))
 }
-# A change in one rule changes the coding of answers with two challenges.
-# The codebook is part of the method, so it must be reported and kept with the
-# code, just like a questionnaire.
+# Count how many answers change theme. With the local model and these 20
+# answers, none did: the model reads the same answers the same way under either
+# rule. A rule that makes no difference is also worth knowing; try it on all 200
+# hand-coded answers, where more answers mention two challenges. Either way, the
+# codebook is part of the method, so it must be reported and kept with the code,
+# just like a questionnaire.

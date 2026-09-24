@@ -3,6 +3,10 @@
 ai <- read.csv(ai_file)
 ai_meta <- read.csv(ai_meta_file)
 
+local_run <- grepl("Ollama", ai_meta$provider)
+where_run <- if (local_run) "run locally through Ollama" else paste("from", ai_meta$provider)
+cost_text <- if (ai_meta$cost_usd == 0) "at no cost" else sprintf("at a cost of about $%.2f", ai_meta$cost_usd)
+
 kappa_label <- function(k) {
   cut(k, c(-Inf, 0.2, 0.4, 0.6, 0.8, Inf),
       labels = c("slight", "fair", "moderate", "substantial", "almost perfect")) |>
@@ -10,7 +14,7 @@ kappa_label <- function(k) {
 }
 ```
 
-Elaf's script used `r ai_meta$model` on `r format(as.Date(ai_meta$date), "%d %B %Y")`. The `r ai_meta$requests` requests cost about `r sprintf("$%.2f", ai_meta$cost_usd)` in total. The results are joined to her hand-coded answers:
+Elaf's script used the model `r ai_meta$model`, `r where_run`, on `r format(as.Date(ai_meta$date), "%d %B %Y")`. The `r ai_meta$requests` requests took about `r round(ai_meta$minutes)` minutes, `r cost_text`, and `r if (ai_meta$failed == 0) "every reply was one of the seven themes" else paste(ai_meta$failed, "replies were not one of the seven themes")`. The results are joined to her hand-coded answers:
 
 ```{r}
 ai <- read.csv(ai_file)
@@ -49,7 +53,7 @@ ai_check |>
 
 Look especially at answers that mention two challenges. If the model and Elaf chose different ones as the main challenge, that is a question for the codebook, not only for the model: a clearer rule ("code the challenge mentioned first") helps both human and machine coders.
 
-Asked a second time, the model gave the same theme for `r round(100 * rerun_agree)`% of the answers (kappa `r sprintf("%.2f", rerun_kap)`). Even with a temperature of 0, a language model is not guaranteed to be perfectly repeatable, which is why the outputs are saved and analysed from the file.
+`r if (rerun_agree == 1) "Asked a second time, the model gave exactly the same theme for every answer: with a temperature of 0, this local model is repeatable." else paste0("Asked a second time, the model gave the same theme for ", round(100 * rerun_agree), "% of the answers (kappa ", sprintf("%.2f", rerun_kap), ").")` That is not guaranteed for every model or setting (online models, in particular, can be updated between runs), which is why the outputs are saved and analysed from the file.
 
 ### What the students said
 
