@@ -1,0 +1,87 @@
+Number of categories should be increased  in order to count frequencies. 
+In smc, smcs > 1 were set to 1.0
+In smc, smcs > 1 were set to 1.0
+Number of categories should be increased  in order to count frequencies. 
+In smc, smcs > 1 were set to 1.0
+In smc, smcs > 1 were set to 1.0
+Number of categories should be increased  in order to count frequencies. 
+In smc, smcs > 1 were set to 1.0
+In smc, smcs > 1 were set to 1.0
+Number of categories should be increased  in order to count frequencies. 
+In smc, smcs > 1 were set to 1.0
+In smc, smcs > 1 were set to 1.0
+ section check                                                   value                                  target                                     ok  
+ Sizes   students                                                600.000                                600                                        TRUE
+ Sizes   semester rows                                           2326.000                               about 2,330                                TRUE
+ Sizes   supervisors                                             120.000                                120                                        TRUE
+ Sizes   max students per supervisor                             12.000                                 1-12                                       TRUE
+ Sizes   open responses                                          535.000                                about 540                                  TRUE
+ Sizes   hand-coded responses                                    200.000                                200                                        TRUE
+ Sizes   counselling weeks                                       260.000                                260                                        TRUE
+ 5.1     mean sleep (hours)                                      6.481                                  about 6.4                                  TRUE
+ 5.1     SD of sleep                                             1.013                                  about 1.0                                  TRUE
+ 5.1     caffeine skewness                                       1.599                                  strongly right-skewed (> 1)                TRUE
+ 5.1     share of zero caffeine                                  0.087                                  some zeros                                 TRUE
+ 5.1     age skewness                                            1.340                                  right-skewed                               TRUE
+ 5.1     r(stress, burnout)                                      0.647                                  about 0.6                                  TRUE
+ 5.1     r(stress, support)                                      -0.333                                 about -0.35                                TRUE
+ 5.1     students with extreme low sleep and high caffeine       14.000                                 a handful                                  TRUE
+ 5.2     one-sample t: mean sleep vs 7 (p)                       0.000                                  clearly below 7                            TRUE
+ 5.2     workshop: semester-2 wellbeing difference               5.250                                  about +5 points                            TRUE
+ 5.2     workshop: Cohen's d                                     0.447                                  about 0.45                                 TRUE
+ 5.2     workshop: two-sample t (p)                              0.000                                  p < .01                                    TRUE
+ 5.2     paired: invited group, semester 1 -> 2                  4.823                                  about +5 points                            TRUE
+ 5.2     paired t (p)                                            0.000                                  p < .001                                   TRUE
+ 5.2     Mann-Whitney: caffeine by gender (p)                    0.063                                  small difference (reported only)           TRUE
+ 5.2     dropout rate: full-time job                             0.258                                  about 25%                                  TRUE
+ 5.2     dropout rate: no job                                    0.137                                  about 12%                                  TRUE
+ 5.2     chi-square employment x dropout (p)                     0.004                                  p < .05                                    TRUE
+ 5.2     ANOVA stress ~ faculty (p)                              0.003                                  p < .05                                    TRUE
+ 5.2     ANOVA eta squared                                       0.027                                  small (about 0.03)                         TRUE
+ 5.2     Tukey: significant pairs                                Humanities-Health Sciences             only Health Sciences vs Humanities         TRUE
+ 5.2     two-way: study mode (p)                                 0.001                                  p < .05                                    TRUE
+ 5.2     two-way: interaction (p)                                0.360                                  no interaction (p > .05)                   TRUE
+ 5.2     null: GPA by gender (p)                                 0.632                                  no difference (p > .05)                    TRUE
+ 5.3     GPA ~ sleep: coefficient                                0.106                                  about +0.10 per hour                       TRUE
+ 5.3     GPA ~ sleep: p                                          0.000                                  p < .05                                    TRUE
+ 5.3     GPA model R-squared                                     0.252                                  about 0.25                                 TRUE
+ 5.3     confounding: caffeine alone (coef < 0, p)               0.000                                  negative, p < .05                          TRUE
+ 5.3     confounding: caffeine with sleep (p)                    0.514                                  no effect (p > .05)                        TRUE
+ 5.3     diminishing returns: study^2 (coef < 0, p)              0.000                                  negative, p < .05                          TRUE
+ 5.3     interaction: support x PhD (coef > 0, p)                0.000                                  support matters more for PhD               TRUE
+ 5.4     Cronbach's alpha: stress                                0.876                                  0.86-0.89                                  TRUE
+ 5.4     Cronbach's alpha: burnout                               0.880                                  0.86-0.89                                  TRUE
+ 5.4     Cronbach's alpha: support                               0.890                                  0.86-0.89                                  TRUE
+ 5.4     Cronbach's alpha: satisfaction                          0.859                                  0.86-0.89                                  TRUE
+ 5.4     four factors match the four scales                      burnout, satisfaction, stress, support stress, burnout, support, satisfaction     TRUE
+ 5.4     items loading on their own scale                        22.000                                 21-22 of 22                                TRUE
+ 5.4     stress_4 loads negatively (before reversing)            -0.503                                 negative                                   TRUE
+ 5.4     burnout_3 cross-loads on stress                         0.325                                  > 0.2                                      TRUE
+ 5.5     k-means (4 clusters) agreement with true profiles (ARI) 0.512                                  clear but overlapping profiles             TRUE
+ 5.6     ICC of wellbeing within supervisors                     0.125                                  about 0.10                                 TRUE
+ 5.6     average change per semester (not invited)               -0.139                                 slight decline                             TRUE
+ 5.6     workshop gap by semester (1, 2, 3, 4)                   0.4, 5.2, 4, 2.5                       about 0, +5, +4, +3 (fading)               TRUE
+ 5.6     students differ in their slopes (SD)                    0.960                                  random slopes present                      TRUE
+ 5.6     mean supervisor meetings per semester                   4.212                                  a count outcome                            TRUE
+ 5.7     share considering dropout                               0.150                                  about 15%                                  TRUE
+ 5.7     logistic regression AUC on test data                    0.785                                  about 0.78                                 TRUE
+ 5.7     odds ratio: stress score                                2.129                                  > 1                                        TRUE
+ 5.7     odds ratio: support score                               0.317                                  < 1                                        TRUE
+ 5.7     odds ratio: financial worry                             1.591                                  > 1                                        TRUE
+ 5.8     share leaving after year 1                              0.062                                  about 6%                                   TRUE
+ 5.8     leaving: considered dropout vs not                      0.24 vs 0.03                           much more common after considering dropout TRUE
+ 5.8     missing questionnaire answers                           0.018                                  about 2%                                   TRUE
+ 5.8     missing financial worry                                 0.063                                  about 5%                                   TRUE
+ 5.9     raw file rows x columns                                 615 x 64                               615 rows                                   TRUE
+ 5.9     duplicate rows (ignoring Response ID)                   12.000                                 12                                         TRUE
+ 5.9     test responses                                          3.000                                  3                                          TRUE
+ 5.9     gender spellings                                        7.000                                  inconsistent                               TRUE
+ 5.9     impossible age present                                  TRUE                                   age 250                                    TRUE
+ 5.9     sleep stored as text (e.g. '7 hrs', '6,5')              348.000                                many                                       TRUE
+ 5.9     SPSS file has value labels                              TRUE                                   labels present                             TRUE
+ 5.10    yearly mean visits                                      30.7, 33.5, 34.6, 37, 37.6             upward trend                               TRUE
+ 5.10    pre-exam vs teaching vs summer weeks                    59 / 40 / 10                           seasonal pattern                           TRUE
+ 4.5     themes in the hand-coded subset                         7.000                                  7 themes                                   TRUE
+ 4.5     low support -> more 'Supervision' answers               0.388                                  themes follow the data                     TRUE
+
+ 72 of 72 checks passed

@@ -178,7 +178,7 @@ Proposed, not yet in the outline:
 ## 6. Order of work
 
 1. [x] **Write the dataset specification** ([data/specification.md](data/specification.md)). Approved.
-2. [ ] **Generate the dataset**: write `data-raw/generate_wellbeing.R` and `data-raw/check_wellbeing.R`, produce all files in the specification, and confirm every designed effect.
+2. [x] **Generate the dataset**: `data-raw/generate_wellbeing.R` produces all files (version 1.0.0); `data-raw/check_wellbeing.R` confirms all 72 designed effects. **Follow-up:** the open-ended answers are built from 56 template sentences, so the same sentences repeat many times across 535 answers; expand the phrase bank (or write more varied answers) before Chapter 16 is written.
 3. [ ] **Build the data package** so readers can install the data as well as download the files.
 4. [ ] **Rewrite each chapter** around Elaf's study (section 0), using the template in 2.1 and following sections 2.2–2.7: tiny example first, then Elaf's data; fact-checked content and proper references; figures, diagrams, "in your field" boxes, exercises, and chapter reviews.
 5. [ ] **Write the new chapters** (9, 16, 17) and appendices B–E.

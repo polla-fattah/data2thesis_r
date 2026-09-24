@@ -1,6 +1,6 @@
 # Dataset Specification: The Graduate Wellbeing Study
 
-**Status:** approved by the author. Nothing has been generated yet.
+**Status:** approved by the author. **Version 1.0.0 generated** by `data-raw/generate_wellbeing.R`; all 72 checks in `data-raw/check_wellbeing.R` pass (results in `data-raw/check_results.txt`). Numbers in section 5 are the values in the generated data.
 
 This document specifies the simulated dataset that runs through the book as its case study. It is based on the 2025 lecture notes *Data Analysis for Research* (where the student was called Sara; `graduate_student_wellbeing.csv`) and extends them so the data supports every chapter.
 
@@ -68,7 +68,7 @@ A two-year **longitudinal study** at one university. The university and country 
 | `open_responses.csv` | about 540 | One row per student who answered the final survey | Ch 16 |
 | `open_responses_coded.csv` | 200 | A subset hand-coded into themes, to check AI coding against | Ch 16 |
 | `counselling_visits.csv` | 260 | Weekly visits to the university counselling service over 5 years, analysed for the service as an internal analysis | Ch 14 |
-| `wellbeing_raw.xlsx` | 612 | The messy "survey export": one wide sheet as it came from the online survey tool | Ch 2, 3 |
+| `wellbeing_raw.xlsx` | 615 | The messy "survey export": one wide sheet as it came from the online survey tool | Ch 2, 3 |
 | `wellbeing.sav` | 600 | SPSS version of `students` and `questionnaire`, with variable and value labels | Ch 2 |
 
 - The clean CSV files are what most chapters use; the raw Excel file is cleaned into them in Chapter 3.
@@ -159,12 +159,12 @@ Effect sizes below are targets; the check script (section 8) confirms the genera
 | Test | Comparison | Built-in result |
 |---|---|---|
 | One-sample t-test | Mean sleep vs. 7 hours | Clearly below 7 (mean about 6.4) |
-| Two-sample t-test | Wellbeing in semester 2: invited vs. not invited | Invited higher by about 5 points (Cohen's d ≈ 0.35) |
-| Paired t-test | Wellbeing, semester 1 vs. 2, invited group | Increases by about 6 points |
+| Two-sample t-test | Wellbeing in semester 2: invited vs. not invited | Invited higher by about 5 points (Cohen's d ≈ 0.45) |
+| Paired t-test | Wellbeing, semester 1 vs. 2, invited group | Increases by about 5 points |
 | Mann–Whitney U | Caffeine (skewed) by gender | Small difference; used to show why a non-parametric test fits skewed data |
 | Wilcoxon signed-rank | One satisfaction item, semester-level comparison **[or drop]** | Small change |
 | Chi-square | Employment × considering dropout | Dropout thoughts more common with a full-time job (about 25% vs. 12%) |
-| One-way ANOVA | Stress score by faculty | Small differences (η² ≈ 0.04); post-hoc tests show only Health Sciences differs from Humanities |
+| One-way ANOVA | Stress score by faculty | Small differences (η² ≈ 0.03); post-hoc tests show only Health Sciences differs from Humanities |
 | Two-way ANOVA | Wellbeing by programme × study mode | Main effect of study mode (part-time lower); **no interaction** (an honest null) |
 | Null result | GPA by gender | No meaningful difference |
 
@@ -175,13 +175,13 @@ Semester GPA depends on:
 - **Stress score** (negative) and **support score** (positive): small to moderate.
 - **Caffeine: a confounding lesson.** Caffeine correlates negatively with GPA on its own, but only because high-caffeine students sleep less; once sleep is in the model, caffeine has no effect.
 - **Interaction:** supervisor support matters more for PhD students than for Master's students (for Chapter 7's interaction section).
-- Overall, a model with these predictors explains about 30% of GPA variance (R² ≈ 0.30): realistic, not perfect.
+- Overall, a model with these predictors explains about 25% of GPA variance (R² ≈ 0.25): realistic, not perfect.
 - For Chapter 12's regularisation, the prediction task includes all 22 items and background variables, several of which are irrelevant or strongly correlated with each other, so Lasso has something to remove.
 
 ### 5.4 Questionnaire structure (RQ6; Ch 8)
 - Four underlying factors (stress, burnout, support, satisfaction), with stress and burnout correlated (about 0.6), so factor analysis has to separate related constructs.
 - Item loadings mostly 0.6–0.8; `burnout_3` cross-loads on stress; `stress_4` is reverse-worded and loads negatively until reversed.
-- Reliability (Cronbach's alpha) about 0.80–0.88 per scale.
+- Reliability (Cronbach's alpha) about 0.86–0.89 per scale.
 
 ### 5.5 Student profiles (RQ7; Ch 8, 13)
 Four profiles are built in, with overlap between them (as in real data):
@@ -205,12 +205,12 @@ Four profiles are built in, with overlap between them (as in real data):
 ### 5.7 Considering dropout (RQ9; Ch 7, 11)
 - About 15% answer Yes: an **imbalanced outcome**, handled deliberately (accuracy is misleading; precision, recall, and AUC are needed).
 - Odds of considering dropout increase with stress (odds ratio ≈ 1.8 per SD), financial worry (≈ 1.5 per point), a full-time job, and part-time study; they decrease with supervisor support (≈ 0.6 per SD).
-- A realistic ceiling: good models reach an AUC of about 0.80, not near-perfect, so model comparison is meaningful.
+- A realistic ceiling: good models reach an AUC of about 0.78 on test data, not near-perfect, so model comparison is meaningful.
 - Models are trained and tested on separate data (fixing the 2025 notes, which tested on the training data).
 
 ### 5.8 Attrition and missing data (Ch 2, 3, 5)
 - **Attrition:** about 6% of students leave after year 1, so their semester 3–4 rows are missing. Leaving is much more common among students who considered dropout, so the missing data is **not random**: a built-in lesson on why dropping incomplete cases can bias results.
-- **Item non-response:** about 2% of questionnaire answers are missing at random.
+- **Item non-response:** about 2% of questionnaire answers are missing at random. Semester self-reports (sleep, study hours, exercise, caffeine) are missing about 1% of the time.
 - Sensitive items (`financial_worry`) are skipped more often (about 5%).
 
 ### 5.9 The messy raw file (Ch 2–3)
@@ -219,7 +219,7 @@ Four profiles are built in, with overlap between them (as in real data):
 - Inconsistent category coding (`F`, `female`, `Female `).
 - Numbers stored as text (`"7 hrs"`, `"6,5"`).
 - Missing values coded as `99`, `-9`, or blank.
-- A few impossible values (age 250, sleep 26 hours) and 12 duplicate rows.
+- A few impossible values (age 250, sleep 26 hours, 700 study hours, GPA 34.5) and 12 duplicate rows. In the clean files these cells are empty (NA), because the true value cannot be known.
 - Semester measurements in wide format (`gpa_s1`, `gpa_s2`, …), to reshape to long format.
 - Test responses at the start of the file (e.g. `student_id` = `TEST`).
 
