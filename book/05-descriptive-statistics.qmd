@@ -1,0 +1,17 @@
+# Descriptive Statistics and Exploratory Data Analysis {#sec-ch05}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+What does graduate student life look like, and what is missing or unusual in the data? (RQ1)
+
+## What this chapter will cover
+
+- Central tendency, variability, and distribution.
+- Identifying missing data and outliers.
+- Visualizing relationships with correlation plots and pairplots.

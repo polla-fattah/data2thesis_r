@@ -1,8 +1,8 @@
 project:
   type: website
   output-dir: ../_site
-  # Copy the case-study data and chapter projects in from the repository
-  pre-render: copy_resources.R
+  # Copy the case-study data and the data package in from data/
+  pre-render: copy_resources.ts
   resources:
     - downloads/
 
@@ -27,6 +27,10 @@ website:
   page-footer:
     left: "© Polla Fattah. *From Data to Thesis: Research Data Analysis with R*."
     right: "Built with [Quarto](https://quarto.org)"
+
+execute:
+  # Store computed results, so the site can be rebuilt without R
+  freeze: auto
 
 format:
   html:

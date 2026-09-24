@@ -1,0 +1,17 @@
+# Advanced Clustering {#sec-ch13}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+Are there student profiles that simple methods miss, and who does not fit any profile? (RQ7)
+
+## What this chapter will cover
+
+- Advanced clustering: DBSCAN and Gaussian Mixture Models.
+- Evaluating clustering performance metrics.
+- Case study: Grouping data points for pattern discovery.

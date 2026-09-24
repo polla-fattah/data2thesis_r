@@ -36,26 +36,26 @@ The story comes from the author's lecture notes *Data Analysis for Research* (20
 
 | Part | Ch | Title | File | Status |
 |---|---|---|---|---|
-| 1 | 1 | Getting Started with R | `010-r-programming/010-chapter01.md` | Draft |
-| 1 | 2 | Data Structures in R | `010-r-programming/020-chapter02.md` | Draft, needs trimming |
-| 1 | 3 | Data Manipulation | `010-r-programming/030-chapter03.md` | Draft |
-| 1 | 4 | Data Visualization | `010-r-programming/040-chapter04.md` | Draft, duplicated content |
-| 2 | 5 | Descriptive Statistics and EDA | `020-…/050-chapter05.md` | Draft |
-| 2 | 6 | Hypothesis Testing and Statistical Inference | `020-…/060-chapter06.md` | Draft |
-| 2 | 7 | ANOVA and Regression | `020-…/070-chapter07.md` | Draft |
-| 2 | 8 | Multivariate Statistical Methods | `020-…/080-chapter08.md` | Draft |
-| 2 | 9 | Mixed-Effects Models | `020-…/090-chapter09.md` | **New, not written** |
-| 3 | 10 | Introduction to Machine Learning in R | `030-…/100-chapter10.md` | Draft |
-| 3 | 11 | Classification Models | `030-…/110-chapter11.md` | Draft |
-| 3 | 12 | Predictive Regression | `030-…/120-chapter12.md` | Draft |
-| 3 | 13 | Advanced Clustering | `030-…/130-chapter13.md` | Draft |
-| 3 | 14 | Advanced Machine Learning Techniques | `030-…/140-chapter14.md` | Draft, overlaps earlier chapters |
-| 4 | 15 | Reproducible Research | `040-…/150-chapter15.md` | Draft |
-| 4 | 16 | Using AI with R | `040-…/160-chapter16.md` | **New, not written** |
-| 4 | 17 | Putting It All Together | `040-…/170-chapter17.md` | **Not written** |
-| – | A–E | Appendices | `999-back/` | A drafted; B–E not written (E is new) |
+| 1 | 1 | Getting Started with R | `book/01-getting-started.qmd` | Placeholder; old draft in archive |
+| 1 | 2 | Data Structures in R | `book/02-data-structures.qmd` | Placeholder; old draft needs trimming |
+| 1 | 3 | Data Manipulation | `book/03-data-manipulation.qmd` | Placeholder; old draft in archive |
+| 1 | 4 | Data Visualization | `book/04-data-visualization.qmd` | Placeholder; old draft has duplicated content |
+| 2 | 5 | Descriptive Statistics and EDA | `book/05-descriptive-statistics.qmd` | Placeholder; old draft in archive |
+| 2 | 6 | Hypothesis Testing and Statistical Inference | `book/06-hypothesis-testing.qmd` | **First section written** (comparing two groups) |
+| 2 | 7 | ANOVA and Regression | `book/07-anova-regression.qmd` | Placeholder; old draft in archive |
+| 2 | 8 | Multivariate Statistical Methods | `book/08-multivariate.qmd` | Placeholder; old draft in archive |
+| 2 | 9 | Mixed-Effects Models | `book/09-mixed-models.qmd` | Placeholder; **new chapter** |
+| 3 | 10 | Introduction to Machine Learning in R | `book/10-machine-learning.qmd` | Placeholder; old draft in archive |
+| 3 | 11 | Classification Models | `book/11-classification.qmd` | Placeholder; old draft in archive |
+| 3 | 12 | Predictive Regression | `book/12-predictive-regression.qmd` | Placeholder; old draft in archive |
+| 3 | 13 | Advanced Clustering | `book/13-advanced-clustering.qmd` | Placeholder; old draft in archive |
+| 3 | 14 | Advanced Machine Learning Techniques | `book/14-advanced-ml.qmd` | Placeholder; old draft overlaps earlier chapters |
+| 4 | 15 | Reproducible Research | `book/15-reproducible-research.qmd` | Placeholder; old draft in archive |
+| 4 | 16 | Using AI with R | `book/16-ai.qmd` | Placeholder; **new chapter** |
+| 4 | 17 | Putting It All Together | `book/17-putting-it-together.qmd` | Placeholder; not written |
+| – | A–E | Appendices | `book/a-installation.qmd` … `book/e-resources.qmd` | Placeholders; old Appendix A draft in archive |
 
-Chapter order comes from the file-name prefix; the website address comes from `slug:`. Keep both in step with the chapter number if chapters move again.
+Chapter order and parts are set in `book/_quarto.yml`. The earlier Jekyll drafts are in `archive/jekyll/_chapters/` and are source material for the rewrites.
 
 ---
 
@@ -94,7 +94,7 @@ Chapter order comes from the file-name prefix; the website address comes from `s
   - Mention Positron as an alternative editor to RStudio.
 
 ### 2.4 Diagrams and figures
-- Convert any ASCII diagrams to **Mermaid** (the site already loads `jekyll-mermaid`). Note that `jekyll-mermaid` is not on the GitHub Pages plugin allow-list, so either build the site with GitHub Actions or render Mermaid with the client-side script.
+- Convert any ASCII diagrams to **Mermaid** (built into Quarto: use a ```` ```{mermaid} ```` block).
 - The book currently has no diagrams or figures. Add diagrams where they explain a process, for example:
   - The data analysis workflow (Ch 5).
   - Choosing the right statistical test (Ch 6).
@@ -104,7 +104,7 @@ Chapter order comes from the file-name prefix; the website address comes from `s
 - Add plot images to the visualization and analysis chapters, so readers can see what the code produces. Every image needs alt text.
 
 ### 2.5 Code standards
-- Every code block is fenced and labeled: ```` ```r ````. Output goes in its own block, not as bare text.
+- Code that should run is written as Quarto code chunks (```` ```{r} ````), so outputs and plots are produced by the code itself. Code that is only shown uses ```` ```r ````. Never paste output by hand.
 - No Markdown escape characters inside code (`\<-`, `\=`, `\_`, `\#`).
 - Load packages at the start of each chapter in one setup block; list installation commands in Appendix A rather than scattered through the text.
 - Use `set.seed()` before every random step (sampling, splitting, resampling, clustering, model fitting).
@@ -141,7 +141,7 @@ These are fixed as part of each chapter's rewrite (section 0). They are listed s
 - [ ] Ch 12: add a plain linear model as a baseline in the life expectancy project.
 - [ ] Ch 14: section 14.1 (ensembles) repeats bagging (Ch 11.2) and boosting (Ch 12). Remove or reduce it, then retitle the chapter (e.g. "Neural Networks and Time Series Forecasting"), or split it into two chapters.
 - [ ] Ch 15: no chapter summary.
-- [ ] Unused stub `010-r-programming/005-chapter00.md` ("Tempo"): delete or merge into the time series material.
+- [x] Unused Jekyll stub `005-chapter00.md` ("Tempo") left behind in `archive/jekyll/`; not part of the Quarto book.
 - [ ] Part index pages have no titles, and Parts 2–4 are `published: false`; check whether this is intended.
 
 ---
@@ -189,7 +189,7 @@ Proposed, not yet in the outline:
 3. [x] **Build the data package**: `data2thesis/` (version 1.0.0) passes `R CMD check` with no warnings or notes. `data-raw/build_package.R` copies the data into it; the built file `data/data2thesis_1.0.0.tar.gz` lets readers install from the website. Package name `data2thesis` chosen so a future Python book could share it.
 4. [x] **Build the playground pilot**: `playground/chapter01.md` (7 browser exercises with hidden solutions) and `playground/chapter01.zip` (RStudio project), built by `data-raw/build_playground.R` from `playground-src/`. Tested on a local Jekyll server without cross-origin headers (the GitHub Pages situation): R starts, all exercises run, plots draw, errors display. **Still to confirm:** the same on the live GitHub Pages site after pushing.
 4b. [x] **Quarto prototype** (`quarto/`): a Quarto website (`quarto/site/`: landing page, playground with quarto-live) and a Quarto book (`quarto/book/`: welcome page and a sample chapter) rendered together into `quarto/_site/`. Build: render `site` first, then `book`. Verified: landing page sections and links, the sample chapter (code runs, figure numbering and cross-reference, Mermaid diagram, citation and reference list, callouts, numbers in the text taken from the code). **Still to verify:** the quarto-live exercises in a visible browser (they do not start in a hidden browser pane).
-4c. [ ] **Move the book to Quarto**: set up the full book structure, move the landing page and playground out of the prototype, polish the CSS (the author approved the prototype's concept; the styling needs work), publish to GitHub Pages, and retire the Jekyll theme. Keep the data download address consistent (the prototype uses `/downloads/`, the package README uses `/data/`).
+4c. [ ] **Move the book to Quarto**. Done: the Jekyll site is archived in `archive/jekyll/`; the website is in `site/` and the book in `book/` (17 chapter and 5 appendix placeholders, each with Elaf's question and an outline; Chapter 6 starts with the written *Comparing two groups* section); the pre-render script is TypeScript (`site/copy_resources.ts`) and code results are frozen, so `.github/workflows/publish.yml` publishes without R (checked: a whole-project build runs no R code). **Still to do:** polish the CSS; verify the quarto-live exercises in a visible browser; push, then switch GitHub Pages to "GitHub Actions" (Settings > Pages) and check the live site.
 5. [ ] **Rewrite each chapter** around Elaf's study (section 0), using the template in 2.1 and following sections 2.2–2.7: tiny example first, then Elaf's data; fact-checked content and proper references; figures, diagrams, "in your field" boxes, exercises, and chapter reviews. Each chapter also gets its playground page.
 6. [ ] **Write the new chapters** (9, 16, 17) and appendices B–E.
 7. [ ] **Unify style** across the whole book.

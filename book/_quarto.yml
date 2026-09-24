@@ -1,0 +1,72 @@
+project:
+  type: book
+  # The book lives inside the website, at /book/
+  output-dir: ../_site/book
+
+book:
+  title: "From Data to Thesis"
+  subtitle: "Research Data Analysis with R"
+  author: "Polla Fattah"
+  site-url: https://polla-fattah.github.io/R4NTR/book
+  repo-url: https://github.com/polla-fattah/R4NTR
+  repo-subdir: book
+  repo-actions: [edit, issue]
+  search: true
+  navbar:
+    left:
+      - text: Home
+        href: ../index.html
+      - text: Book
+        href: index.qmd
+      - text: Playground
+        href: ../playground/index.html
+  chapters:
+    - index.qmd
+    - part: "Foundations of R Programming and Data Handling"
+      chapters:
+        - 01-getting-started.qmd
+        - 02-data-structures.qmd
+        - 03-data-manipulation.qmd
+        - 04-data-visualization.qmd
+    - part: "Statistical Analysis for Research"
+      chapters:
+        - 05-descriptive-statistics.qmd
+        - 06-hypothesis-testing.qmd
+        - 07-anova-regression.qmd
+        - 08-multivariate.qmd
+        - 09-mixed-models.qmd
+    - part: "Machine Learning with R"
+      chapters:
+        - 10-machine-learning.qmd
+        - 11-classification.qmd
+        - 12-predictive-regression.qmd
+        - 13-advanced-clustering.qmd
+        - 14-advanced-ml.qmd
+    - part: "Reproducible Research and Applications"
+      chapters:
+        - 15-reproducible-research.qmd
+        - 16-ai.qmd
+        - 17-putting-it-together.qmd
+    - references.qmd
+  appendices:
+    - a-installation.qmd
+    - b-glossary.qmd
+    - c-packages.qmd
+    - d-common-errors.qmd
+    - e-resources.qmd
+
+bibliography: references.bib
+
+execute:
+  # Store computed results, so the book can be rebuilt without R
+  freeze: auto
+  warning: false
+  message: false
+
+format:
+  html:
+    theme:
+      light: [cosmo, ../site/styles/theme.scss]
+      dark: [darkly, ../site/styles/theme.scss]
+    code-link: true
+    fig-align: center

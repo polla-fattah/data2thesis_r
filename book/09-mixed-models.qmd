@@ -1,0 +1,19 @@
+# Mixed-Effects Models {#sec-ch09}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+How do wellbeing and GPA change over the two years, and how much do supervisors matter? (RQ8)
+
+## What this chapter will cover
+
+- Why ordinary regression fails with repeated measures and nested data.
+- Random intercepts and random slopes with `lme4`.
+- Interpreting and reporting mixed models: p-values with `lmerTest` and the intraclass correlation (ICC).
+- Generalized linear mixed models for binary and count outcomes.
+- Case study: Analyzing repeated measurements from a longitudinal study.

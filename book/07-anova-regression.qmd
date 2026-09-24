@@ -1,0 +1,18 @@
+# ANOVA and Regression {#sec-ch07}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+Do stress and wellbeing differ between faculties and study modes? (RQ4) What explains students' GPA? (RQ5) Which students consider dropping out? (RQ9)
+
+## What this chapter will cover
+
+- ANOVA (one-way and two-way) and post hoc testing.
+- Linear regression: simple and multiple.
+- Logistic regression for binary outcomes.
+- Case study: Predicting outcomes using regression models.

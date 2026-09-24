@@ -1,0 +1,11 @@
+# Common Errors and How to Fix Them
+
+::: {.callout-note appearance="simple"}
+## This appendix is being written
+
+Until it is finished, this page shows what it will cover.
+:::
+
+## What this appendix will cover
+
+- The error messages beginners meet most often, what they mean, and how to fix them.

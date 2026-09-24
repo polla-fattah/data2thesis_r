@@ -3,7 +3,7 @@
 #
 # Builds the downloadable project for each playground chapter:
 # playground-src/chapterNN/ (scripts, README, .Rproj, and files.txt listing the
-# data files it needs) becomes playground/chapterNN.zip, with the data copied
+# data files it needs) becomes site/playground/chapterNN.zip, with the data copied
 # in from data/.
 #
 # Run from the project root, after generate_wellbeing.R:
@@ -11,7 +11,7 @@
 # ------------------------------------------------------------------------------
 
 src_root <- "playground-src"
-out_root <- "playground"
+out_root <- file.path("site", "playground")
 
 chapters <- list.dirs(src_root, full.names = FALSE, recursive = FALSE)
 

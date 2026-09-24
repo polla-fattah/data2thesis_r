@@ -1,0 +1,21 @@
+# Data Structures in R {#sec-ch02}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+Elaf's data arrives in three formats: CSV files, an Excel export, and an SPSS file with labels. How does R hold each of them?
+
+## What this chapter will cover
+
+- Understanding vectors, matrices, lists, and data frames.
+- Indexing, subsetting, and modifying data structures.
+- Handling Errors Gracefully
+- Packages and Libraries in R.
+- Importing and exporting data: CSV, Excel (`readxl`), and SPSS (`haven`), keeping variable and value labels.
+- Coming from SPSS or Excel: how familiar tasks map to R.
+- Basic exploratory analysis: summary statistics and data visualization.

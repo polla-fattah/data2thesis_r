@@ -1,0 +1,18 @@
+# Introduction to Machine Learning in R {#sec-ch10}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+Can we build a fair, well-tested model to spot students at risk of dropping out? (RQ9)
+
+## What this chapter will cover
+
+- Supervised vs. unsupervised learning: An overview.
+- Preprocessing data: scaling, normalization, and feature engineering.
+- Splitting datasets into training, testing, and validation sets.
+- Cross-validation and hyperparameter tuning.

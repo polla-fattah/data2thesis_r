@@ -1,7 +1,39 @@
----
-layout: home
-title: "From Data to Thesis: Research Data Analysis with R"
----
+# From Data to Thesis: Research Data Analysis with R
+
+A practical guide to analysing research data with R, for researchers with no programming or statistics background. The book follows Elaf, a Master's student, through her thesis on graduate student wellbeing, introducing each method as the answer to one of her research questions.
+
+**Read it online:** https://polla-fattah.github.io/R4NTR
+
+## Repository layout
+
+| Folder | Contents |
+|---|---|
+| `book/` | The book (Quarto book project): one `.qmd` file per chapter and appendix |
+| `site/` | The website around the book (Quarto website project): landing page and playground |
+| `data/` | Elaf's dataset (generated), its specification, and the built `data2thesis` package |
+| `data-raw/` | Scripts that generate and check the data, build the package, and build the playground projects |
+| `data2thesis/` | Source of the `data2thesis` R package |
+| `playground-src/` | Source of the downloadable playground project for each chapter |
+| `archive/jekyll/` | The earlier Jekyll version of the site, including the first chapter drafts (source material for the rewrites) |
+| `plan.md` | The revision plan: decisions, instructions for every chapter, and the order of work |
+
+## Building the site
+
+Requires [Quarto](https://quarto.org) and R. Build the website first, then the book, which goes inside it:
+
+```bash
+cd site && quarto render && cd ../book && quarto render
+```
+
+The result is in `_site/`. To look at it locally:
+
+```bash
+python -m http.server 4200 --directory _site
+```
+
+Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them after changing any code, so the site can be published by GitHub Actions (`.github/workflows/publish.yml`) without R.
+
+## Outline
 
 *Every chapter ends with a chapter review: a short summary and a list of key terms, which are collected in the glossary (Appendix B).*
 

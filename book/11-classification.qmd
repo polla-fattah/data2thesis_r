@@ -1,0 +1,19 @@
+# Classification Models {#sec-ch11}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+Which students are at risk of considering dropout, and how well can we predict them? (RQ9)
+
+## What this chapter will cover
+
+- Decision trees and random forests.
+- k-Nearest Neighbors (k-NN).
+- Support Vector Machines (SVMs).
+- Evaluating classification performance: confusion matrix, precision, recall, and F1 score.
+- Case study: Classifying observations in a research dataset.

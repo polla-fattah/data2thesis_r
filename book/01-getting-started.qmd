@@ -1,0 +1,23 @@
+# Getting Started with R {#sec-ch01}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+Elaf opens her data for the first time: how many students, which variables, and a first question.
+
+## What this chapter will cover
+
+- Installing and setting up R and RStudio.
+- Exploring the RStudio interface: Source, Console, Environment, and Plots panes.
+- Writing and executing R scripts.
+- Organizing your work with RStudio Projects and reliable file paths (`here`).
+- Overview of R libraries and packages.
+
+## Practise
+
+The exercises for this chapter are in the [playground](../playground/chapter01.html).

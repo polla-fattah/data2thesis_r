@@ -1,0 +1,18 @@
+# Data Visualization {#sec-ch04}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+What does graduate student life look like? (RQ1)
+
+## What this chapter will cover
+
+- Creating basic visualizations: bar plots, histograms, scatter plots, and box plots.
+- Customizing plots: themes, annotations, and advanced styling.
+- Advanced visualizations: heatmaps, faceting, and density plots.
+- Exporting publication-quality plots.

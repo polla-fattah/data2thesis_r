@@ -1,0 +1,12 @@
+# Installation and Setup
+
+::: {.callout-note appearance="simple"}
+## This appendix is being written
+
+Until it is finished, this page shows what it will cover.
+:::
+
+## What this appendix will cover
+
+- Installing R, RStudio, and Positron on Windows, macOS, and Linux.
+- Installing the packages used in the book, and the `data2thesis` data package.

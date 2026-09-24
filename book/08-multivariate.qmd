@@ -1,0 +1,18 @@
+# Multivariate Statistical Methods {#sec-ch08}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+Do the questionnaire items measure what they should? (RQ6) Are there distinct groups of students? (RQ7)
+
+## What this chapter will cover
+
+- Principal Component Analysis (PCA) for dimensionality reduction.
+- Factor analysis for latent variable identification.
+- Clustering methods: k-means and hierarchical clustering.
+- Case study: Identifying patterns in complex datasets.

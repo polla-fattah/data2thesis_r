@@ -1,0 +1,12 @@
+# Further Learning Resources
+
+::: {.callout-note appearance="simple"}
+## This appendix is being written
+
+Until it is finished, this page shows what it will cover.
+:::
+
+## What this appendix will cover
+
+- Books, courses, and videos for going further, including Arabic-language resources.
+- Tyson Barrett's free *R for Researchers: An Introduction* as a shorter companion.

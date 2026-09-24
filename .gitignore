@@ -1,14 +1,16 @@
-_site/
-_draft/
-.jekyll-cache/
-
 .codegpt
-# Quarto prototype: build output and temporary files
-quarto/_site/
-quarto/**/.quarto/
-quarto/**/site_libs/
-quarto/site/index.html
-quarto/site/playground/*.html
-quarto/site/playground/*.csv
-quarto/site/playground/*.zip
-quarto/site/downloads/
+
+# Quarto build output (regenerated on every build)
+_site/
+**/.quarto/
+**/site_libs/
+# ...except inside _freeze, which Quarto needs to rebuild without R
+!**/_freeze/site_libs/
+*_files/
+site/index.html
+site/playground/*.html
+book/*.html
+
+# Copied in by site/copy_resources.ts before each build
+site/playground/*.csv
+site/downloads/

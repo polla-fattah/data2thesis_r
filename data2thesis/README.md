@@ -11,7 +11,7 @@ Choose one of these. Both install the same package.
 **From the book's website** (needs nothing else):
 
 ```r
-install.packages("https://polla-fattah.github.io/R4NTR/data/data2thesis_1.0.0.tar.gz",
+install.packages("https://polla-fattah.github.io/R4NTR/downloads/data2thesis_1.0.0.tar.gz",
                  repos = NULL, type = "source")
 ```
 
@@ -48,7 +48,7 @@ haven::read_sav(data2thesis_example("wellbeing.sav"))           # SPSS file with
 
 ## The same data as files
 
-Every dataset is also available as a file in the [`data/`](../data) folder of the book's repository and website.
+Every dataset is also available as a file: in the [`data/`](../data) folder of the repository, and in the downloads folder of the website (https://polla-fattah.github.io/R4NTR/downloads/).
 
 ## How the data was made
 

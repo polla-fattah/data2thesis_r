@@ -1,0 +1,18 @@
+# Predictive Regression {#sec-ch12}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+Can we predict final GPA from year-1 information? (RQ10)
+
+## What this chapter will cover
+
+- Ridge, Lasso, and Elastic Net regression.
+- Boosting methods: Gradient Boosting, XGBoost.
+- Evaluating regression models: RMSE, MAE, and R².
+- Hands-on project: Regression modeling on real-world data.

@@ -1,0 +1,18 @@
+# Data Manipulation {#sec-ch03}
+
+::: {.callout-note appearance="simple"}
+## This chapter is being rewritten
+
+The full chapter is being written around Elaf's study. Until then, this page shows what it will cover.
+:::
+
+## Elaf's question
+
+The survey export is messy. Elaf cleans it, computes the questionnaire scale scores, reshapes the semester records, and joins the tables.
+
+## What this chapter will cover
+
+- Filtering, arranging, and summarizing data.
+- Grouped operations with the `%>%` pipeline.
+- Reshaping data: pivoting and joining datasets.
+- Hands-on data cleaning and preparation techniques.
