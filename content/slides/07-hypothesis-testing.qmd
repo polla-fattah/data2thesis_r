@@ -1,0 +1,746 @@
+---
+title: "Hypothesis Testing & Statistical Inference"
+subtitle: "Sampling Distributions, t-Tests, Effect Sizes, and Non-Parametric Alternatives"
+author: "Dr. Polla Fattah"
+institute: "From Data to Thesis: Research Data Analysis with R"
+format:
+  revealjs:
+    theme: [default, ../../styles/theme.scss]
+    slide-number: true
+    preview-links: auto
+    chalkboard: true
+    transition: slide
+    highlight-style: github
+    code-line-numbers: false
+    width: 1200
+    height: 750
+execute:
+  freeze: auto
+---
+
+# Statistical Inference & Testing
+
+### The Normal World, t-Tests, and Non-Parametric Alternatives
+
+**Chapter 7 · From Data to Thesis**
+
+Dr. Polla Fattah
+
+---
+
+## The Fundamental Leap of Research
+
+Empirical science is almost always about **more people than we can measure**:
+
+- A study of 600 students matters because of what it reveals about **all graduate students**.
+- A clinical trial of 150 patients matters because of future patients who will receive the therapy.
+
+> **Statistical inference is the mathematical discipline of generalizing from the sample we measured to the population we care about—while rigorously quantifying uncertainty.**
+
+A second sample would give slightly different numbers; a third another. How do we decide when a sample difference is real?
+
+---
+
+## What We Will Master Today
+
+By the end of this lecture deck, you will be able to:
+
+- Distinguish population **parameters** ($\mu, \sigma$) from sample **statistics** ($\bar{x}, s$).
+- Demonstrate the **Central Limit Theorem (CLT)** and the behavior of the **Standard Error**.
+- Calculate, plot, and interpret parametric and **bootstrap confidence intervals**.
+- Demystify the **p-value** through computer simulation (**permutation test**).
+- Quantify the trade-offs between **Type I errors**, **Type II errors**, and **statistical power**.
+- Avoid the **multiple testing crisis** ($1 - 0.95^k$).
+- Conduct and interpret **one-sample**, **two-sample (Welch)**, and **paired t-tests**.
+- Calculate and contextualize standardized effect sizes (**Cohen's d**).
+- Deploy **non-parametric tests** (Mann-Whitney U, Wilcoxon signed-rank) and **Chi-Square ($\chi^2$) tests**.
+- Write publication-standard **APA results sections**.
+
+---
+
+# Sampling Distributions & The Central Limit Theorem
+
+### The Engine of Inferential Statistics
+
+---
+
+## Parameters vs. Statistics
+
+```
++---------------------------------------------------------------+
+| POPULATION (All Graduate Students)                            |
+| Fixed, unobservable truth. Summarized by PARAMETERS:          |
+|   - True mean sleep:       μ (mu)                             |
+|   - True standard dev:     σ (sigma)                          |
++---------------------------------------------------------------+
+                               |
+                               | Random Sample (N = 600)
+                               v
++---------------------------------------------------------------+
+| SAMPLE (Elaf's Measured Cohort)                               |
+| Observable, fluctuating reality. Summarized by STATISTICS:    |
+|   - Sample mean sleep:     x̄ = 6.38 hours                     |
+|   - Sample standard dev:   s = 1.02 hours                     |
++---------------------------------------------------------------+
+```
+
+---
+
+## Simulating the Sampling Distribution in R
+
+Treat the 600 students as a known population and draw 1,000 samples of size 5 and size 30 from the skewed caffeine variable:
+
+```r
+library(data2thesis)
+library(dplyr)
+library(ggplot2)
+
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
+
+caffeine_pop <- na.omit(first_sem$caffeine_mg)
+
+set.seed(2026)
+means_5  <- replicate(1000, mean(sample(caffeine_pop, size = 5)))
+means_30 <- replicate(1000, mean(sample(caffeine_pop, size = 30)))
+```
+
+---
+
+## Visualizing the Central Limit Theorem
+
+```r
+sim_df <- tibble(
+  mean_val = c(means_5, means_30),
+  size     = rep(c("Samples of N = 5", "Samples of N = 30"), each = 1000)
+)
+
+ggplot(sim_df, aes(x = mean_val)) +
+  geom_histogram(bins = 35, fill = "steelblue", colour = "white") +
+  facet_wrap(~ size, scales = "free_y") +
+  labs(title = "Sampling Distribution of the Mean", x = "Sample Mean Caffeine (mg)", y = "Frequency") +
+  theme_minimal(base_size = 13)
+```
+
+```
+Samples of N = 5 (Wide, Skewed)      Samples of N = 30 (Narrow, Bell-shaped)
+        +--+                                    +---+
+       /    \____                              /     \
+     -+----------\---                        -+-------+-
+```
+
+### Three Foundational Insights:
+1. **Unbiasedness:** Both distributions center precisely on the true population mean (281 mg).
+2. **Precision:** Samples of 30 cluster far more tightly than samples of 5.
+3. **The Central Limit Theorem:** Even though individual caffeine values are severely skewed, sample means of $N \ge 30$ are **symmetrical and normally distributed**.
+
+---
+
+## The Standard Error of the Mean
+
+The standard deviation of the sampling distribution is the **Standard Error (SE)**:
+
+$$SE = \frac{s}{\sqrt{n}}$$
+
+Comparing simulation vs. theoretical formula:
+
+```r
+# Empirical standard deviation across 1,000 simulated sample means:
+sd(means_30)
+#> [1] 31.84
+
+# Theoretical formula:
+sd(caffeine_pop) / sqrt(30)
+#> [1] 31.87
+```
+
+> **The Quadrupling Law of Research Design:** Because $n$ sits under a square root, **halving your standard error requires quadrupling your sample size.**
+
+---
+
+# Confidence Intervals
+
+### Replacing Point Estimates with Plausible Ranges
+
+---
+
+## What is a Confidence Interval?
+
+A point estimate ($\bar{x} = 6.38$ hrs) gives no indication of precision.
+
+A **95% Confidence Interval** provides a range of values that are plausible for the true parameter $\mu$:
+
+$$\text{Approximate 95% CI} = \bar{x} \pm 2 \times SE = \bar{x} \pm 1.96 \left(\frac{s}{\sqrt{n}}\right)$$
+
+```r
+t.test(first_sem$sleep_hours)$conf.int
+#> [1] 6.297464 6.462740
+#> attr(,"conf.level")
+#> [1] 0.95
+```
+
+We are 95% confident that the true average nocturnal sleep of graduate students lies between **6.30 and 6.46 hours**.
+
+---
+
+## Common Misconception: "Mean $\pm$ SE"
+
+Many theses report: *"Sleep averaged $6.38 \pm 0.04$ hours."*
+
+- Examiners often mistake this for a confidence interval.
+- $SE$ represents only **half** the width of an approximate 68% interval ($\pm 1 SE$).
+- A 95% interval requires approximately **$\pm 2 SE$**.
+
+> **Thesis Rule:** Always report the explicit confidence interval:
+> *"M = 6.38 hours, 95% CI [6.30, 6.46]."*
+
+---
+
+## Non-Parametric Bootstrap Confidence Intervals
+
+What if we need a confidence interval for a statistic with no tidy formula (e.g., the **median**)?
+
+The **Bootstrap Principle** (Efron, 1979): Resample the data *with replacement* thousands of times:
+
+```r
+set.seed(1)
+small_sample <- sample(caffeine_pop, 40)
+
+# Resample 2,000 medians with replacement:
+boot_medians <- replicate(2000, {
+  median(sample(small_sample, replace = TRUE))
+})
+
+# Percentile confidence interval:
+quantile(boot_medians, probs = c(0.025, 0.975))
+#>  2.5% 97.5% 
+#>   180   320 
+```
+
+The bootstrap requires zero distributional assumptions and works for medians, ratios, and correlation coefficients.
+
+---
+
+# The Logic of Hypothesis Testing
+
+### Demystifying p-Values through Permutations
+
+---
+
+## Testing RQ3: The Wellbeing Workshop
+
+Does attending the 6-week workshop improve graduate student wellbeing in Semester 2?
+
+```r
+semester2 <- semesters |>
+  filter(semester == 2) |>
+  left_join(students, join_by(student_id))
+
+observed_diff <- mean(semester2$wellbeing[semester2$workshop == "Invited"]) -
+                 mean(semester2$wellbeing[semester2$workshop == "Not invited"])
+
+observed_diff
+#> [1] 5.21
+```
+
+Invited students scored **5.21 points higher**.
+
+- Is 5.21 a real therapeutic improvement?
+- Or is it merely random luck in who received an invitation?
+
+---
+
+## The Permutation Test: Building the Null Distribution
+
+If the workshop does nothing ($H_0$), the labels "Invited" and "Not invited" are meaningless stickers.
+
+We can shuffle the labels 5,000 times to see what differences pure chance creates:
+
+```r
+set.seed(2026)
+
+null_differences <- replicate(5000, {
+  shuffled_labels <- sample(semester2$workshop)
+  mean(semester2$wellbeing[shuffled_labels == "Invited"]) -
+  mean(semester2$wellbeing[shuffled_labels == "Not invited"])
+})
+```
+
+---
+
+## Visualizing the Permutation Test
+
+```r
+ggplot(data.frame(gap = null_differences), aes(x = gap)) +
+  geom_histogram(binwidth = 0.25, fill = "grey75", colour = "white") +
+  geom_vline(xintercept = observed_diff, colour = "firebrick", linewidth = 1.2) +
+  labs(
+    title = "Permutation Test: 5,000 Random Shuffles of Workshop Labels",
+    subtitle = "Red Line = Observed Difference (+5.21 points)",
+    x = "Difference in Group Means Under H0", y = "Count"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+```
+               Null Distribution (Pure Chance)
+                          +---+
+                        /       \
+                     --+---------+--               | Observed (+5.21)
+                    -3     0    +3                 |
+```
+
+In 5,000 shuffles, pure chance never produced a difference of $+5.21$.
+
+$$p = \frac{\text{Count}(\ge |5.21|)}{5000} = \frac{0}{5000} \rightarrow p < .001$$
+
+---
+
+## Contrast: Permutation on GPA by Gender
+
+Testing an association where no difference is expected:
+
+```r
+gpa_diff <- mean(first_sem$gpa[first_sem$gender == "Female"], na.rm = TRUE) -
+            mean(first_sem$gpa[first_sem$gender == "Male"], na.rm = TRUE)
+
+gpa_null <- replicate(5000, {
+  shuffled <- sample(first_sem$gender)
+  mean(first_sem$gpa[shuffled == "Female"], na.rm = TRUE) -
+  mean(first_sem$gpa[shuffled == "Male"], na.rm = TRUE)
+})
+
+c(Observed = gpa_diff, p_value = mean(abs(gpa_null) >= abs(gpa_diff)))
+```
+
+```
+  Observed    p_value 
+0.01242105 0.62880000 
+```
+
+A difference of $0.01$ GPA points is generated by pure chance in **63% of shuffles**. We retain $H_0$.
+
+---
+
+## What a p-Value Actually Means
+
+```
++-------------------------------------------------------------+
+| WHAT A p-VALUE IS:                                          |
+| The probability of obtaining data as extreme as (or more    |
+| extreme than) what was observed, ASSUMING THAT H0 IS TRUE.  |
++-------------------------------------------------------------+
+| WHAT A p-VALUE IS NOT:                                      |
+| 1. NOT the probability that H0 is true.                     |
+| 2. NOT the probability that your hypothesis H1 is true.     |
+| 3. NOT the probability that the result happened by chance.  |
+| 4. NOT a measure of the size or importance of an effect!    |
++-------------------------------------------------------------+
+```
+
+---
+
+# Decision Errors & Statistical Power
+
+### False Alarms and Missed Discoveries
+
+---
+
+## Type I and Type II Errors
+
+```
+                                  TRUE REALITY IN POPULATION
+                             H0 is True (No effect)   H1 is True (Real effect)
+Decision: Reject H0          TYPE I ERROR (alpha)     CORRECT DECISION
+                             (False Positive / Alarm) (Statistical Power = 1-beta)
+
+Decision: Retain H0          CORRECT DECISION         TYPE II ERROR (beta)
+                             (True Negative)          (False Negative / Miss)
+```
+
+- **$\alpha$ (Significance Level):** Typically set to $.05$. In 5% of tests where nothing happens, we get a false alarm.
+- **$\beta$ (Miss Rate):** Typically targeted at $.20$.
+- **Power ($1 - \beta$):** Probability of detecting a real effect (Target: $80\%$).
+
+---
+
+## Simulating the 5% False Alarm Rate
+
+Splitting 600 students into two random groups 1,000 times on pure noise:
+
+```r
+set.seed(7)
+false_alarms <- replicate(1000, {
+  fake_group <- sample(rep(c("A", "B"), each = 300))
+  t.test(first_sem$wellbeing ~ fake_group)$p.value < 0.05
+})
+
+mean(false_alarms)
+#> [1] 0.048   <-- Exactly ~5% false alarms occur by chance!
+```
+
+---
+
+## The Danger of Multiple Testing
+
+What happens if you run 20 independent tests on variables where $H_0$ is true?
+
+$$P(\text{At least 1 false alarm}) = 1 - (1 - \alpha)^k = 1 - (0.95)^{20} \approx 64.2\%$$
+
+```r
+set.seed(8)
+multi_test_sim <- replicate(1000, {
+  p_vals <- replicate(20, t.test(rnorm(30), rnorm(30))$p.value)
+  any(p_vals < 0.05)
+})
+
+mean(multi_test_sim)
+#> [1] 0.651
+```
+
+> **Warning:** A thesis that tests 20 uncorrected relationships has a **65% chance of finding a false "discovery"** that disappears upon replication.
+
+---
+
+# The t-Test Family
+
+### One-Sample, Two-Sample, and Paired Comparisons
+
+---
+
+## One-Sample t-Test: Testing RQ2 (Sleep Threshold)
+
+Do graduate students sleep less than the recommended 7.0 hours?
+
+$$H_0: \mu = 7.0 \quad \text{vs.} \quad H_1: \mu \neq 7.0$$
+
+$$t = \frac{\bar{x} - \mu_0}{s / \sqrt{n}} = \frac{6.38 - 7.00}{1.02 / \sqrt{588}} = -14.77$$
+
+```r
+sleep_test <- t.test(first_sem$sleep_hours, mu = 7.0)
+sleep_test
+```
+
+```
+	One Sample t-test
+
+data:  first_sem$sleep_hours
+t = -14.768, df = 587, p-value < 2.2e-16
+alternative hypothesis: true mean is not equal to 7
+95 percent confidence interval:
+ 6.297464 6.462740
+sample estimates:
+mean of x 
+ 6.380102 
+```
+
+Students sleep an average of $6.38$ hours—statistically significantly lower than 7.0 ($t(587) = -14.77, p < .001$).
+
+---
+
+## Two-Sample t-Test (Welch's Test): Testing RQ3
+
+Comparing Semester 2 wellbeing across Workshop vs Control groups:
+
+```r
+workshop_test <- t.test(wellbeing ~ workshop, data = semester2)
+workshop_test
+```
+
+```
+	Welch Two Sample t-test
+
+data:  wellbeing by workshop
+t = 5.7629, df = 596.88, p-value = 1.391e-08
+alternative hypothesis: true difference in means between group Invited and group Not invited is not equal to 0
+95 percent confidence interval:
+ 3.435431 6.984569
+sample estimates:
+    mean in group Invited mean in group Not invited 
+                 65.21000                  60.00000 
+```
+
+- **Welch's $t$-test** does not assume equal variances between groups.
+- The 5.21 point gain is highly significant ($t(596.9) = 5.76, p < .001$).
+- Because students were **randomly assigned**, we can state that the workshop **caused** this gain!
+
+---
+
+## Standardized Effect Size: Cohen's d
+
+A 5.21-point difference on a 0–100 scale: is that large or small?
+
+$$d = \frac{\bar{x}_1 - \bar{x}_2}{s_{\text{pooled}}} = \frac{65.21 - 60.00}{11.08} = 0.47$$
+
+```r
+inv <- semester2$wellbeing[semester2$workshop == "Invited"]
+ctl <- semester2$wellbeing[semester2$workshop == "Not invited"]
+
+d_val <- (mean(inv) - mean(ctl)) / sqrt((var(inv) + var(ctl)) / 2)
+round(d_val, 2)
+#> [1] 0.47
+```
+
+### Cohen's (1988) Effect Size Benchmarks:
+- $d = 0.20$: Small
+- $d = 0.50$: Medium
+- $d = 0.80$: Large
+
+The workshop produced a **moderate effect** ($d = 0.47$)—substantively meaningful for a 6-week brief intervention.
+
+---
+
+## Paired t-Test: Measuring Change Within Subjects
+
+Did the **invited students themselves** improve between Semester 1 and Semester 2?
+
+```r
+library(tidyr)
+
+invited_paired <- semesters |>
+  filter(semester %in% c(1, 2)) |>
+  left_join(students, join_by(student_id)) |>
+  filter(workshop == "Invited") |>
+  select(student_id, semester, wellbeing) |>
+  pivot_wider(names_from = semester, values_from = wellbeing, names_prefix = "sem_")
+
+t.test(invited_paired$sem_2, invited_paired$sem_1, paired = TRUE)
+```
+
+```
+	Paired t-test
+
+data:  invited_paired$sem_2 and invited_paired$sem_1
+t = 6.8421, df = 299, p-value = 3.912e-11
+mean of the differences 
+                   4.81 
+```
+
+- Paired tests eliminate between-person variance, increasing statistical power.
+- **Methodological Warning:** The paired test alone cannot prove causality because it lacks a control group (students might simply feel better in Semester 2).
+
+---
+
+# Non-Parametric Rank Tests
+
+### What to Do When Normality Assumptions Fail
+
+---
+
+## Mann-Whitney U Test (Wilcoxon Rank-Sum)
+
+When data is ordinal or severely skewed with small $N$, compare **ranks** instead of raw values:
+
+```r
+# Testing skewed caffeine intake across genders:
+wilcox.test(caffeine_mg ~ gender, data = first_sem)
+```
+
+```
+	Wilcoxon rank sum test with continuity correction
+
+data:  caffeine_mg by gender
+W = 44210, p-value = 0.4821
+alternative hypothesis: true location shift is not equal to 0
+```
+
+- Medians: Females = 230 mg, Males = 250 mg.
+- $W = 44210, p = .482$ (no significant difference in caffeine intake ranks).
+
+---
+
+## Wilcoxon Signed-Rank Test (Paired Non-Parametric)
+
+The non-parametric counterpart to the paired $t$-test:
+
+```r
+wilcox.test(invited_paired$sem_2, invited_paired$sem_1, paired = TRUE)
+```
+
+```
+	Wilcoxon signed rank test with continuity correction
+
+data:  invited_paired$sem_2 and invited_paired$sem_1
+V = 32840, p-value = 1.124e-10
+```
+
+Both parametric ($t = 6.84$) and non-parametric ($V = 32840$) tests reach the identical conclusion ($p < .001$).
+
+---
+
+# Categorical Inference: Chi-Square ($\chi^2$) Tests
+
+### Comparing Observed Frequencies with Expected Frequencies
+
+---
+
+## Chi-Square Goodness-of-Fit Test
+
+Testing whether a single categorical variable matches expected population proportions (e.g., 50/50 gender balance):
+
+$$\chi^2 = \sum \frac{(O - E)^2}{E}$$
+
+```r
+table(students$gender)
+#> Female   Male 
+#>    312    288 
+
+chisq.test(table(students$gender), p = c(0.5, 0.5))
+```
+
+```
+	Chi-squared test for given probabilities
+
+data:  table(students$gender)
+X-squared = 0.96, df = 1, p-value = 0.3272
+```
+
+$\chi^2(1) = 0.96, p = .327$. The sample does not deviate significantly from a 50/50 ratio.
+
+---
+
+## Chi-Square Test of Independence
+
+Testing whether two categorical variables are associated:
+
+```r
+job_tab <- table(students$employment, students$considering_dropout)
+job_tab
+```
+
+```
+                No Yes
+  None         276  42
+  Part-time    119  21
+  Full-time    107  35
+```
+
+```r
+job_test <- chisq.test(job_tab)
+job_test
+```
+
+```
+	Pearson's Chi-squared test
+
+data:  job_tab
+X-squared = 8.4121, df = 2, p-value = 0.01491
+```
+
+Employment and dropout thoughts are significantly associated ($\chi^2(2) = 8.41, p = .015$).
+
+---
+
+## Inspecting Expected Cell Counts
+
+Chi-square tests require that all expected cell frequencies exceed $5$:
+
+```r
+round(job_test$expected, 1)
+```
+
+```
+                  No  Yes
+  None         266.1 51.9
+  Part-time    117.1 22.9
+  Full-time    118.8 23.2
+```
+
+All expected counts are $> 20$. If any expected count falls below 5, use **Fisher's Exact Test** (`fisher.test()`).
+
+---
+
+# Selecting the Right Statistical Test
+
+### The Master Inference Decision Tree
+
+---
+
+## Inference Decision Matrix
+
+```
+                      WHAT IS THE OUTCOME VARIABLE?
+                                    |
+          +-------------------------+-------------------------+
+          |                                                   |
+      NUMERIC                                            CATEGORICAL
+          |                                                   |
+How many groups to compare?                       How many categorical variables?
+  - 1 Group vs Mu  ==> One-Sample t-test            - 1 Variable ==> Chi-Square Goodness of Fit
+  - 2 Independent  ==> Two-Sample t-test (Welch)    - 2 Variables==> Chi-Square Independence
+  - 2 Paired/PrePost=> Paired t-test
+  - 3+ Groups      ==> One-Way ANOVA (Chapter 8)
+  
+  [If severely skewed + small N]:
+  - 2 Independent  ==> Mann-Whitney U test
+  - 2 Paired       ==> Wilcoxon Signed-Rank test
+```
+
+---
+
+# Writing APA Results Sections
+
+### Communicating Statistical Evidence with Rigour
+
+---
+
+## Reporting Guidelines for Statistical Results
+
+### Four Rules for Thesis Writing:
+1. **Never Report a $p$-Value Alone:** Always state means, SDs, and confidence intervals.
+2. **Report Exact $p$-Values:** Write $p = .015$ or $p = .048$; reserve $p < .001$ for extremely small numbers.
+3. **Include Effect Sizes:** Always accompany $t$-tests with Cohen's $d$.
+4. **Link Back to the Substantive Hypothesis:** State clearly whether $H_0$ was rejected.
+
+---
+
+## Publication-Ready Thesis Examples
+
+### One-Sample t-Test:
+> "Graduate students reported sleeping significantly fewer hours than the recommended 7.0-hour threshold ($M = 6.38$, $SD = 1.02$), $t(587) = -14.77$, $p < .001$, $95\%\text{ CI } [6.30, 6.46]$."
+
+### Two-Sample t-Test:
+> "Students randomly assigned to the wellbeing workshop demonstrated significantly higher wellbeing at the conclusion of Semester 2 ($M = 65.21$, $SD = 10.95$) than uninvited control participants ($M = 60.00$, $SD = 11.20$), representing a moderate intervention effect, $t(596.9) = 5.76$, $p < .001$, $d = 0.47$, $95\%\text{ CI } [3.44, 6.98]$. The null hypothesis was rejected."
+
+### Chi-Square Test:
+> "Thoughts of program dropout differed significantly by employment status, $\chi^2(2, N = 600) = 8.41$, $p = .015$. Students holding full-time jobs exhibited the highest prevalence of considering dropout ($24.6\%$), compared to $15.0\%$ of part-time workers and $13.2\%$ of non-employed peers."
+
+---
+
+## Statistical Inference Checklist
+
+Before finalizing your thesis results chapter:
+
+- [ ] **Data Independence Checked:** Observations represent distinct participants (or accounted for via paired design).
+- [ ] **Two-Tailed Standard:** Used conservative two-tailed tests unless strictly justified a priori.
+- [ ] **Welch Default:** Used Welch's two-sample test (did not assume equal variances).
+- [ ] **Effect Sizes Calculated:** Cohen's $d$ reported alongside all significant $t$-tests.
+- [ ] **Assumption Violations Addressed:** Non-parametric tests deployed for ordinal/severely skewed small datasets.
+- [ ] **Expected Cell Counts Verified:** Confirmed all expected cells $\ge 5$ before reporting $\chi^2$.
+- [ ] **No Causal Overreach:** Causal language restricted strictly to randomized experimental manipulations.
+
+---
+
+## Summary of Core R Inference Functions
+
+| Test | Function | Example |
+|---|---|---|
+| One-sample t-test | `t.test()` | `t.test(x, mu = 7)` |
+| Two-sample t-test | `t.test()` | `t.test(y ~ group, data = df)` |
+| Paired t-test | `t.test()` | `t.test(post, pre, paired = TRUE)` |
+| Mann-Whitney U | `wilcox.test()` | `wilcox.test(y ~ group, data = df)` |
+| Wilcoxon Signed-Rank | `wilcox.test()` | `wilcox.test(post, pre, paired = TRUE)` |
+| Chi-square Goodness of Fit | `chisq.test()` | `chisq.test(table(x), p = c(0.5, 0.5))` |
+| Chi-square Independence | `chisq.test()` | `chisq.test(table(x, y))` |
+| Power calculation | `power.t.test()` | `power.t.test(n = 300, delta = 5, sd = 11)` |
+
+---
+
+# Questions & Hands-On Practice
+
+Open the Chapter 7 Interactive Playground:
+[playground/chapter07.html](../playground/chapter07.html)
+
+**Next Lecture:**
+*Chapter 8 · Comparing Many Groups and Modeling Relationships: ANOVA and Multiple Regression*

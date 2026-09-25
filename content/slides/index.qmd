@@ -19,6 +19,7 @@ These presentation decks accompany the book chapters, designed for classroom ins
 | **Chapter 4** | Data Visualization with ggplot2 | Interactive RevealJS (55 slides) | [**Open Presentation Deck**](04-data-visualization.html) · [Source](04-data-visualization.qmd) |
 | **Chapter 5** | Framing Research Questions and Analysis Plan | Interactive RevealJS (58 slides) | [**Open Presentation Deck**](05-research-question.html) · [Source](05-research-question.qmd) |
 | **Chapter 6** | Descriptive Statistics and Exploratory Data Analysis | Interactive RevealJS (56 slides) | [**Open Presentation Deck**](06-descriptive-statistics.html) · [Source](06-descriptive-statistics.qmd) |
+| **Chapter 7** | Hypothesis Testing & Statistical Inference | Interactive RevealJS (62 slides) | [**Open Presentation Deck**](07-hypothesis-testing.html) · [Source](07-hypothesis-testing.qmd) |
 
 ### Using the Slide Decks
 
