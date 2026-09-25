@@ -26,6 +26,7 @@ These presentation decks accompany the book chapters, designed for classroom ins
 | **Chapter 11** | Machine Learning Foundations: Prediction vs. Inference | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](11-machine-learning.html) · [Source](11-machine-learning.qmd) |
 | **Chapter 12** | Classification Models & Supervised Learning | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](12-classification.html) · [Source](12-classification.qmd) |
 | **Chapter 13** | Predictive Regression & Regularization | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](13-predictive-regression.html) · [Source](13-predictive-regression.qmd) |
+| **Chapter 14** | Advanced Clustering & Unsupervised Learning | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](14-advanced-clustering.html) · [Source](14-advanced-clustering.qmd) |
 
 ### Using the Slide Decks
 
