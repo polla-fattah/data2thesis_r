@@ -1,0 +1,107 @@
+project:
+  type: website
+  output-dir: _site
+  pre-render: copy_resources.ts
+  render:
+    - index.qmd
+    - "content/book/*.qmd"
+    - "content/playground/*.qmd"
+    - "content/slides/*.qmd"
+    - "content/slides/*.md"
+  resources:
+    - downloads/
+    - content/playground/*.zip
+    - content/playground/*.csv
+
+website:
+  title: "From Data to Thesis"
+  site-url: https://polla-fattah.github.io/R4NTR
+  repo-url: https://github.com/polla-fattah/R4NTR
+  page-navigation: true
+  search: true
+  navbar:
+    left:
+      - text: Home
+        href: index.qmd
+      - text: Book
+        href: content/book/index.qmd
+      - text: Playground
+        href: content/playground/index.qmd
+      - text: Slides
+        href: content/slides/index.qmd
+      - text: Get the data
+        href: index.qmd#get-the-data
+    right:
+      - icon: github
+        href: https://github.com/polla-fattah/R4NTR
+        aria-label: GitHub
+  sidebar:
+    - id: book
+      title: "From Data to Thesis"
+      style: docked
+      search: true
+      contents:
+        - content/book/index.qmd
+        - section: "Foundations of R Programming and Data Handling"
+          contents:
+            - content/book/01-getting-started.qmd
+            - content/book/02-data-structures.qmd
+            - content/book/03-data-manipulation.qmd
+            - content/book/04-data-visualization.qmd
+        - section: "Statistical Analysis for Research"
+          contents:
+            - content/book/05-research-question.qmd
+            - content/book/06-descriptive-statistics.qmd
+            - content/book/07-hypothesis-testing.qmd
+            - content/book/08-anova-regression.qmd
+            - content/book/09-multivariate.qmd
+            - content/book/10-mixed-models.qmd
+        - section: "Machine Learning with R"
+          contents:
+            - content/book/11-machine-learning.qmd
+            - content/book/12-classification.qmd
+            - content/book/13-predictive-regression.qmd
+            - content/book/14-advanced-clustering.qmd
+            - content/book/15-neural-networks.qmd
+            - content/book/16-time-series.qmd
+        - section: "Reproducible Research and Applications"
+          contents:
+            - content/book/17-reproducible-research.qmd
+            - content/book/18-ai.qmd
+            - content/book/19-putting-it-together.qmd
+        - content/book/references.qmd
+        - section: "Appendices"
+          contents:
+            - content/book/a-installation.qmd
+            - content/book/b-glossary.qmd
+            - content/book/c-packages.qmd
+            - content/book/d-common-errors.qmd
+            - content/book/e-resources.qmd
+  page-footer:
+    left: "© Polla Fattah. *From Data to Thesis: Research Data Analysis with R*."
+    right: "Built with [Quarto](https://quarto.org)"
+
+bibliography: content/book/references.bib
+
+execute:
+  freeze: auto
+  warning: false
+  message: false
+
+format:
+  html:
+    theme:
+      light: [cosmo, styles/light.scss, styles/theme.scss]
+      dark: [darkly, styles/dark.scss, styles/theme.scss]
+    fig-align: center
+    grid:
+      sidebar-width: 320px
+      body-width: 780px
+      margin-width: 240px
+    include-after-body:
+      text: |
+        <script>
+          // Chapter titles are shortened to one line in the sidebar; show the full title on hover
+          document.querySelectorAll(".sidebar-navigation .menu-text, .sidebar-navigation .sidebar-item-text")
+            .forEach(function (el) { el.title = el.textContent.replace(/\s+/g, " ").trim(); });
+        </script>

@@ -6,16 +6,33 @@ A practical guide to analysing research data with R, for researchers with no pro
 
 ## Repository layout
 
-| Folder | Contents |
+```text
+R4NTR/
+├── content/book/        chapter and appendix manuscript (.qmd)
+├── content/playground/  practical chapter exercises and datasets
+├── content/slides/      lecture decks for each chapter
+├── styles/              custom styling (SCSS)
+├── downloads/           case study datasets and data2thesis package
+├── _freeze/             cached computational results for fast rendering
+├── index.qmd            landing page
+├── _quarto.yml          unified Quarto website configuration
+└── build.ps1            unified build and serve script
+```
+
+| Folder / File | Contents |
 |---|---|
-| `book/` | The book (Quarto book project): one `.qmd` file per chapter and appendix |
-| `site/` | The website around the book (Quarto website project): landing page and playground |
-| `data/` | Elaf's dataset (generated), its specification, and the built `data2thesis` package |
-| `data-raw/` | Scripts that generate and check the data, build the package, and build the playground projects |
+| `content/book/` | The book chapters and appendices (`.qmd`) |
+| `content/playground/` | Practical interactive exercises and datasets (`.qmd`, `.zip`, `.csv`) |
+| `content/slides/` | Lecture presentation decks (`.md`, `.qmd`) |
+| `styles/` | Custom SCSS styling (light and dark mode) |
+| `downloads/` | Built case-study data files and `data2thesis` package |
+| `_freeze/` | Cached execution results so rebuilding requires no R run |
+| `index.qmd` | The landing page of the website |
+| `_quarto.yml` | Unified Quarto configuration |
+| `build.ps1` | The PowerShell build and preview script |
+| `data/` | Case study raw datasets and specification |
+| `data-raw/` | Scripts that generate data and build the packages/zips |
 | `data2thesis/` | Source of the `data2thesis` R package |
-| `playground-src/` | Source of the downloadable playground project for each chapter |
-| `archive/jekyll/` | The earlier Jekyll version of the site, including the first chapter drafts (source material for the rewrites) |
-| `plan.md` | The revision plan: decisions, instructions for every chapter, and the order of work |
 
 ## Building and running the site locally
 
@@ -25,27 +42,18 @@ Requires [Quarto](https://quarto.org), R, and Python (only for the local web ser
 .\build.ps1
 ```
 
-It renders the website, then the book (which is published inside the website), and then serves the result at <http://localhost:4300>. Leave the terminal open while you browse; press Ctrl+C to stop the server. If Windows refuses to run the script, use `powershell -ExecutionPolicy Bypass -File .\build.ps1`.
+It renders the entire website (landing page, book, playground, and slides) in a single unified pass, and serves the result at <http://localhost:4300>. Leave the terminal open while you browse; press Ctrl+C to stop the server. If Windows refuses to run the script, use `powershell -ExecutionPolicy Bypass -File .\build.ps1`.
 
 | Command | What it does |
 |---|---|
-| `.\build.ps1` | Build the website and the book, then serve them |
-| `.\build.ps1 -NoBuild` | Serve what is already built (the quickest way to reopen the site) |
+| `.\build.ps1` | Build the entire site (book, playground, slides) and serve |
+| `.\build.ps1 -NoBuild` | Serve what is already built |
 | `.\build.ps1 -NoServe` | Build only |
 | `.\build.ps1 -Chapter 07-hypothesis-testing.qmd` | Render one book chapter only, then serve |
 | `.\build.ps1 -Playground` | Also rebuild the playground download zips (after changing `playground-src/`) |
 | `.\build.ps1 -Port 4400` | Serve on another port |
 
-The script expects Quarto in `C:\Program Files\Quarto` and R 4.4.3 in `C:\Program Files\R\R-4.4.3`; change the two paths at the top of `build.ps1` if yours differ.
-
-On other systems, or without the script, the same steps are:
-
-```bash
-cd site && quarto render && cd ../book && quarto render && cd ..
-python -m http.server 4300 --directory _site
-```
-
-Chapters whose code has not changed are not run again: their results are stored in `site/_freeze/` and `book/_freeze/`, so a full build takes a few minutes. Commit these folders after changing any code, so the site can be published by GitHub Actions (`.github/workflows/publish.yml`) without R.
+Chapters whose code has not changed are not re-executed: their results are stored in `_freeze/`, so a full build takes seconds. Commit `_freeze/` after changing code, so the site can be published by GitHub Actions (`.github/workflows/publish.yml`) without R.
 
 ## Outline
 

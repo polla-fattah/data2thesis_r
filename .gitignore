@@ -2,15 +2,19 @@
 
 # Quarto build output (regenerated on every build)
 _site/
-**/.quarto/
+.quarto/
 **/site_libs/
 # ...except inside _freeze, which Quarto needs to rebuild without R
 !**/_freeze/site_libs/
 *_files/
-site/index.html
-site/playground/*.html
-book/*.html
+*.html
+content/book/*.html
+content/playground/*.html
+content/slides/*.html
 
-# Copied in by site/copy_resources.ts before each build
-site/playground/*.csv
-site/downloads/
+# Copied in by copy_resources.ts before each build
+content/playground/*.csv
+downloads/
+
+/.quarto/
+**/*.quarto_ipynb

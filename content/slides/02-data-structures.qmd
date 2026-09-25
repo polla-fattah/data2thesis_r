@@ -1,0 +1,1202 @@
+---
+title: "Data Structures and Data Import"
+subtitle: "Managing Measurements in R"
+author: "Dr. Polla Fattah"
+institute: "From Data to Thesis: Research Data Analysis with R"
+format:
+  revealjs:
+    theme: [default, ../../styles/theme.scss]
+    slide-number: true
+    preview-links: auto
+    chalkboard: true
+    transition: slide
+    highlight-style: github
+    code-line-numbers: false
+    width: 1200
+    height: 750
+execute:
+  freeze: auto
+---
+
+# Data Structures and Data Import
+
+### Managing Measurements in R
+
+**Chapter 2 · From Data to Thesis**
+
+Dr. Polla Fattah
+
+---
+
+## Research Data in the Real World
+
+Empirical research rarely arrives in a single, perfectly formatted file.
+
+In Elaf's graduate wellbeing study:
+
+- The online survey tool exported a messy **Excel workbook** (`.xlsx`).
+- The university registrar sent semester academic records as **CSV files** (`.csv`).
+- A collaborating supervisor conducted an earlier pilot in **SPSS** (`.sav`).
+
+How do we bring these diverse formats into R without losing variable meanings, question wordings, or category labels?
+
+---
+
+## What We Will Explain Today
+
+By the end of this lecture deck, you will be able to:
+
+- Identify the **unit of analysis** and prevent hierarchical aggregation errors.
+- Manipulate **vectors** and avoid catastrophic **silent type coercion**.
+- Use **logical indexing** (`[ ]`) to subset observations with surgical precision.
+- Distinguish **nominal, ordinal, and interval** data and model them as **factors**.
+- Navigate **data frames**, **tibbles**, **matrices**, and **lists**.
+- Import and export **CSV, Excel, and SPSS** files while preserving variable labels.
+- Build an automated **research codebook** for your thesis methodology appendix.
+- Read and resolve R's four most common **error messages**.
+
+---
+
+## Data as Measurement: The Data Matrix
+
+Almost all empirical data begins as a rectangular matrix:
+
+```text
+               Variable 1        Variable 2        Variable 3
+             (Student Age)        (Faculty)      (Sleep Hours)
+           ┌─────────────────┬─────────────────┬───────────────┐
+  Case 1   │       31        │ Health Sciences │      6.5      │
+           ├─────────────────┼─────────────────┼───────────────┤
+  Case 2   │       28        │    Education    │      7.0      │
+           ├─────────────────┼─────────────────┼───────────────┤
+  Case 3   │       33        │   Humanities    │      5.5      │
+           └─────────────────┴─────────────────┴───────────────┘
+```
+
+- Each **Row** is an individual **Case** (the entity being measured).
+- Each **Column** is a **Variable** (one attribute measured on every case).
+- Each **Cell** holds a single empirical **Value**.
+
+---
+
+## What is the Unit of Analysis?
+
+The **unit of analysis** is the specific entity that constitutes one row in your data table:
+
+- Is it a **student**?
+- Is it a **semester measurement**?
+- Is it a **supervisor**?
+- Is it a **university department**?
+
+Confusing the unit of analysis is one of the most severe methodological errors in graduate theses.
+
+---
+
+## Multiple Units in One Study
+
+In Elaf's research, two tables describe the same students at different hierarchical levels:
+
+### Table A: `students`
+One row per student ($N = 600$).
+
+### Table B: `semesters`
+One row per student **per semester** ($N = 2,326$).
+
+A question about student demographics must use `students`.
+
+A question about changes over time requires `semesters` and models that account for repeated observations (Chapter 10).
+
+---
+
+## Inspecting the Repeated Unit
+
+```r
+head(semesters, n = 4)
+```
+
+```
+  student_id semester sleep_hours study_hours wellbeing gpa
+1      S0001        1         7.2        18.5        58 3.2
+2      S0001        2         8.4        14.0        63 3.3
+3      S0001        3         7.8        16.0        61 3.2
+4      S0001        4         7.2        17.5        59 3.3
+```
+
+Notice that student `S0001` appears four times: once for each semester.
+
+If you averaged this table ignoring student IDs, you would count `S0001` four times!
+
+---
+
+## The Foundational Atom of R: The Vector
+
+A single variable's values are stored in a **vector**:
+
+```r
+sleep <- c(6.5, 7, 5.5, 8, 6)
+sleep
+```
+
+```
+[1] 6.5 7.0 5.5 8.0 6.0
+```
+
+Vectors are the foundational building block of R.
+
+A vector has two defining properties:
+
+1. **Length**: How many elements it contains (`length(sleep)` is $5$).
+2. **Homogeneity**: Every single element **must be of the exact same type**.
+
+---
+
+## The Silent Coercion Trap
+
+What happens if you combine different data types into one vector?
+
+```r
+mixed <- c(6.5, "seven", 5.5)
+mixed
+```
+
+```
+[1] "6.5"   "seven" "5.5"  
+```
+
+```r
+class(mixed)
+```
+
+```
+[1] "character"
+```
+
+Notice the quotes around `"6.5"`!
+
+R silently converts **every number in the vector to text**.
+
+---
+
+## Why Silent Coercion Ruins Analyses
+
+If a single participant types `"seven"` or `"unknown"` into a numeric survey field:
+
+```r
+mean(mixed)
+```
+
+```
+Warning message:
+In mean.default(mixed) : argument is not numeric or logical: returning NA
+[1] NA
+```
+
+- R cannot average text strings.
+- Because of one word, your entire numeric column becomes useless text.
+- Later in this lecture, we will inspect a real Excel survey export with this exact defect.
+
+---
+
+## Vectorized Arithmetic: Operating on the Whole
+
+In traditional languages, modifying every element requires an explicit loop.
+
+In R, mathematical operations are natively **vectorized**:
+
+```r
+# Convert hours of sleep to minutes in one step:
+sleep * 60
+```
+
+```
+[1] 390 420 330 480 360
+```
+
+The scalar `60` is automatically multiplied against every single element in `sleep`.
+
+---
+
+## Vectorized Comparisons
+
+Logical comparisons also operate across the entire vector simultaneously:
+
+```r
+# Which nights had less than the recommended 7 hours of sleep?
+sleep < 7
+```
+
+```
+[1]  TRUE FALSE  TRUE FALSE  TRUE
+```
+
+The output is a **logical vector** of identical length, where each position records the truth of that specific element.
+
+---
+
+## Summarizing Logical Vectors
+
+Remember: R counts `TRUE` as $1$ and `FALSE` as $0$.
+
+This enables two powerful analytical one-liners:
+
+```r
+# Count how many nights were short (< 7 hours):
+sum(sleep < 7)
+```
+
+```
+[1] 3
+```
+
+```r
+# Calculate the percentage / proportion of short nights:
+mean(sleep < 7)
+```
+
+```
+[1] 0.6
+```
+
+$60\%$ of recorded nights were short ($3$ out of $5$).
+
+---
+
+## Positional Indexing: Square Brackets `[ ]`
+
+To extract specific elements from a vector, use square brackets `[ ]`.
+
+Positions in R start at **$1$** (unlike Python or C which start at $0$):
+
+```r
+sleep[1]         # First night
+```
+
+```
+[1] 6.5
+```
+
+```r
+sleep[c(1, 3)]   # First and third nights
+```
+
+```
+[1] 6.5 5.5
+```
+
+```r
+sleep[-2]        # All nights EXCEPT the second
+```
+
+```
+[1] 6.5 5.5 8.0 6.0
+```
+
+---
+
+## Logical Indexing: Filtering by Condition
+
+Instead of position numbers, you can supply a logical vector (`TRUE`/`FALSE`) inside the brackets.
+
+R retains only the elements where the condition is `TRUE`:
+
+```r
+sleep[sleep < 7]
+```
+
+```
+[1] 6.5 5.5 6.0
+```
+
+Read this code aloud:
+
+> *"Take `sleep`, where `sleep` is less than 7."*
+
+This is **logical indexing**, the foundation of case selection in R.
+
+---
+
+## In-Place Value Replacement
+
+Square brackets on the **left side** of the assignment arrow update values in-place:
+
+Suppose the second night was incorrectly recorded as $7.0$, but the participant log confirmed $7.5$:
+
+```r
+sleep[2] <- 7.5
+sleep
+```
+
+```
+[1] 6.5 7.5 5.5 8.0 6.0
+```
+
+Only the second slot was updated; all other values remain intact.
+
+---
+
+## Modeling Categories: Factors
+
+Research variables are often qualitative categories: faculty, gender, treatment group, questionnaire Likert scales.
+
+In R, categories are modeled as **factors**:
+
+```r
+faculty <- factor(c("Education", "Humanities", "Education", "Health Sciences"))
+faculty
+```
+
+```
+[1] Education       Humanities      Education       Health Sciences
+Levels: Education Health Sciences Humanities
+```
+
+A factor looks like text, but internally R stores each category as an integer pointer mapped to a fixed dictionary of **levels**.
+
+---
+
+## Inspecting Factor Levels
+
+```r
+levels(faculty)
+```
+
+```
+[1] "Education"       "Health Sciences" "Humanities"     
+```
+
+```r
+table(faculty)
+```
+
+```
+      Education Health Sciences      Humanities 
+              2               1               1 
+```
+
+Notice the order of levels: by default, R sorts categories **alphabetically**.
+
+---
+
+## The Danger of Alphabetical Ordering
+
+Alphabetical ordering is harmless for unordered nominal categories like `faculty`.
+
+However, for **ordinal** variables, alphabetical ordering destroys statistical meaning:
+
+```r
+# Alphabetical order: Full-time job -> None -> Part-time job
+# "None" is trapped in the middle!
+```
+
+In tables and regression models, R treats the **first level** as the baseline comparison reference group.
+
+If your reference group is wrong, every regression coefficient will be inverted!
+
+---
+
+## Defining Explicit Level Order
+
+Always specify the natural hierarchy using the `levels` argument:
+
+```r
+employment <- factor(
+  c("None", "Full-time job", "Part-time job", "None"),
+  levels = c("None", "Part-time job", "Full-time job")
+)
+table(employment)
+```
+
+```
+         None Part-time job Full-time job 
+            2             1             1 
+```
+
+Now `None` is unambiguously the baseline group, followed by increasing levels of employment.
+
+---
+
+## Levels of Measurement and R Data Types
+
+| Measurement Level | Empirical Definition | R Data Type | Research Example |
+|---|---|---|---|
+| **Nominal** | Categories with no order | `factor` | Faculty, Gender |
+| **Ordinal** | Categories with rank order | `factor(..., levels=...)` | Employment status, Likert scale |
+| **Interval / Ratio** | Numbers with equal units | `numeric` (`double`/`integer`) | Age, GPA, Sleep hours |
+| **Binary Flag** | True / False indicator | `logical` | Invited to workshop (`TRUE`/`FALSE`) |
+
+Your choice of R data type dictates which statistical tests are mathematically legitimate (Chapter 5).
+
+---
+
+## The Core Research Structure: The Data Frame
+
+A **data frame** is a rectangular grid holding multiple variables across multiple cases:
+
+```r
+pilot <- data.frame(
+  student = c("S1", "S2", "S3", "S4"),
+  faculty = c("Education", "Humanities", "Education", "Health Sciences"),
+  sleep   = c(6.5, 7.5, 5.5, 8.0),
+  invited = c(TRUE, FALSE, TRUE, FALSE)
+)
+pilot
+```
+
+```
+  student         faculty sleep invited
+1      S1       Education   6.5    TRUE
+2      S2      Humanities   7.5   FALSE
+3      S3       Education   5.5    TRUE
+4      S4 Health Sciences   8.0   FALSE
+```
+
+---
+
+## Anatomy of a Data Frame
+
+A data frame is actually a collection of equal-length vectors:
+
+- Each **column** is a single vector, meaning all values in a column must share the same type.
+- Different **columns** can have completely different types (text, numbers, factors, logical flags).
+- Every column must have the **exact same number of rows**.
+
+---
+
+## Structural Inspection: `str()`
+
+The single most informative function to run on any new dataset is `str()` (*structure*):
+
+```r
+str(pilot)
+```
+
+```
+'data.frame':	4 obs. of  4 variables:
+ $ student: chr  "S1" "S2" "S3" "S4"
+ $ faculty: chr  "Education" "Humanities" "Education" "Health Sciences"
+ $ sleep  : num  6.5 7.5 5.5 8
+ $ invited: logi  TRUE FALSE TRUE FALSE
+```
+
+It instantly reveals:
+1. Total observations ($4$ rows) and variables ($4$ columns).
+2. The data type of every variable (`chr`, `num`, `logi`).
+3. A preview of the first few values.
+
+---
+
+## Selecting from Data Frames: `[Rows, Columns]`
+
+Square brackets on a data frame take two arguments separated by a comma:
+
+```text
+dataframe[ rows_to_keep , columns_to_keep ]
+```
+
+Leaving a position empty means: *"Keep ALL of them"*.
+
+```r
+pilot[2, ]                         # Row 2, all columns
+```
+
+```
+  student    faculty sleep invited
+2      S2 Humanities   7.5   FALSE
+```
+
+```r
+pilot[, c("student", "sleep")]     # All rows, selected columns
+```
+
+```
+  student sleep
+1      S1   6.5
+2      S2   7.5
+3      S3   5.5
+4      S4   8.0
+```
+
+---
+
+## Filtering Rows with Conditions
+
+Combine row indexing with a logical expression:
+
+```r
+pilot[pilot$sleep < 7, ]
+```
+
+```
+  student   faculty sleep invited
+1      S1 Education   6.5    TRUE
+3      S3 Education   5.5    TRUE
+```
+
+Read this expression:
+
+> *"From `pilot`, keep the rows where `pilot$sleep < 7`, and include all columns."*
+
+This is the R equivalent of SPSS's **Select Cases** dialog.
+
+---
+
+## Adding New Calculated Columns
+
+Assigning to a new column name adds it to the data frame:
+
+```r
+pilot$short_sleep <- pilot$sleep < 7
+pilot
+```
+
+```
+  student         faculty sleep invited short_sleep
+1      S1       Education   6.5    TRUE        TRUE
+2      S2      Humanities   7.5   FALSE       FALSE
+3      S3       Education   5.5    TRUE        TRUE
+4      S4 Health Sciences   8.0   FALSE       FALSE
+```
+
+The new variable `short_sleep` is now permanently attached to the dataset for subsequent modeling.
+
+---
+
+## Case Study: The Complete `students` Dataset
+
+Let us inspect the full research dataset from `data2thesis`:
+
+```r
+str(students)
+```
+
+```
+'data.frame':	600 obs. of  14 variables:
+ $ student_id         : chr  "S0001" "S0002" "S0003" "S0004" ...
+ $ supervisor_id      : chr  "SUP088" "SUP116" "SUP040" "SUP112" ...
+ $ age                : int  31 28 33 34 35 36 33 34 27 34 ...
+ $ gender             : chr  "Female" "Female" "Male" "Female" ...
+ $ faculty            : chr  "Health Sciences" "Education" "Education" ...
+ $ programme          : chr  "Master's" "PhD" "PhD" "Master's" ...
+ $ study_mode         : chr  "Full-time" "Full-time" "Full-time" ...
+ ...
+```
+
+Variables arrived from the CSV file as `chr` (text).
+
+Before analysis, categorical variables must be converted to factors.
+
+---
+
+## Converting to Factors
+
+```r
+students$faculty <- factor(students$faculty)
+levels(students$faculty)
+```
+
+```
+[1] "Education"       "Health Sciences" "Humanities"     
+[4] "Natural Sciences" "Social Sciences"
+```
+
+Now R recognizes `faculty` as a 5-level categorical factor.
+
+---
+
+## Filtering with Compound Logic
+
+How many PhD students in Health Sciences are in the study?
+
+We combine two conditions using the boolean **AND** operator `&`:
+
+```r
+hs_phd <- students[
+  students$faculty == "Health Sciences" & students$programme == "PhD", 
+]
+nrow(hs_phd)
+```
+
+```
+[1] 43
+```
+
+Exactly **43 students** meet both criteria simultaneously.
+
+---
+
+## Boolean Comparison Operators in R
+
+| Operator | Meaning | Example |
+|---|---|---|
+| `==` | Exactly equal to | `faculty == "Education"` |
+| `!=` | Not equal to | `programme != "PhD"` |
+| `<` / `>` | Less than / Greater than | `age > 30` |
+| `<=` / `>=` | Less than or equal / Greater than or equal | `sleep_hours >= 7` |
+| `&` | Logical AND (both must be true) | `age > 25 & gender == "Female"` |
+| `|` | Logical OR (at least one is true) | `faculty == "Education" | faculty == "Humanities"` |
+| `%in%` | Matches any element in a vector | `faculty %in% c("Education", "Humanities")` |
+
+---
+
+## Critical Bug Warning: `=` versus `==`
+
+- **Single `=`** is used for assigning argument values inside functions (`mean(x, na.rm = TRUE)`).
+- **Double `==`** is a comparison test: *"Is the left side equal to the right side?"*
+
+```r
+# DANGEROUS MISTAKE:
+students[students$programme = "PhD", ]
+# Error: unexpected '=' in ...
+```
+
+Always use `==` when filtering data.
+
+---
+
+## Visual Inspection: `View()`
+
+In RStudio, you can inspect any data frame in a familiar spreadsheet viewer:
+
+```r
+View(students)
+```
+
+- Opens an interactive grid tab in the Source pane.
+- Allows sorting columns, visual scrolling, and ad-hoc searching.
+- **Rule of Reproducibility**: `View()` is strictly for human inspection. Never attempt to edit data cells by hand in the viewer!
+
+---
+
+## Matrices: Two-Dimensional Grids of One Type
+
+A **matrix** is a rectangular grid where every cell has the **same data type** (usually numeric).
+
+Matrices are rarely constructed manually, but many statistical functions output matrices.
+
+A classic example is the **correlation matrix** (`cor()`):
+
+```r
+first_sem <- semesters[semesters$semester == 1, ]
+vars <- first_sem[, c("gpa", "sleep_hours", "study_hours", "wellbeing")]
+
+correlations <- cor(vars, use = "complete.obs")
+round(correlations, 2)
+```
+
+```
+             gpa sleep_hours study_hours wellbeing
+gpa         1.00        0.28        0.31      0.34
+sleep_hours 0.28        1.00       -0.08      0.46
+study_hours 0.31       -0.08        1.00      0.12
+wellbeing   0.34        0.46        0.12      1.00
+```
+
+---
+
+## Indexing Matrices
+
+Values are extracted from matrices using `[row, column]` indexing:
+
+```r
+# Extract correlation between sleep hours and wellbeing:
+correlations["sleep_hours", "wellbeing"]
+```
+
+```
+[1] 0.4611082
+```
+
+In Chapter 6 and 8, we will explore why sleep duration and wellbeing correlate at $r = 0.46$.
+
+---
+
+## Lists: The Universal Container
+
+A **list** is a flexible container whose elements can be anything:
+
+Vectors of different lengths, matrices, data frames, or even other lists!
+
+```r
+student_profile <- list(
+  id        = "S0001",
+  faculty   = "Health Sciences",
+  semester_sleep = c(7.2, 8.4, 7.8, 7.2),
+  completed = TRUE
+)
+```
+
+```r
+student_profile$semester_sleep
+```
+
+```
+[1] 7.2 8.4 7.8 7.2
+```
+
+---
+
+## Why Lists Matter: Statistical Test Results
+
+When you run a statistical test in R, the result is returned as a **list**:
+
+```r
+# Test whether student sleep in semester 1 differs from 7.0 hours:
+test_result <- t.test(first_sem$sleep_hours, mu = 7)
+names(test_result)
+```
+
+```
+ [1] "statistic"   "parameter"   "p.value"     "conf.int"    "estimate"   
+ [6] "null.value"  "stderr"      "alternative" "method"      "data.name"  
+```
+
+To extract a specific statistical value for your thesis text or report:
+
+```r
+test_result$p.value
+```
+
+```
+[1] 0.003418291
+```
+
+```r
+test_result$estimate
+```
+
+```
+mean of x 
+ 6.842833 
+```
+
+---
+
+## Importing Data into R
+
+R provides specialized functions for every major scientific data format:
+
+```text
+CSV (Plain text)    ──► read.csv() or readr::read_csv()
+Excel (.xlsx, .xls) ──► readxl::read_excel()
+SPSS (.sav)         ──► haven::read_sav()
+Stata (.dta)        ──► haven::read_dta()
+```
+
+Every import function reads the external file and returns a clean **data frame** or **tibble**.
+
+---
+
+## Importing CSV Files
+
+CSV (*Comma-Separated Values*) is the universal open standard for data exchange:
+
+```r
+# Standard import:
+semester_data <- read.csv("semesters.csv")
+head(semester_data, n = 2)
+```
+
+```
+  student_id semester sleep_hours study_hours wellbeing gpa
+1      S0001        1         7.2        18.5        58 3.2
+2      S0001        2         8.4        14.0        63 3.3
+```
+
+- If your CSV file uses European semicolons (`;`) and decimal commas (`,`), use `read.csv2()`.
+- Use `here::here("data", "semesters.csv")` for robust relative path resolution.
+
+---
+
+## Importing Excel Files: `readxl`
+
+Excel files are read using the dedicated **`readxl`** package:
+
+```r
+library(readxl)
+
+# Read the raw questionnaire export:
+raw_survey <- read_excel("wellbeing_raw.xlsx")
+dim(raw_survey)
+```
+
+```
+[1] 615  64
+```
+
+Notice: $615$ rows! But Elaf only has $600$ students!
+
+Let us look at why.
+
+---
+
+## The Reality of Real-World Survey Exports
+
+```r
+head(raw_survey[, 1:4], n = 4)
+```
+
+```
+# A tibble: 4 × 4
+  `Response ID` `Q1_Student ID` Q2_Age Q3_Gender
+  <chr>         <chr>           <chr>  <chr>    
+1 R0001         TEST            99     Female   
+2 R0002         test            NA     NA       
+3 R0003         TEST2           30     Male     
+4 R0004         S0001           31     Female   
+```
+
+Three severe real-world problems are immediately evident:
+
+1. **Test entries**: The survey software recorded setup test submissions (`TEST`, `test`).
+2. **Missing codes**: Age was coded as `99` instead of `NA`.
+3. **Silent type poisoning**: Because of test text, `Q2_Age` arrived as `<chr>` (text)!
+
+In Chapter 3, we will clean this file step by step.
+
+---
+
+## Reading Specific Excel Sheets
+
+Excel workbooks often contain multiple sheets.
+
+By default, `read_excel()` reads the first sheet.
+
+To specify another sheet:
+
+```r
+# By sheet index:
+s2_data <- read_excel("study_data.xlsx", sheet = 2)
+
+# By sheet name:
+s2_data <- read_excel("study_data.xlsx", sheet = "Semester 2")
+```
+
+To list all available sheets:
+
+```r
+excel_sheets("study_data.xlsx")
+```
+
+---
+
+## Importing SPSS Files: `haven`
+
+Researchers migrating from SPSS often worry about losing variable and value labels.
+
+The **`haven`** package preserves every label:
+
+```r
+library(haven)
+spss_data <- read_sav("wellbeing.sav")
+spss_data[1:3, c("student_id", "gender", "faculty", "stress_1")]
+```
+
+```
+# A tibble: 3 × 4
+  student_id            gender           faculty          stress_1
+  <chr>              <dbl+lbl>         <dbl+lbl>         <dbl+lbl>
+1 S0001      2 [Female]        2 [Health Sciences] 4 [Agree]        
+2 S0002      2 [Female]        1 [Education]       3 [Neutral]      
+3 S0003      1 [Male]          1 [Education]       4 [Agree]        
+```
+
+Values are stored as numeric codes, with original SPSS labels displayed alongside in brackets!
+
+---
+
+## Accessing SPSS Question Wording
+
+In SPSS, each variable has a descriptive question label.
+
+`haven` preserves these as R attributes:
+
+```r
+attr(spss_data$stress_1, "label")
+```
+
+```
+[1] "I feel unable to control important things in my studies"
+```
+
+The exact survey question wording seen by students is preserved directly inside R!
+
+---
+
+## Converting SPSS Labels to Factors: `as_factor()`
+
+To analyze an SPSS variable as categories, convert it with `haven::as_factor()`:
+
+```r
+# Without as_factor: outputs raw numeric codes (1, 2)
+# With as_factor: uses SPSS text labels as factor levels!
+table(as_factor(spss_data$faculty))
+```
+
+```
+      Education Health Sciences      Humanities Natural Sciences Social Sciences 
+            148             154              95              87             116 
+```
+
+All the work put into defining labels in SPSS is transferred into R seamlessly.
+
+---
+
+## Building a Research Codebook
+
+A value like `4` in column `stress_1` means nothing in isolation.
+
+A **codebook** documents:
+- Variable names.
+- Question wording.
+- Measurement scale ($1 = \text{Strongly Disagree}$, $5 = \text{Strongly Agree}$).
+- Storage type.
+
+Most graduate thesis examiners expect a complete codebook in Appendix A.
+
+---
+
+## Automating the Codebook in R
+
+We can construct a thesis codebook table directly from the SPSS metadata:
+
+```r
+codebook <- data.frame(
+  Variable = names(spss_data),
+  Label    = sapply(spss_data, function(x) attr(x, "label")),
+  Type     = sapply(spss_data, function(x) class(x)[1]),
+  row.names = NULL
+)
+head(codebook, n = 5)
+```
+
+```
+       Variable                                                   Label      Type
+1    student_id                                      Student identifier character
+2 supervisor_id                                   Supervisor identifier character
+3           age                                             Age (years)   numeric
+4        gender                                                  Gender  labelled
+5       faculty University faculty in which student is enrolled  labelled
+```
+
+This table can be exported directly into your thesis manuscript (Chapter 17).
+
+---
+
+## Exporting Clean Data
+
+Once data is cleaned, save it under a **new filename** (never overwrite raw data):
+
+```r
+# Export to CSV:
+write.csv(students, "students_clean.csv", row.names = FALSE)
+
+# Export to Excel:
+writexl::write_xlsx(students, "students_clean.xlsx")
+
+# Export to SPSS:
+haven::write_sav(spss_data, "students_clean.sav")
+```
+
+Always set `row.names = FALSE` in `write.csv()` to prevent R from injecting an unwanted column of row numbers.
+
+---
+
+## SPSS/Excel to R Rosetta Stone
+
+| Task | SPSS / Excel | R Equivalent |
+|---|---|---|
+| Open data | File > Open | `read_csv()`, `read_excel()`, `read_sav()` |
+| View variables | Variable View | `str(df)` or `names(df)` |
+| View table | Data View | `View(df)` |
+| Filter cases | Data > Select Cases | `df[condition, ]` |
+| Compute variable | Transform > Compute | `df$new <- ...` |
+| Frequencies | Analyze > Frequencies | `table(df$variable)` |
+| Summaries | Analyze > Descriptives | `summary(df)` or `mean()` |
+| Save data | File > Save As | `write.csv()`, `write_xlsx()`, `write_sav()` |
+
+---
+
+## Decoding Error 1: "Object not found"
+
+```r
+mean(slep)
+```
+
+```
+Error in mean(slep) : object 'slep' not found
+```
+
+### The Diagnosis:
+1. Did you misspell the name? (`slep` instead of `sleep`).
+2. Is the variable case-sensitive? (`Sleep` instead of `sleep`).
+3. Did you forget to run the line of code that defined the variable earlier in the script?
+
+---
+
+## Decoding Error 2: "Could not find function"
+
+```r
+reed_csv("students.csv")
+```
+
+```
+Error in reed_csv("students.csv") : could not find function "reed_csv"
+```
+
+### The Diagnosis:
+1. Did you misspell the function? (`reed_csv` vs `read_csv`).
+2. Did you forget to load the package?
+   - `read_excel()` requires `library(readxl)`.
+   - `read_sav()` requires `library(haven)`.
+
+---
+
+## Decoding Error 3: "Non-numeric argument"
+
+```r
+mixed <- c(6.5, "seven", 5.5)
+mixed * 2
+```
+
+```
+Error in mixed * 2 : non-numeric argument to binary operator
+```
+
+### The Diagnosis:
+You attempted to perform a mathematical operation (`*`, `/`, `+`) on text (`character`).
+
+Look closely at your data import: did a character value accidentally coerce your numeric column into text?
+
+---
+
+## Decoding Error 4: "Undefined columns selected"
+
+```r
+students[, "Faculty"]
+```
+
+```
+Error in `[.data.frame`(students, , "Faculty") : undefined columns selected
+```
+
+### The Diagnosis:
+The column name does not exist in the data frame.
+
+Remember: R is case-sensitive!
+
+In Elaf's data, the column is lowercase `"faculty"`, not uppercase `"Faculty"`.
+
+Check `names(students)` to verify exact spelling and capitalization.
+
+---
+
+## Quick Multivariate Overview: `summary()`
+
+The `summary()` function provides an instant statistical audit of every column:
+
+```r
+summary(first_sem[, c("gpa", "sleep_hours", "study_hours", "wellbeing")])
+```
+
+```
+      gpa         sleep_hours     study_hours      wellbeing    
+ Min.   :2.100   Min.   :4.000   Min.   : 6.00   Min.   :32.00  
+ 1st Qu.:2.900   1st Qu.:6.100   1st Qu.:12.00   1st Qu.:54.00  
+ Median :3.200   Median :6.800   Median :15.00   Median :61.00  
+ Mean   :3.195   Mean   :6.843   Mean   :15.39   Mean   :60.46  
+ 3rd Qu.:3.500   3rd Qu.:7.500   3rd Qu.:18.50   3rd Qu.:67.00  
+ Max.   :4.000   Max.   :9.800   Max.   :27.00   Max.   :88.00  
+```
+
+- Instantly reveals Min, Quartiles, Median, Mean, and Max.
+- If missing values exist, an extra row `NA's: count` appears automatically.
+
+---
+
+## In Your Field: Health Research
+
+Consider `ToothGrowth`, an experimental pharmacology dataset in base R:
+
+```r
+str(ToothGrowth)
+```
+
+```
+'data.frame':	60 obs. of  3 variables:
+ $ len : num  4.2 11.5 7.3 5.8 6.4 10 11.2 11.2 5.2 7 ...
+ $ supp: Factor w/ 2 levels "OJ","VC": 1 1 1 1 1 1 1 1 1 1 ...
+ $ dose: num  0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 ...
+```
+
+- **Unit of analysis**: One guinea pig ($N = 60$).
+- **Outcome (`len`)**: Odontoblast length (continuous numeric).
+- **Treatment (`supp`)**: Factor with 2 levels (`OJ` = Orange Juice, `VC` = Ascorbic Acid).
+- **Dose (`dose`)**: Numeric dosage level ($0.5$, $1.0$, $2.0$ mg/day).
+
+---
+
+## Tabulating Experimental Factor Combinations
+
+```r
+table(ToothGrowth$supp, ToothGrowth$dose)
+```
+
+```
+    0.5  1  2
+ OJ  10 10 10
+ VC  10 10 10
+```
+
+Notice the balanced factorial design: exactly $10$ animals per treatment-dose cell.
+
+Whether modeling guinea pig pharmacology or graduate student wellbeing, the rectangular data frame structure is identical.
+
+---
+
+## Thesis Methodology Checklist: Data Section
+
+When writing Chapter 3 (Methodology) of your thesis, verify you have documented:
+
+1. **Unit of Analysis**: Explicitly stated what a single row represents in each table.
+2. **Levels of Measurement**: Detailed which constructs are nominal, ordinal, or continuous.
+3. **Data Provenance**: Named the original source formats (CSV, Qualtrics Excel, SPSS).
+4. **Codebook**: Attached a complete variable codebook in your thesis appendix.
+5. **Software Environment**: Noted the exact R package versions used for import (`readxl 1.4.3`, `haven 2.5.4`).
+
+---
+
+## Key Terms Summary
+
+- **Unit of Analysis**: The entity being measured in a single row of data.
+- **Type Coercion**: The automatic conversion of disparate data types into a common type (e.g. numeric $\rightarrow$ character).
+- **Logical Indexing**: Subsetting cases using a boolean conditional expression (`[df$x > 5, ]`).
+- **Factor**: An R data structure for categorical variables with defined `levels`.
+- **Data Frame**: A rectangular table of equal-length vectors of differing types.
+- **Matrix**: A two-dimensional array where all elements share the same type.
+- **List**: An arbitrary container holding heterogeneous R objects.
+- **Codebook**: A comprehensive reference linking variable names to question wordings and response scales.
+
+---
+
+## Practice in the Playground
+
+Reinforce today's lecture with the interactive Chapter 2 exercises:
+
+- In your browser: Visit the [Chapter 2 Interactive Playground](../../content/playground/chapter02.html).
+- Practice subsetting Elaf's data: filter part-time students with children, count participants over age 30, and inspect SPSS variable attributes.
+- Download `chapter02.zip` to run the exercises locally in RStudio.
+
+---
+
+## Next Lecture: Chapter 3
+
+In Chapter 3, we move to:
+
+### **Data Manipulation with dplyr and tidyr**
+
+- Tidy Data principles: Why wide spreadsheet exports break statistical workflows.
+- The 5 core dplyr verbs: `filter()`, `select()`, `arrange()`, `mutate()`, and `summarise()`.
+- Modern grouping with `.by`.
+- Reshaping tables between wide and long with `pivot_longer()`.
+- Merging multi-table datasets with relational joins (`left_join()`, `anti_join()`).
+- Cleaning the messy raw survey export (`wellbeing_raw.xlsx`).

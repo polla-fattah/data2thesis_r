@@ -1,0 +1,26 @@
+---
+title: "Lecture Slides"
+subtitle: "Presentation Decks for Research Data Analysis with R"
+toc: false
+---
+
+::: {.callout-note appearance="simple"}
+## Lecture Decks
+These presentation decks accompany the book chapters, designed for classroom instruction, seminars, and self-paced review.
+:::
+
+## Available Presentations
+
+| Chapter | Topic | Format | Presentation Deck |
+|---|---|---|---|
+| **Chapter 1** | Getting Started with R | Interactive RevealJS (50 slides) | [**Open Presentation Deck**](01-getting-started.html) · [Source](01-getting-started.qmd) |
+| **Chapter 2** | Data Structures and Data Import | Interactive RevealJS (63 slides) | [**Open Presentation Deck**](02-data-structures.html) · [Source](02-data-structures.qmd) |
+| **Chapter 3** | Data Manipulation with dplyr and tidyr | Interactive RevealJS (60 slides) | [**Open Presentation Deck**](03-data-manipulation.html) · [Source](03-data-manipulation.qmd) |
+
+### Using the Slide Decks
+
+- **Navigation**: Use Space, Arrow Keys, or the on-screen navigation buttons.
+- **Slide Overview**: Press `O` (or `Esc`) to zoom out and view all slide tiles simultaneously.
+- **Chalkboard / Drawing**: Press `B` to open the interactive blackboard or click the pen icon.
+- **PDF Export**: Add `?print-pdf` to the URL or open print dialog (`Ctrl + P`) in Chromium browsers.
+

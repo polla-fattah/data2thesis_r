@@ -32,13 +32,10 @@ jobs:
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
-      - name: Render the website
-        working-directory: site
-        run: quarto render
-
-      - name: Render the book into the website
-        working-directory: book
-        run: quarto render
+      - name: Render website and book
+        run: |
+          quarto render
+          cp -r _site/content/* _site/
 
       - name: Upload the site
         uses: actions/upload-pages-artifact@v3

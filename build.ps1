@@ -11,7 +11,7 @@
 #   powershell -ExecutionPolicy Bypass -File .\build.ps1
 #
 # Chapters whose code has not changed are not re-run (their results are frozen
-# in _freeze), so a full build takes a few minutes, not an hour.
+# in _freeze), so a full build takes seconds, not an hour.
 
 param(
   [switch]$NoBuild,
@@ -27,16 +27,6 @@ $quarto  = "C:\Program Files\Quarto\bin\quarto.exe"
 $rscript = "C:\Program Files\R\R-4.4.3\bin\Rscript.exe"
 $env:QUARTO_R = $rscript
 
-function Render($folder, $target) {
-  Push-Location (Join-Path $root $folder)
-  try {
-    if ($target) { & $quarto render $target } else { & $quarto render }
-    if ($LASTEXITCODE -ne 0) { throw "Rendering $folder failed." }
-  } finally {
-    Pop-Location
-  }
-}
-
 if (-not $NoBuild) {
   if ($Playground) {
     Write-Host "Building the playground download zips..." -ForegroundColor Cyan
@@ -46,14 +36,17 @@ if (-not $NoBuild) {
   }
 
   if ($Chapter) {
-    Write-Host "Rendering book/$Chapter..." -ForegroundColor Cyan
-    Render "book" $Chapter
+    $target = if ($Chapter -like "content/book/*") { $Chapter } else { "content/book/$Chapter" }
+    Write-Host "Rendering $target..." -ForegroundColor Cyan
+    & $quarto render $target
   } else {
-    # The website first, then the book: the book is published inside the site.
-    Write-Host "Rendering the website..." -ForegroundColor Cyan
-    Render "site" ""
-    Write-Host "Rendering the book..." -ForegroundColor Cyan
-    Render "book" ""
+    Write-Host "Rendering website, book, and playground..." -ForegroundColor Cyan
+    & $quarto render
+
+    # Mirror content/ paths to root URLs for backward compatibility
+    if (Test-Path "$root/_site/content") {
+      Copy-Item -Path "$root/_site/content/*" -Destination "$root/_site" -Recurse -Force
+    }
   }
 }
 

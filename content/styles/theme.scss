@@ -1,0 +1,1096 @@
+/*-- scss:defaults --*/
+// Colours and fonts are in light.scss and dark.scss. This file holds the rules
+// shared by both, written with the custom properties defined below, so one set
+// of rules serves the light and the dark theme.
+
+/*-- scss:rules --*/
+
+/* ---------- Design tokens ---------- */
+
+body.quarto-light,
+body:not(.quarto-dark) {
+  --d2t-bg: #f1f4f8;
+  --d2t-ink: #16222e;
+  --d2t-emphasis: #0d161f;
+  --d2t-soft: #3d4e61;
+  --d2t-muted: #586b80;
+  --d2t-silk: #5d7189;
+  --d2t-paper: #fff;
+  --d2t-surface: #e9eef4;
+  --d2t-sidebar: #eceff3;
+  --d2t-line: rgba(48, 74, 105, 0.14);
+  --d2t-line-strong: rgba(48, 74, 105, 0.3);
+  --d2t-link: #245f94;
+  --d2t-link-hover: #1d6fc4;
+  --d2t-accent-rgb: 36, 95, 148;
+  --d2t-button: #2f6793;
+  --d2t-button-hover: #275a82;
+  --d2t-copper: #b4762e;
+  --d2t-copper-dim: rgba(180, 118, 46, 0.6);
+  --d2t-code-ink: #b02a37;
+  --d2t-code-chip: rgba(22, 34, 46, 0.06);
+  --d2t-output-bg: #f6f9fc;
+  --d2t-grid: rgba(47, 103, 147, 0.06);
+  --d2t-header-bg: rgba(241, 244, 248, 0.85);
+  --d2t-shadow-sm: 0 2px 10px rgba(23, 42, 66, 0.08);
+  --d2t-shadow-md: 0 12px 34px rgba(23, 42, 66, 0.12);
+  --d2t-mark-from: #1d588c;
+  --d2t-mark-to: #b4762e;
+}
+
+body.quarto-dark {
+  --d2t-bg: #0b1119;
+  --d2t-ink: #e8eef6;
+  --d2t-emphasis: #f4f8fc;
+  --d2t-soft: #b6c2d2;
+  --d2t-muted: #7f8da1;
+  --d2t-silk: #93a3b8;
+  --d2t-paper: #121c29;
+  --d2t-surface: #121c29;
+  --d2t-sidebar: #111821;
+  --d2t-line: rgba(148, 176, 210, 0.16);
+  --d2t-line-strong: rgba(148, 176, 210, 0.32);
+  --d2t-link: #5da2dd;
+  --d2t-link-hover: #7fb8e8;
+  --d2t-accent-rgb: 93, 162, 221;
+  --d2t-button: #2f6793;
+  --d2t-button-hover: #3a78a8;
+  --d2t-copper: #e0a35c;
+  --d2t-copper-dim: rgba(224, 163, 92, 0.55);
+  --d2t-code-ink: #f0899a;
+  --d2t-code-chip: rgba(232, 238, 246, 0.08);
+  --d2t-output-bg: #0f1722;
+  --d2t-grid: rgba(120, 150, 190, 0.055);
+  --d2t-header-bg: rgba(11, 17, 25, 0.92);
+  --d2t-shadow-sm: 0 4px 18px rgba(2, 8, 18, 0.35);
+  --d2t-shadow-md: 0 14px 44px rgba(2, 8, 18, 0.45);
+  --d2t-mark-from: #7fb8e8;
+  --d2t-mark-to: #e0a35c;
+}
+
+/* ---------- Scrollbars ---------- */
+
+/* Thin, rounded, and quiet, as in the front-end book. The page scrollbar is a
+   slim pill; the sidebar and contents scrollbars appear only on hover. */
+:root {
+  --d2t-scroll-thumb: rgba(48, 74, 105, 0.28);
+  --d2t-scroll-thumb-hover: rgba(48, 74, 105, 0.45);
+  color-scheme: light;
+}
+:root:has(body.quarto-dark) {
+  --d2t-scroll-thumb: rgba(148, 176, 210, 0.28);
+  --d2t-scroll-thumb-hover: rgba(148, 176, 210, 0.45);
+  color-scheme: dark;
+}
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--d2t-scroll-thumb) transparent;
+}
+html::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+html::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--d2t-scroll-thumb);
+  background-clip: padding-box;
+}
+html::-webkit-scrollbar-thumb:hover {
+  background: var(--d2t-scroll-thumb-hover);
+  background-clip: padding-box;
+}
+
+#quarto-sidebar,
+#quarto-margin-sidebar,
+.sidebar,
+nav#TOC {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+#quarto-sidebar:hover,
+#quarto-margin-sidebar:hover,
+.sidebar:hover,
+nav#TOC:hover {
+  scrollbar-color: var(--d2t-scroll-thumb) transparent;
+}
+#quarto-sidebar::-webkit-scrollbar,
+#quarto-margin-sidebar::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar,
+nav#TOC::-webkit-scrollbar {
+  width: 6px;
+}
+#quarto-sidebar::-webkit-scrollbar-track,
+#quarto-margin-sidebar::-webkit-scrollbar-track,
+.sidebar::-webkit-scrollbar-track,
+nav#TOC::-webkit-scrollbar-track {
+  background: transparent;
+}
+#quarto-sidebar::-webkit-scrollbar-thumb,
+#quarto-margin-sidebar::-webkit-scrollbar-thumb,
+.sidebar::-webkit-scrollbar-thumb,
+nav#TOC::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+}
+#quarto-sidebar:hover::-webkit-scrollbar-thumb,
+#quarto-margin-sidebar:hover::-webkit-scrollbar-thumb,
+.sidebar:hover::-webkit-scrollbar-thumb,
+nav#TOC:hover::-webkit-scrollbar-thumb {
+  background: var(--d2t-scroll-thumb);
+}
+
+/* Code that is wider than its card scrolls with the same slim bar */
+div.sourceCode pre,
+.cell-output pre {
+  scrollbar-width: thin;
+  scrollbar-color: var(--d2t-scroll-thumb) transparent;
+}
+
+/* ---------- Page ---------- */
+
+body {
+  background-color: var(--d2t-bg);
+  color: var(--d2t-ink);
+}
+
+::selection {
+  background: rgba(var(--d2t-accent-rgb), 0.22);
+}
+
+a {
+  color: var(--d2t-link);
+  text-decoration: none;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+a:hover {
+  color: var(--d2t-link-hover);
+}
+main a:not(.btn):not(.nav-link):hover {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--d2t-emphasis);
+}
+
+/* ---------- Navbar ---------- */
+
+#quarto-header,
+.headroom {
+  background: transparent;
+}
+#quarto-header .navbar {
+  background: var(--d2t-header-bg) !important;
+  backdrop-filter: saturate(160%) blur(10px);
+  -webkit-backdrop-filter: saturate(160%) blur(10px);
+  border-bottom: 1px solid var(--d2t-line);
+  box-shadow: none;
+}
+#quarto-header .navbar-title {
+  font-family: "Chakra Petch", "Inter", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  background: linear-gradient(115deg, var(--d2t-mark-from) 6%, var(--d2t-mark-to) 94%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+#quarto-header .navbar .nav-link {
+  color: var(--d2t-soft);
+  font-weight: 500;
+}
+#quarto-header .navbar .nav-link:hover,
+#quarto-header .navbar .nav-link.active {
+  color: var(--d2t-emphasis);
+}
+/* Menu in the middle of the bar, as in the front-end book */
+@media (min-width: 992px) {
+  /* Centred on the page, not in the space left by the logo and the icons,
+     so the menu sits in the same place on every page */
+  #quarto-header .navbar-collapse > .navbar-nav.me-auto {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0 !important;
+  }
+  #quarto-header .navbar-collapse > .navbar-nav.ms-auto,
+  #quarto-header .navbar-collapse > .quarto-navbar-tools {
+    margin-left: auto !important;
+  }
+  #quarto-header .navbar .nav-link {
+    padding-left: 0.9rem !important;
+    padding-right: 0.9rem !important;
+  }
+}
+#quarto-header .quarto-color-scheme-toggle .bi,
+#quarto-header .navbar .bi {
+  color: var(--d2t-soft);
+}
+
+/* ---------- Book sidebar ---------- */
+
+#quarto-sidebar,
+.sidebar.sidebar-navigation {
+  background-color: var(--d2t-sidebar);
+  border-right: 1px solid var(--d2t-line);
+}
+.sidebar-title a,
+.sidebar-title {
+  font-family: "Chakra Petch", "Inter", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--d2t-emphasis);
+}
+.sidebar-navigation .sidebar-section .sidebar-item-text,
+.sidebar-navigation .sidebar-item-section > .sidebar-item-container .text-start {
+  font-weight: 600;
+}
+.sidebar-navigation .sidebar-item .sidebar-link {
+  display: flex;
+  align-items: baseline;
+  padding: 0.38rem 0.6rem;
+  margin: 1px 0;
+  border-radius: 8px;
+  color: var(--d2t-soft);
+  font-weight: 500;
+}
+.sidebar-navigation .sidebar-item .sidebar-link:hover {
+  background: rgba(var(--d2t-accent-rgb), 0.07);
+  color: var(--d2t-emphasis);
+  text-decoration: none;
+}
+.sidebar-navigation .sidebar-item .sidebar-link.active {
+  background: rgba(var(--d2t-accent-rgb), 0.14);
+  color: var(--d2t-emphasis);
+  font-weight: 600;
+}
+/* One line per chapter, shortened with an ellipsis (the full title shows on hover) */
+.sidebar-navigation .sidebar-link .menu-text,
+.sidebar-navigation .sidebar-item-container .sidebar-item-text {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sidebar-navigation .sidebar-item-container {
+  min-width: 0;
+}
+.sidebar-navigation .sidebar-item-section > .sidebar-item-container {
+  margin-top: 0.6rem;
+}
+.sidebar-navigation .sidebar-item-section > .sidebar-item-container .sidebar-item-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+#quarto-sidebar.docked,
+.sidebar.sidebar-navigation.docked {
+  padding: 1rem 0.75rem 1rem 0.9rem;
+}
+.sidebar-navigation .sidebar-menu-container > ul.list-unstyled,
+.sidebar-navigation .sidebar-item-section .list-unstyled {
+  padding-left: 0;
+}
+.sidebar-navigation .sidebar-item {
+  font-size: 0.93rem;
+}
+.sidebar-navigation .sidebar-link .chapter-number {
+  display: inline-block;
+  min-width: 1.6em;
+  text-align: right;
+  margin-right: 0.35em;
+  color: var(--d2t-muted);
+  font-weight: 600;
+}
+.sidebar-navigation .sidebar-item-section .sidebar-item-text {
+  color: var(--d2t-emphasis);
+}
+.sidebar-navigation .sidebar-divider,
+.sidebar-navigation .sidebar-item-section {
+  border-color: var(--d2t-line);
+}
+.sidebar-search .aa-DetachedSearchButton,
+.sidebar-search input {
+  background: var(--d2t-paper);
+  border: 1px solid var(--d2t-line);
+  border-radius: 8px;
+}
+
+/* Table of contents on the right */
+#TOC,
+nav#TOC {
+  border-left: 1px solid var(--d2t-line);
+}
+#TOC .nav-link,
+.sidebar nav[role="doc-toc"] ul > li > a {
+  color: var(--d2t-muted);
+  border-left-color: transparent;
+}
+#TOC .nav-link.active,
+.sidebar nav[role="doc-toc"] ul > li > a.active {
+  color: var(--d2t-link);
+  border-left-color: var(--d2t-link);
+}
+#toc-title {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--d2t-silk);
+}
+
+/* ---------- Reading text ---------- */
+
+main.content {
+  line-height: 1.8;
+}
+main.content p,
+main.content li {
+  color: var(--d2t-ink);
+}
+
+/* ---------- Chapter titles and headings ---------- */
+
+.quarto-title-breadcrumbs .breadcrumb,
+.breadcrumb {
+  font-size: 0.95rem;
+}
+.breadcrumb-item,
+.breadcrumb-item a {
+  color: var(--d2t-muted);
+}
+.breadcrumb-item.active {
+  color: var(--d2t-soft);
+}
+
+#title-block-header .title,
+header h1.title {
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+h1 .chapter-number,
+.title .chapter-number {
+  color: var(--d2t-muted);
+  font-weight: 700;
+}
+
+main h2 {
+  margin-top: 2.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--d2t-line);
+  font-weight: 750;
+  letter-spacing: -0.005em;
+}
+main h3 {
+  margin-top: 1.9rem;
+  font-weight: 700;
+}
+
+/* ---------- Code and results ---------- */
+
+/* Inline code: crimson ink on a light chip, so identifiers stand apart from links */
+p code:not(.sourceCode),
+li code:not(.sourceCode),
+td code:not(.sourceCode),
+dd code:not(.sourceCode),
+.callout code:not(.sourceCode),
+.landing code {
+  padding: 0.12em 0.36em;
+  border-radius: 5px;
+  background: var(--d2t-code-chip);
+  color: var(--d2t-code-ink);
+  font-size: 0.88em;
+  font-weight: 500;
+}
+
+/* Code: a white (dark: raised navy) card with a hairline border */
+div.sourceCode {
+  margin: 1.1rem 0;
+  border: 1px solid var(--d2t-line);
+  border-radius: 12px;
+  background: var(--d2t-paper) !important;
+  box-shadow: var(--d2t-shadow-sm);
+  overflow: hidden;
+}
+div.sourceCode pre.sourceCode,
+pre.sourceCode {
+  margin: 0;
+  padding: 0.9rem 1.1rem;
+  border: 0;
+  background: transparent !important;
+  font-size: 0.87rem;
+  line-height: 1.6;
+}
+.code-copy-button {
+  top: 0.45rem;
+  right: 0.45rem;
+}
+
+/* Results: quieter than the code, on their own tinted ground with a copper edge
+   and a small label, so the reader always knows which is which */
+.cell-output,
+.cell-output-stdout,
+.cell-output-stderr {
+  position: relative;
+}
+.cell-output pre,
+.cell-output-stdout pre,
+.cell-output-stderr pre {
+  margin: -0.35rem 0 1.2rem;
+  padding: 1.55rem 1.1rem 0.8rem 1.1rem;
+  border: 1px solid var(--d2t-line);
+  border-left: 3px solid var(--d2t-copper);
+  border-radius: 0 10px 10px 0;
+  background: var(--d2t-output-bg);
+  color: var(--d2t-soft);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+.cell-output-stdout pre::before,
+.cell-output pre::before,
+.cell-output-stderr pre::before {
+  content: "Output";
+  position: absolute;
+  top: 0.45rem;
+  left: 1.2rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--d2t-silk);
+}
+.cell-output pre code,
+.cell-output-stdout pre code {
+  background: transparent;
+  color: inherit;
+}
+/* Figures produced by code sit on the page, not in the output box */
+.cell-output-display {
+  margin: 0.4rem 0 1.2rem;
+}
+.cell-output-display table {
+  font-size: 0.92rem;
+}
+
+/* ---------- Playground editors (quarto-live) ---------- */
+
+/* quarto-live styles its editors from these variables; point them at the site
+   tokens so the editor card matches the code cards in both themes */
+body.quarto-light,
+body.quarto-dark {
+  --exercise-main-color: var(--d2t-ink);
+  --exercise-main-bg: var(--d2t-paper);
+  --exercise-output-color: var(--d2t-soft);
+  --exercise-primary-rgb: var(--d2t-accent-rgb);
+  --exercise-gray: var(--d2t-line);
+  --exercise-cap-bg: color-mix(in srgb, var(--d2t-link) 6%, var(--d2t-paper));
+  --exercise-line-bg: rgba(var(--d2t-accent-rgb), 0.06);
+  --exercise-line-gutter-bg: rgba(var(--d2t-accent-rgb), 0.12);
+  --exercise-code-block-color: var(--d2t-ink);
+  --exercise-code-block-bg: var(--d2t-paper);
+}
+.card.exercise-editor {
+  border: 1px solid var(--d2t-line);
+  border-radius: 12px;
+  background: var(--d2t-paper);
+  box-shadow: var(--d2t-shadow-sm);
+  overflow: hidden;
+}
+body .card.exercise-editor .card-header {
+  padding: 0.5rem 0.8rem 0.5rem 1.1rem;
+  border-bottom: 1px solid var(--d2t-line);
+  color: var(--d2t-emphasis);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+body .card.exercise-editor .cm-gutters {
+  background-color: var(--d2t-paper);
+  color: var(--d2t-muted);
+  border-right: 1px solid var(--d2t-line);
+}
+.card.exercise-editor .cm-editor {
+  font-size: 0.87rem;
+}
+.card.exercise-editor .cm-editor.cm-focused {
+  outline: none;
+}
+/* Buttons: quiet outlines for Start Over and Hint, the site's blue for Run */
+body.quarto-light .card.exercise-editor .card-header .btn.btn-outline-dark,
+body.quarto-dark .card.exercise-editor .card-header .btn.btn-outline-dark {
+  --bs-btn-color: var(--d2t-soft);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: var(--d2t-line-strong);
+  --bs-btn-hover-color: var(--d2t-link);
+  --bs-btn-hover-bg: rgba(var(--d2t-accent-rgb), 0.1);
+  --bs-btn-hover-border-color: var(--d2t-line-strong);
+  --bs-btn-active-color: var(--d2t-link);
+  --bs-btn-active-bg: rgba(var(--d2t-accent-rgb), 0.16);
+  --bs-btn-active-border-color: var(--d2t-line-strong);
+  --bs-btn-disabled-color: var(--d2t-muted);
+  --bs-btn-disabled-border-color: var(--d2t-line);
+  --bs-btn-focus-shadow-rgb: var(--d2t-accent-rgb);
+}
+body .card.exercise-editor .card-header .btn.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--d2t-button);
+  --bs-btn-border-color: var(--d2t-button);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--d2t-button-hover);
+  --bs-btn-hover-border-color: var(--d2t-button-hover);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--d2t-button-hover);
+  --bs-btn-active-border-color: var(--d2t-button-hover);
+  --bs-btn-disabled-bg: var(--d2t-button);
+  --bs-btn-disabled-border-color: var(--d2t-button);
+  --bs-btn-focus-shadow-rgb: var(--d2t-accent-rgb);
+  border-radius: 8px;
+  font-weight: 600;
+}
+body .card.exercise-editor .card-header .btn-group .btn:first-child {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+body .card.exercise-editor .card-header .btn-group .btn:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+/* A result in the playground carries the blue of the editor above it, so the
+   editor and its output read as one exercise */
+div.exercise-cell-output.cell-output pre {
+  margin-top: 0;
+  border-left-color: var(--d2t-link);
+}
+
+/* ---------- Callouts ---------- */
+
+div.callout {
+  border: 1px solid var(--d2t-line);
+  border-left-width: 4px !important;
+  border-radius: 10px;
+  background: var(--d2t-paper);
+  box-shadow: var(--d2t-shadow-sm);
+}
+div.callout.callout-style-default > .callout-header {
+  background: transparent;
+  border-bottom: 1px solid var(--d2t-line);
+}
+div.callout-titled .callout-title-container,
+div.callout .callout-title-container {
+  font-weight: 700;
+  color: var(--d2t-emphasis);
+}
+div.callout.callout-style-simple {
+  padding: 0.5rem 1rem;
+}
+
+/* ---------- Tables, quotes, figures ---------- */
+
+main table:not(.table-borderless) {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: transparent;
+  border-color: var(--d2t-line);
+}
+main table thead th {
+  border-bottom: 1px solid var(--d2t-line-strong) !important;
+  color: var(--d2t-emphasis);
+  font-weight: 600;
+}
+main table td,
+main table th {
+  padding: 0.55rem 0.7rem;
+  border-color: var(--d2t-line);
+}
+main table caption,
+.table-caption,
+figcaption,
+.figure-caption {
+  color: var(--d2t-muted);
+}
+
+blockquote {
+  margin: 1.25rem 0;
+  padding: 0.7rem 1.1rem;
+  border-left: 2px solid var(--d2t-copper);
+  border-radius: 0 6px 6px 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--d2t-copper) 7%, transparent), transparent 80%);
+  color: var(--d2t-soft);
+}
+blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.quarto-figure img,
+.cell-output-display img {
+  border-radius: 8px;
+}
+
+/* ---------- Footer and page navigation ---------- */
+
+.nav-footer {
+  background: var(--d2t-bg);
+  border-top: 1px solid var(--d2t-line);
+  color: var(--d2t-muted);
+}
+.page-navigation {
+  border-top: 1px solid var(--d2t-line);
+}
+.page-navigation .nav-page a {
+  color: var(--d2t-link);
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  border-radius: 8px;
+  font-weight: 700;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease,
+    border-color 160ms ease, color 160ms ease;
+}
+.btn:hover {
+  transform: translateY(-2px);
+}
+.btn-primary {
+  background: var(--d2t-button);
+  border-color: var(--d2t-button);
+  color: #fff;
+  box-shadow: 0 6px 22px rgba(47, 103, 147, 0.3);
+}
+.btn-primary:hover,
+.btn-primary:focus {
+  background: var(--d2t-button-hover);
+  border-color: var(--d2t-button-hover);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(47, 103, 147, 0.38);
+}
+.btn-outline-primary,
+.btn-outline-secondary {
+  background: transparent;
+  border-color: var(--d2t-line-strong);
+  color: var(--d2t-ink);
+}
+.btn-outline-primary:hover,
+.btn-outline-secondary:hover {
+  background: transparent;
+  border-color: var(--d2t-link);
+  color: var(--d2t-link-hover);
+}
+
+/* ---------- Landing page ---------- */
+
+/* Quarto's Bootstrap build leaves out Bootstrap's grid classes, so the landing
+   page defines the few it uses (same names and breakpoints as Bootstrap). */
+.landing {
+  position: relative;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+.landing .row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -0.75rem;
+  margin-right: -0.75rem;
+}
+.landing .row > * {
+  box-sizing: border-box;
+  width: 100%;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+.landing .row.g-3 { row-gap: 1rem; }
+.landing .row.g-4 { row-gap: 1.5rem; }
+.landing .row.g-5 { row-gap: 2.5rem; }
+.landing .justify-content-center { justify-content: center; }
+.landing .align-items-center { align-items: center; }
+.landing .row > .col-6 { width: 50%; }
+@media (min-width: 768px) {
+  .landing .row > .col-md-3 { width: 25%; }
+  .landing .row > .col-md-4 { width: 33.333%; }
+  .landing .row > .col-md-6 { width: 50%; }
+}
+@media (min-width: 992px) {
+  .landing .row > .col-lg-2 { width: 16.667%; }
+  .landing .row > .col-lg-3 { width: 25%; }
+  .landing .row > .col-lg-5 { width: 41.667%; }
+  .landing .row > .col-lg-7 { width: 58.333%; }
+  .landing .row > .col-lg-8 { width: 66.667%; }
+}
+
+/* The faint blueprint grid behind the whole landing page */
+body:has(.landing) {
+  background-image:
+    radial-gradient(50% 42% at 72% 12%, rgba(var(--d2t-accent-rgb), 0.14), transparent 70%),
+    radial-gradient(34% 30% at 8% 40%, color-mix(in srgb, var(--d2t-copper) 10%, transparent), transparent 72%),
+    linear-gradient(var(--d2t-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--d2t-grid) 1px, transparent 1px);
+  background-size: 100% 1100px, 100% 1100px, 44px 44px, 44px 44px;
+  background-repeat: no-repeat, no-repeat, repeat, repeat;
+}
+
+.landing section {
+  padding: clamp(56px, 7vw, 96px) 0;
+}
+.landing section + section {
+  border-top: 1px solid var(--d2t-line);
+}
+.landing .section-head {
+  max-width: 46rem;
+  margin: 0 0 clamp(30px, 4vw, 52px);
+}
+.landing .section-head::before {
+  content: "";
+  display: block;
+  width: 3.2rem;
+  height: 2px;
+  margin-bottom: 1.1rem;
+  background: linear-gradient(90deg, var(--d2t-copper), transparent);
+}
+.landing .section-head h2 {
+  margin: 0;
+  border-bottom: none;
+  font-size: clamp(1.9rem, 3.6vw, 2.7rem);
+  font-weight: 900;
+  line-height: 1.16;
+  color: var(--d2t-emphasis);
+}
+.landing .section-head p {
+  margin: 0.8rem 0 0;
+  color: var(--d2t-soft);
+  font-size: clamp(1rem, 1.25vw, 1.12rem);
+}
+
+/* Hero */
+.landing .hero {
+  position: relative;
+  padding: clamp(56px, 8vw, 104px) 0 clamp(48px, 6vw, 80px);
+}
+.landing .hero .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1.4rem;
+  color: var(--d2t-silk);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.landing .hero .eyebrow::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--d2t-copper);
+  border-radius: 50%;
+}
+.landing .hero h1 {
+  margin: 0 0 1rem;
+  font-family: "Chakra Petch", "Inter", sans-serif;
+  font-size: clamp(2.3rem, 4.4vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.04;
+  color: var(--d2t-emphasis);
+}
+.landing .hero .subtitle {
+  margin-bottom: 1.3rem;
+  color: var(--d2t-silk);
+  font-size: clamp(1.15rem, 1.8vw, 1.35rem);
+  font-style: italic;
+}
+.landing .hero .lead {
+  max-width: 38rem;
+  color: var(--d2t-soft);
+  font-size: clamp(1.02rem, 1.45vw, 1.17rem);
+}
+.landing .hero p {
+  color: var(--d2t-soft);
+}
+.landing .hero .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 1.9rem;
+}
+.landing .hero .btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.98rem;
+}
+
+.landing .cover-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  max-width: 300px;
+  aspect-ratio: 3 / 4;
+  margin: 0 auto;
+  padding: 2rem 1.6rem;
+  border-radius: 14px;
+  background: linear-gradient(150deg, #1d588c 0%, #16334f 62%, #7a4f22 130%);
+  color: #fff;
+  box-shadow: 0 26px 70px rgba(1, 6, 14, 0.26);
+  overflow: hidden;
+}
+.landing .cover-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.landing .cover-card > * {
+  position: relative;
+}
+.landing .cover-card .cover-title {
+  font-family: "Chakra Petch", "Inter", sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.08;
+}
+.landing .cover-card .cover-sub {
+  margin-top: 0.6rem;
+  font-size: 1.05rem;
+  opacity: 0.9;
+}
+.landing .cover-card .cover-author {
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(224, 163, 92, 0.6);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.95;
+}
+
+/* Numbers */
+.landing .metric {
+  padding: 0.45rem;
+}
+.landing .metric > * {
+  position: relative;
+}
+.landing section:has(.metric) .row {
+  row-gap: 14px;
+}
+.landing .metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.landing .metric .value,
+.landing .metric .label,
+.landing .metric .note {
+  width: 100%;
+}
+.landing .metric .value {
+  padding-top: 1.3rem;
+  border: 1px solid var(--d2t-line);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--d2t-paper);
+  font-family: "Chakra Petch", "Inter", sans-serif;
+  font-size: clamp(1.9rem, 2.8vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--d2t-emphasis);
+}
+.landing .metric .label {
+  border-left: 1px solid var(--d2t-line);
+  border-right: 1px solid var(--d2t-line);
+  background: var(--d2t-paper);
+  color: var(--d2t-link);
+  font-weight: 700;
+}
+.landing .metric .note {
+  flex: 1;
+  padding: 0.3rem 0.9rem 1.3rem;
+  border: 1px solid var(--d2t-line);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: var(--d2t-paper);
+  color: var(--d2t-muted);
+  font-size: 0.86rem;
+}
+
+/* Steps */
+.landing .step {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1.3rem;
+}
+.landing .step .num {
+  flex: 0 0 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--d2t-copper);
+  border-radius: 50%;
+  background: var(--d2t-paper);
+  color: var(--d2t-emphasis);
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+}
+.landing .step h3 {
+  margin: 0.3rem 0 0.2rem;
+  font-size: 1.1rem;
+}
+.landing .step p {
+  margin: 0;
+  color: var(--d2t-soft);
+}
+
+/* Cards */
+.landing .path-card,
+.landing .tool,
+.landing details {
+  border: 1px solid var(--d2t-line);
+  border-radius: 12px;
+  background: var(--d2t-paper);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.landing .path-card:hover,
+.landing .tool:hover {
+  transform: translateY(-3px);
+  border-color: var(--d2t-copper-dim);
+  box-shadow: var(--d2t-shadow-md);
+}
+.landing .path-card {
+  height: 100%;
+  padding: 1.4rem;
+}
+.landing .path-card .tag {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--d2t-copper);
+}
+.landing .path-card h3 {
+  margin: 0.5rem 0;
+  font-size: 1.15rem;
+}
+.landing .path-card p {
+  margin: 0;
+  color: var(--d2t-soft);
+}
+
+/* Timeline */
+.landing .timeline {
+  margin-left: 0.8rem;
+  padding-left: 1.6rem;
+  border-left: 2px solid var(--d2t-copper-dim);
+}
+.landing .timeline .item {
+  position: relative;
+  margin-bottom: 1.8rem;
+}
+.landing .timeline .item::before {
+  content: "";
+  position: absolute;
+  left: -2.18rem;
+  top: 0.3rem;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--d2t-copper);
+  border-radius: 50%;
+  background: var(--d2t-bg);
+}
+.landing .timeline .when {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--d2t-silk);
+}
+.landing .timeline h3 {
+  margin: 0.2rem 0 0.2rem;
+  font-size: 1.15rem;
+}
+.landing .timeline p {
+  color: var(--d2t-soft);
+}
+
+/* Tools */
+.landing .tool {
+  height: 100%;
+  padding: 1rem 1.1rem;
+}
+.landing .tool strong {
+  display: block;
+  color: var(--d2t-emphasis);
+}
+.landing .tool span {
+  font-size: 0.9rem;
+  color: var(--d2t-muted);
+}
+
+/* FAQ */
+.landing details {
+  margin-bottom: 0.7rem;
+  padding: 0.9rem 1.2rem;
+}
+.landing details[open] {
+  border-color: var(--d2t-line-strong);
+}
+.landing details summary {
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--d2t-emphasis);
+}
+.landing details summary::marker {
+  color: var(--d2t-copper);
+}
+.landing details p {
+  margin: 0.7rem 0 0.2rem;
+  color: var(--d2t-soft);
+}
+
+/* Call to action */
+.landing .cta {
+  text-align: center;
+}
+.landing .cta .section-head {
+  margin-left: auto;
+  margin-right: auto;
+}
+.landing .cta .section-head::before {
+  margin-left: auto;
+  margin-right: auto;
+  background: linear-gradient(90deg, transparent, var(--d2t-copper), transparent);
+}
+.landing .cta .actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 1.2rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .landing .path-card,
+  .landing .tool {
+    transition: none;
+  }
+  .btn:hover,
+  .landing .path-card:hover,
+  .landing .tool:hover {
+    transform: none;
+  }
+}

@@ -1,0 +1,1339 @@
+---
+title: "Data Manipulation with dplyr and tidyr"
+subtitle: "From Messy Survey Exports to Tidy Analysis Tables"
+author: "Dr. Polla Fattah"
+institute: "From Data to Thesis: Research Data Analysis with R"
+format:
+  revealjs:
+    theme: [default, ../../styles/theme.scss]
+    slide-number: true
+    preview-links: auto
+    chalkboard: true
+    transition: slide
+    highlight-style: github
+    code-line-numbers: false
+    width: 1200
+    height: 750
+execute:
+  freeze: auto
+---
+
+# Data Manipulation with dplyr & tidyr
+
+### From Messy Survey Exports to Tidy Analysis Tables
+
+**Chapter 3 · From Data to Thesis**
+
+Dr. Polla Fattah
+
+---
+
+## The Reality of Raw Empirical Data
+
+Raw survey and experimental data is **never** ready for direct statistical analysis.
+
+In Elaf's university wellbeing study:
+
+- Survey tools record test submissions alongside real student responses.
+- Anxious participants submit the questionnaire two or three times.
+- Missing answers are coded as `99` or `-9`.
+- One person types `"Female"`, another `"female"`, and another `"F"`.
+- A typo records a student's age as `250`.
+- Sleep hours are typed as `"7 hrs"` and `"6,5"`.
+
+---
+
+## Why Data Cleaning is Real Analysis
+
+Cleaning is **not** a tedious administrative chore before "real" science begins.
+
+> **Every cleaning decision is a methodological decision that directly impacts your thesis findings.**
+
+- Leaving a single `99` code in a 1–5 Likert item shifts the sample mean drastically.
+- Counting duplicate rows artificially inflates statistical power ($N$) and distorts $p$-values.
+- Dropping cases without documentation invites immediate scrutiny from thesis examiners.
+
+---
+
+## What We Will Master Today
+
+By the end of this lecture deck, you will be able to:
+
+- Evaluate datasets against the **5 qualities of clean data**.
+- Distinguish between **untidy wide** and **tidy long** tabular layouts.
+- Chain transparent analytical workflows using the native pipe (`|>`).
+- Transform observations and variables using **dplyr verbs** (`filter`, `select`, `arrange`, `mutate`, `summarise`).
+- Group and aggregate cleanly with modern `.by` syntax.
+- Reshape complex longitudinal data with `pivot_longer()` and `pivot_wider()`.
+- Merge disparate tables using relational joins (`left_join()`, `anti_join()`).
+- Reverse-code survey scale items and compute psychometric indices.
+- Standardize messy text with `stringr` and convert European numbers with `readr`.
+- Write a formal, reproducible **data cleaning methodology log** for your thesis.
+
+---
+
+## The Five Qualities of Clean Data
+
+```
++-------------------------------------------------------------+
+|               THE 5 QUALITIES OF CLEAN DATA                 |
++-------------------------------------------------------------+
+| 1. VALID      | Values fall within real-world legal ranges  |
+| 2. ACCURATE   | Values reflect participant intent (no codes)|
+| 3. COMPLETE   | Real gaps marked as NA, not buried in codes |
+| 4. CONSISTENT | Single spelling/representation per category |
+| 5. UNIQUE     | Every participant/unit appears exactly once |
++-------------------------------------------------------------+
+```
+
+Every survey export fails on one or more of these dimensions.
+
+---
+
+## The Distortion of Unhandled Missing Codes
+
+What happens if an unhandled missing code (`99`) stays in your data?
+
+```r
+library(dplyr)
+
+answers <- c(4, 3, 5, 99, 2)
+
+# Uncleaned mean:
+mean(answers)
+#> [1] 22.6   <-- Completely impossible on a 1-5 scale!
+
+# Cleaned with na_if():
+clean_answers <- na_if(answers, 99)
+mean(clean_answers, na.rm = TRUE)
+#> [1] 3.5    <-- The authentic substantive mean
+```
+
+In large samples, this distortion does not produce an obvious 22.6; it subtly inflates the mean by 0.25—enough to produce a false positive ($p < .05$).
+
+---
+
+## The Three Golden Rules of Data Hygiene
+
+### Rule 1: The Raw File is Sacred
+Never edit `wellbeing_raw.xlsx` in Excel. Keep the original immutable in `data-raw/`.
+
+### Rule 2: Every Decision Must Be Scripted
+Every row dropped, every code converted to `NA`, and every recoded category must exist in executable code (`01-clean-data.R`).
+
+### Rule 3: Check After Every Single Step
+Many data cleaning bugs produce **zero error messages**. Always verify row counts (`nrow()`) and category counts (`count()`) after each transformation.
+
+---
+
+# Tidy Data Architecture
+
+### Structuring Measurements for Scalable Analysis
+
+---
+
+## What is "Tidy Data"?
+
+Formalized by Hadley Wickham (2014), tidy data enforces three structural invariants:
+
+1. **Each variable forms its own column.**
+2. **Each observation forms its own row.**
+3. **Each value sits in its own individual cell.**
+
+```
+       Variables (Columns)
+        Col 1    Col 2    Col 3
+      +--------+--------+--------+
+Row 1 | Value  | Value  | Value  |  <-- Single Observation
+      +--------+--------+--------+
+Row 2 | Value  | Value  | Value  |
+      +--------+--------+--------+
+```
+
+---
+
+## Untidy Data (Wide Format)
+
+Consider three students measured across two university semesters:
+
+| student | wellbeing_s1 | wellbeing_s2 |
+|---|---|---|
+| S1 | 58 | 63 |
+| S2 | 71 | 70 |
+| S3 | 64 | 69 |
+
+**Why this is untidy:**
+
+- The variable `wellbeing` is fragmented across two separate columns.
+- The variable `semester` is trapped inside the column headers (`_s1`, `_s2`).
+- Asking "calculate average wellbeing by semester" requires writing custom column formulas rather than a standard grouping.
+
+---
+
+## Tidy Data (Long Format)
+
+Here is the exact same information arranged in tidy form:
+
+| student | semester | wellbeing |
+|---|---|---|
+| S1 | 1 | 58 |
+| S1 | 2 | 63 |
+| S2 | 1 | 71 |
+| S2 | 2 | 70 |
+| S3 | 1 | 64 |
+| S3 | 2 | 69 |
+
+**Why this is tidy:**
+
+- Each column represents one conceptual variable (`student`, `semester`, `wellbeing`).
+- Each row represents one measurement event (one student in one semester).
+- Grouping, modeling, and plotting with `ggplot2` become effortless.
+
+---
+
+## The Tidyverse Toolkit
+
+We load the specific packages required for this chapter:
+
+```r
+library(dplyr)    # Grammar of data manipulation (rows & columns)
+library(tidyr)    # Tools for reshaping data (wide <-> long)
+library(stringr)  # Robust text standardization and regex
+library(readr)    # Parsing numbers and types from strings
+```
+
+You can also load all core tidyverse tools with `library(tidyverse)`.
+
+---
+
+# Chaining Workflows with the Pipe
+
+### `|>` vs Nested Functions
+
+---
+
+## The Readability Problem: Nested Code
+
+In traditional R, multi-step operations are nested inside each other:
+
+```r
+sleep <- c(6.5, 7, 5.5, 8, 6)
+
+# Nested: Reads inside out!
+round(mean(sleep), 1)
+#> [1] 6.6
+```
+
+With 5 or 6 operations (filter, group, summarise, mutate, arrange), nested code becomes impossible to read and debug.
+
+---
+
+## The Solution: The Native Pipe `|>`
+
+Introduced in R 4.1, the native pipe passes the left-hand result into the first argument of the right-hand function:
+
+```r
+sleep |> mean() |> round(1)
+#> [1] 6.6
+```
+
+Read `|>` as **"and then"**:
+
+1. Take `sleep`,
+2. **and then** compute its `mean()`,
+3. **and then** `round(1)` to one decimal place.
+
+*Keyboard Shortcut in RStudio:* `Ctrl + Shift + M` (`Cmd + Shift + M` on macOS).
+
+---
+
+## Historical Note: `|>` vs `%>%`
+
+In older tutorials, StackOverflow answers, and published packages, you will see `%>%` (from `magrittr`).
+
+- `|>` is built into base R (no package dependencies required).
+- `%>%` is provided by the tidyverse.
+- For 99% of research workflows, they behave identically.
+- This book uses the modern standard native pipe `|>`.
+
+---
+
+# Working with Cases and Variables
+
+### The Five Core Verbs of dplyr
+
+---
+
+## The Grammar of dplyr
+
+`dplyr` provides a clean vocabulary where function names are verbs:
+
+| Verb | Operation | Target |
+|---|---|---|
+| `filter()` | Pick rows meeting logical criteria | Observations |
+| `select()` | Pick or drop columns by name | Variables |
+| `arrange()` | Reorder rows based on values | Ordering |
+| `mutate()` | Create new variables or transform existing ones | Computations |
+| `summarise()` | Collapse multiple values into a summary statistic | Aggregations |
+
+**Every dplyr verb takes a data frame/tibble as its first argument and returns a new data frame/tibble.**
+
+---
+
+## Our Working Example: Pilot Wellbeing Cohort
+
+```r
+library(tibble)
+
+pilot <- tibble(
+  student = c("S1", "S2", "S3", "S4", "S5"),
+  faculty = c("Education", "Humanities", "Education", "Health Sciences", "Humanities"),
+  sleep   = c(6.5, 7.5, 5.5, 8.0, 6.0),
+  stress  = c(3.2, 2.1, 4.5, 1.8, 3.9)
+)
+pilot
+```
+
+```
+# A tibble: 5 x 4
+  student faculty          sleep stress
+  <chr>   <chr>            <dbl>  <dbl>
+1 S1      Education          6.5    3.2
+2 S2      Humanities         7.5    2.1
+3 S3      Education          5.5    4.5
+4 S4      Health Sciences    8      1.8
+5 S5      Humanities         6      3.9
+```
+
+---
+
+## `filter()`: Selecting Target Observations
+
+Use `filter()` to select rows that satisfy specific logical conditions:
+
+```r
+# Students sleeping less than 7 hours:
+pilot |> filter(sleep < 7)
+```
+
+```
+# A tibble: 3 x 4
+  student faculty     sleep stress
+  <chr>   <chr>       <dbl>  <dbl>
+1 S1      Education     6.5    3.2
+2 S3      Education     5.5    4.5
+3 S5      Humanities    6      3.9
+```
+
+Rows where the condition evaluates to `TRUE` are preserved; `FALSE` and `NA` are excluded.
+
+---
+
+## Combining Multiple Filter Conditions
+
+Multiple conditions separated by commas act as a logical **AND** (`&`):
+
+```r
+# Education students sleeping under 7 hours:
+pilot |> filter(sleep < 7, faculty == "Education")
+```
+
+```
+# A tibble: 2 x 4
+  student faculty   sleep stress
+  <chr>   <chr>     <dbl>  <dbl>
+1 S1      Education   6.5    3.2
+2 S3      Education   5.5    4.5
+```
+
+---
+
+## Matching Multiple Values with `%in%`
+
+To match any category from a set, use `%in%` rather than repeated `==` statements:
+
+```r
+# Keep Education and Humanities faculties:
+pilot |> filter(faculty %in% c("Education", "Humanities"))
+```
+
+```
+# A tibble: 4 x 4
+  student faculty    sleep stress
+  <chr>   <chr>      <dbl>  <dbl>
+1 S1      Education    6.5    3.2
+2 S2      Humanities   7.5    2.1
+3 S3      Education    5.5    4.5
+4 S5      Humanities   6      3.9
+```
+
+> **Warning:** Never write `faculty == c("Education", "Humanities")`. That triggers vector cycling and causes silent data loss!
+
+---
+
+## `select()`: Choosing Variables
+
+Select specific variables to clean up wide, overwhelming datasets:
+
+```r
+# Keep only student ID and sleep hours:
+pilot |> select(student, sleep)
+```
+
+```
+# A tibble: 5 x 2
+  student sleep
+  <chr>   <dbl>
+1 S1        6.5
+2 S2        7.5
+3 S3        5.5
+4 S4        8  
+5 S5        6  
+```
+
+---
+
+## Dropping and Helper Functions in `select()`
+
+Use `-` to exclude columns, and powerful pattern helpers:
+
+```r
+# Exclude the faculty column:
+pilot |> select(-faculty)
+
+# Select columns based on names:
+pilot |> select(starts_with("s"))   # student, sleep, stress
+pilot |> select(ends_with("p"))     # sleep
+pilot |> select(where(is.numeric))  # sleep, stress
+```
+
+Helper functions prevent hardcoding column indexes that break when survey items are added or removed.
+
+---
+
+## `arrange()`: Sorting Observations
+
+Sort rows to inspect outliers, extreme values, or chronological sequences:
+
+```r
+# Sort by stress in descending order:
+pilot |> arrange(desc(stress))
+```
+
+```
+# A tibble: 5 x 4
+  student faculty          sleep stress
+  <chr>   <chr>            <dbl>  <dbl>
+1 S3      Education          5.5    4.5
+2 S5      Humanities         6      3.9
+3 S1      Education          6.5    3.2
+4 S2      Humanities         7.5    2.1
+5 S4      Health Sciences    8      1.8
+```
+
+You can pass multiple columns: `arrange(faculty, desc(stress))`.
+
+---
+
+## `mutate()`: Creating and Transforming Variables
+
+Use `mutate()` to calculate new variables from existing columns:
+
+```r
+pilot |> mutate(
+  sleep_minutes = sleep * 60,
+  short_sleep   = sleep < 7
+)
+```
+
+```
+# A tibble: 5 x 6
+  student faculty          sleep stress sleep_minutes short_sleep
+  <chr>   <chr>            <dbl>  <dbl>         <dbl> <lgl>      
+1 S1      Education          6.5    3.2           390 TRUE       
+2 S2      Humanities         7.5    2.1           450 FALSE      
+3 S3      Education          5.5    4.5           330 TRUE       
+4 S4      Health Sciences    8      1.8           480 FALSE      
+5 S5      Humanities         6      3.9           360 TRUE       
+```
+
+Existing columns can also be overwritten in place: `mutate(sleep = sleep * 60)`.
+
+---
+
+## Categorization with `case_when()`
+
+`case_when()` allows vectorized `if-else` matching with multiple branches:
+
+```r
+pilot |> mutate(
+  stress_category = case_when(
+    stress >= 4.0 ~ "High",
+    stress >= 2.5 ~ "Medium",
+    .default      = "Low"
+  )
+)
+```
+
+**Key Mechanics:**
+
+- Evaluated in top-to-bottom order.
+- The first condition evaluating to `TRUE` assigns the value.
+- `.default` catches all unmatched rows (including `NA`).
+
+---
+
+## Methodological Note: Avoid Over-Categorizing
+
+Turning continuous variables into categories (e.g., binning GPA or stress) is called **dichotomization** or **coarsening**:
+
+- It discards rich variance (stress 3.9 and 2.6 both become "Medium").
+- It reduces statistical power in regression models.
+- It creates arbitrary cut points.
+
+> **Guideline:** Use categories for presentation tables and descriptive figures, but keep continuous metrics in your primary models!
+
+---
+
+## `summarise()`: Aggregating Statistics
+
+`summarise()` collapses many rows into a single summary row:
+
+```r
+pilot |> summarise(
+  mean_sleep  = mean(sleep),
+  sd_sleep    = sd(sleep),
+  mean_stress = mean(stress),
+  n_students  = n()
+)
+```
+
+```
+# A tibble: 1 x 4
+  mean_sleep sd_sleep mean_stress n_students
+       <dbl>    <dbl>       <dbl>      <int>
+1        6.7    0.994         3.1          5
+```
+
+`n()` is a special dplyr context function that counts observations in the current group.
+
+---
+
+## Grouped Summaries with the Modern `.by` Syntax
+
+The real power of `summarise()` appears when comparing groups:
+
+```r
+pilot |> summarise(
+  mean_sleep  = mean(sleep),
+  mean_stress = mean(stress),
+  students    = n(),
+  .by         = faculty
+)
+```
+
+```
+# A tibble: 3 x 4
+  faculty         mean_sleep mean_stress students
+  <chr>                <dbl>       <dbl>    <int>
+1 Education             6           3.85        2
+2 Humanities            6.75        3           2
+3 Health Sciences       8           1.8         1
+```
+
+---
+
+## Why `.by` Replaced `group_by()`
+
+In older tidyverse code, you will frequently see:
+
+```r
+# Older idiom: leaves the dataframe permanently grouped!
+pilot |> 
+  group_by(faculty) |> 
+  summarise(mean_sleep = mean(sleep)) |> 
+  ungroup()   # forgetting ungroup() causes silent downstream bugs
+```
+
+**The Modern Standard:**
+
+- `.by = faculty` limits grouping strictly to the current verb.
+- Eliminates the need for `ungroup()`.
+- Supports grouping by multiple columns: `.by = c(faculty, programme)`.
+
+---
+
+## Fast Counting with `count()`
+
+For quick frequency tables, `count()` is a convenient shortcut:
+
+```r
+pilot |> count(faculty, sort = TRUE)
+```
+
+```
+# A tibble: 3 x 2
+  faculty             n
+  <chr>           <int>
+1 Education           2
+2 Humanities          2
+3 Health Sciences     1
+```
+
+Equivalent to `summarise(n = n(), .by = faculty) |> arrange(desc(n))`.
+
+---
+
+# Reshaping Data: Wide to Long and Back
+
+### Mastering `pivot_longer()` and `pivot_wider()`
+
+---
+
+## Longitudinal and Repeated Measurements
+
+In empirical studies, we frequently measure participants repeatedly over time:
+
+```r
+wide_scores <- tibble(
+  student     = c("S1", "S2", "S3"),
+  wellbeing_1 = c(58, 71, 64),
+  wellbeing_2 = c(63, 70, 69)
+)
+wide_scores
+```
+
+```
+# A tibble: 3 x 3
+  student wellbeing_1 wellbeing_2
+  <chr>         <dbl>       <dbl>
+1 S1               58          63
+2 S2               71          70
+3 S3               64          69
+```
+
+To plot change over time with `ggplot2` or run a mixed-effects regression, this **must** be reshaped to long format.
+
+---
+
+## `pivot_longer()`: Collapsing Columns into Rows
+
+```r
+long_scores <- wide_scores |>
+  pivot_longer(
+    cols         = c(wellbeing_1, wellbeing_2),
+    names_to     = "semester",
+    names_prefix = "wellbeing_",
+    values_to    = "wellbeing"
+  )
+long_scores
+```
+
+```
+# A tibble: 6 x 3
+  student semester wellbeing
+  <chr>   <chr>        <dbl>
+1 S1      1               58
+2 S1      2               63
+3 S2      1               71
+4 S2      2               70
+5 S3      1               64
+6 S3      2               69
+```
+
+---
+
+## `pivot_longer()` Argument Breakdown
+
+```
+pivot_longer(
+  cols         = c(wellbeing_1, wellbeing_2), # Which columns to stack
+  names_to     = "semester",                  # New column for variable names
+  names_prefix = "wellbeing_",                # Strips "wellbeing_" from "1", "2"
+  values_to    = "wellbeing"                  # New column for the measurements
+)
+```
+
+- `cols`: Specifies the columns being gathered (supports selectors like `starts_with("wellbeing_")`).
+- `names_to`: Stores what the headers originally stood for.
+- `values_to`: Stores the numerical data values.
+
+---
+
+## `pivot_wider()`: From Long to Wide
+
+Wide format is ideal for **executive summary tables** in thesis reports:
+
+```r
+long_scores |> 
+  pivot_wider(
+    names_from  = semester, 
+    values_from = wellbeing,
+    names_prefix = "Semester_"
+  )
+```
+
+```
+# A tibble: 3 x 3
+  student Semester_1 Semester_2
+  <chr>        <dbl>      <dbl>
+1 S1              58         63
+2 S2              71         70
+3 S3              64         69
+```
+
+`pivot_longer()` and `pivot_wider()` are mathematical inverses of each other.
+
+---
+
+## Thesis Application: Pivot for Publication Tables
+
+A pipeline computing average wellbeing across 4 semesters by workshop group:
+
+```r
+library(data2thesis)
+
+semesters |>
+  left_join(students |> select(student_id, workshop), join_by(student_id)) |>
+  summarise(
+    mean_wb = round(mean(wellbeing), 1),
+    .by     = c(semester, workshop)
+  ) |>
+  pivot_wider(names_from = workshop, values_from = mean_wb)
+```
+
+```
+# A tibble: 4 x 3
+  semester Control Workshop
+     <int>   <dbl>    <dbl>
+1        1    60.1     60.4
+2        2    60.3     65.2
+3        3    59.8     66.1
+4        4    60.0     66.8
+```
+
+This wide table is immediately formatted for APA thesis presentation!
+
+---
+
+# Relational Data & Table Joins
+
+### Combining Data Across Tables with Keys
+
+---
+
+## Why Separate Tables?
+
+Good database and research design avoids massive monolithic tables:
+
+- **Participants table (`students`)**: Attributes fixed at baseline (gender, age, faculty).
+- **Longitudinal records (`semesters`)**: Measurements changing each semester (GPA, sleep, wellbeing).
+- **Supervisor table (`supervisors`)**: Faculty supervisors and academic ranks.
+
+We link these tables using an **identifier (primary/foreign key)** like `student_id`.
+
+---
+
+## Join Mechanics Illustrated
+
+```
+Table A (scores)           Table B (people)
++---------+-----------+    +---------+-----------+
+| student | wellbeing |    | student | faculty   |
++---------+-----------+    +---------+-----------+
+| S1      | 58        |    | S1      | Education |
+| S2      | 71        |    | S2      | Humanities|
+| S4      | 66        |    | S3      | Sciences  |
++---------+-----------+    +---------+-----------+
+           \                    /
+            \                  /
+             left_join(join_by(student))
+                        v
++---------+-----------+-----------+
+| student | wellbeing | faculty   |
++---------+-----------+-----------+
+| S1      | 58        | Education |
+| S2      | 71        | Humanities|
+| S4      | 66        | NA        | <-- S4 has no match in B
++---------+-----------+-----------+
+```
+
+---
+
+## `left_join()`: Preserving the Cohort
+
+`left_join()` keeps **every observation** in the left table and adds matching attributes from the right table:
+
+```r
+scores <- tibble(student = c("S1", "S2", "S4"), wellbeing = c(58, 71, 66))
+people <- tibble(student = c("S1", "S2", "S3"), faculty   = c("Edu", "Hum", "Sci"))
+
+scores |> left_join(people, join_by(student))
+```
+
+```
+# A tibble: 3 x 3
+  student wellbeing faculty
+  <chr>         <dbl> <chr>  
+1 S1               58 Edu    
+2 S2               71 Hum    
+3 S4               66 NA     
+```
+
+Notice: Student `S4` is preserved with `faculty = NA`. Student `S3` (only in `people`) is dropped.
+
+---
+
+## `anti_join()`: Diagnosing Missing Observations
+
+`anti_join()` returns all rows in the left table that have **no match** in the right table.
+
+It is the single most valuable diagnostic tool for attrition and missing survey links:
+
+```r
+# Which people have no scores recorded?
+people |> anti_join(scores, join_by(student))
+```
+
+```
+# A tibble: 1 x 2
+  student faculty
+  <chr>   <chr>  
+1 S3      Sci    
+```
+
+Student `S3` enrolled but never generated a score.
+
+---
+
+## Research Case: Tracking Student Study Dropouts
+
+In Elaf's wellbeing study, did students drop out at random in Year 2?
+
+```r
+# Find students enrolled at baseline who have NO record in Semester 3:
+dropouts <- students |>
+  anti_join(semesters |> filter(semester == 3), join_by(student_id))
+
+nrow(dropouts)
+#> [1] 44
+
+dropouts |> count(considering_dropout)
+```
+
+```
+# A tibble: 2 x 2
+  considering_dropout     n
+  <chr>               <int>
+1 No                      8
+2 Yes                    36
+```
+
+**Substantive insight:** 36 of the 44 dropouts had already stated at baseline that they were considering leaving! Attrition was systematically non-random.
+
+---
+
+# Case Study: Cleaning Elaf's Raw Survey Export
+
+### Transforming `wellbeing_raw.xlsx` Step-by-Step
+
+---
+
+## Step 0: Inspecting the Raw Workbook
+
+```r
+library(readxl)
+
+raw_path <- data2thesis_example("wellbeing_raw.xlsx")
+raw <- read_excel(raw_path)
+
+dim(raw)
+#> [1] 624  54
+```
+
+**Initial Findings:**
+
+- Expected sample: 600 students. The raw export contains **624 rows**.
+- 54 columns with long, messy question headers containing spaces and punctuation.
+- Column types: numeric items imported as text (`chr`).
+
+---
+
+## Uncovering Messy Categories & Test Rows
+
+```r
+# Examining gender responses:
+raw |> count(Q3_Gender)
+
+# Searching for test accounts:
+raw |> 
+  filter(str_detect(str_to_upper(`Q1_Student ID`), "TEST")) |> 
+  select(1:4)
+```
+
+```
+# A tibble: 7 x 2
+  Q3_Gender     n
+  <chr>     <int>
+1 F            42
+2 Female      280
+3 female       48
+4 M            35
+5 Male        211
+6 male          6
+7 NA            2
+```
+
+We see test records, inconsistent case, abbreviations (`M`/`F`), and trailing spaces.
+
+---
+
+## Step 1: Removing Test Entries & Duplicates
+
+Test entries are artifacts of survey testing; duplicate submissions artificially duplicate participants:
+
+```r
+responses <- raw |>
+  # 1. Filter out IDs starting with TEST (case-insensitive)
+  filter(!str_detect(str_to_upper(`Q1_Student ID`), "^TEST")) |>
+  # 2. Drop the unique submission timestamp/ID so exact duplicates match
+  select(-`Response ID`) |>
+  # 3. Deduplicate rows
+  distinct()
+
+nrow(responses)
+#> [1] 600
+```
+
+- `^TEST` matches "TEST" strictly at the beginning of the string.
+- Exactly 600 validated student records remain.
+
+---
+
+## Step 2: Renaming to Clean Variable Identifiers
+
+Raw question texts like `Q10_How worried are you about money? (1-5)` are error-prone.
+
+```r
+# Generate standard scale item names:
+item_names <- c(
+  paste0("stress_", 1:6),
+  paste0("burnout_", 1:6),
+  paste0("support_", 1:6),
+  paste0("satisfaction_", 1:4)
+)
+
+responses <- responses |>
+  rename(
+    student_id          = `Q1_Student ID`,
+    age                 = Q2_Age,
+    gender              = Q3_Gender,
+    faculty             = Q4_Faculty,
+    programme           = Q5_Programme,
+    study_mode          = `Q6_Study mode`,
+    employment          = `Q7_Paid work`,
+    has_children        = Q8_Children,
+    lives_away          = `Q9_Moved away from family`,
+    financial_worry     = `Q10_How worried are you about money? (1-5)`,
+    workshop            = `Workshop group`,
+    workshop_sessions   = `Workshop sessions attended`,
+    considering_dropout = `Y1_Considered leaving?`
+  ) |>
+  rename_with(~ item_names, .cols = Q11_1:Q11_22)
+```
+
+---
+
+## Step 3: Standardizing Inconsistent Categories
+
+Use `str_to_lower()`, `str_trim()`, and regex matching to unify variations:
+
+```r
+responses <- responses |>
+  mutate(
+    # Unify Gender to "Female" / "Male"
+    gender = if_else(str_starts(str_to_lower(str_trim(gender)), "f"), "Female", "Male"),
+    
+    # Map Faculty text strings cleanly
+    faculty = case_when(
+      str_detect(str_to_lower(faculty), "educ")    ~ "Education",
+      str_detect(str_to_lower(faculty), "health")  ~ "Health Sciences",
+      str_detect(str_to_lower(faculty), "humanit") ~ "Humanities",
+      str_detect(str_to_lower(faculty), "social")  ~ "Social Sciences",
+      str_detect(str_to_lower(faculty), "natural|^sciences$") ~ "Natural Sciences"
+    ),
+    
+    # Program and study mode
+    programme  = if_else(str_detect(str_to_lower(programme), "ph"), "PhD", "Master's"),
+    study_mode = if_else(str_detect(str_to_lower(study_mode), "part"), "Part-time", "Full-time"),
+    
+    # Binary Yes/No items across multiple columns in one go:
+    across(c(has_children, lives_away, considering_dropout),
+           ~ if_else(str_starts(str_to_lower(.x), "y"), "Yes", "No"))
+  )
+```
+
+---
+
+## Step 4: Missing Codes vs Real Numbers
+
+Missing-answer codes (`99`, `-9`) must be converted to `NA` **before** numerical conversion:
+
+```r
+responses <- responses |>
+  mutate(
+    financial_worry = financial_worry |> na_if("99") |> na_if("-9") |> as.integer(),
+    across(all_of(item_names), ~ as.integer(na_if(.x, "99"))),
+    workshop_sessions = as.integer(workshop_sessions),
+    age = parse_number(age)
+  )
+```
+
+> **Critical Warning:** Never run a global find-and-replace of `99` $\rightarrow$ `NA` across an entire dataset! On a 0–100 wellbeing scale, 99 is an authentic high score, not a missing code.
+
+---
+
+## The European Decimal Comma Trap
+
+When parsing text numbers with `readr::parse_number()`, watch out for European comma conventions:
+
+```r
+# Demonstration:
+parse_number(c("7 hrs", "6.5", "6,5"))
+#> [1]  7.0  6.5 65.0   <-- 6,5 was read as sixty-five!
+```
+
+Because English punctuation treats commas as thousand separators, `"6,5"` becomes `65`.
+
+**The Robust Fix:** Replace commas with periods before parsing:
+
+```r
+parse_number(str_replace(c("7 hrs", "6.5", "6,5"), ",", "."))
+#> [1] 7.0 6.5 6.5   <-- Correct!
+```
+
+---
+
+## Step 5: Handling Impossible Biological Values
+
+Some values are clear typing errors that cannot be true:
+
+```r
+# Find impossible ages:
+responses |> filter(age > 100) |> select(student_id, age)
+```
+
+```
+# A tibble: 1 x 2
+  student_id   age
+  <chr>      <dbl>
+1 S087         250
+```
+
+- Did student `S087` mean 25? Or 50?
+- We cannot invent data. The scientific fix is to recode impossible values to `NA`:
+
+```r
+responses <- responses |> 
+  mutate(age = if_else(age > 100, NA_real_, age))
+```
+
+---
+
+## Step 6: Psychometric Scale Scores & Reverse Items
+
+Questionnaire items must all point in the same psychological direction before averaging.
+
+Item `stress_4`: *"I feel confident handling problems in my studies."*
+
+- High score on `stress_4` = **low** stress!
+- Leaving it unreversed cancels out the other 5 items measuring high stress.
+
+**Reverse Scoring Formula (1 to 5 scale):**
+
+$$\text{Reversed} = (\text{Max} + \text{Min}) - \text{Item} = (5 + 1) - \text{Item} = 6 - \text{Item}$$
+
+- If answer is $5 \rightarrow 6 - 5 = 1$.
+- If answer is $1 \rightarrow 6 - 1 = 5$.
+
+---
+
+## Computing Multi-Item Scale Indices
+
+```r
+questionnaire_clean <- responses |>
+  select(student_id, all_of(item_names))
+
+scale_scores <- questionnaire_clean |>
+  mutate(
+    # 1. Reverse negative item
+    stress_4           = 6 - stress_4,
+    
+    # 2. Average items within each domain
+    stress_score       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    burnout_score      = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+    support_score      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction_score = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  ) |>
+  select(student_id, ends_with("_score"))
+
+head(scale_scores, 3)
+```
+
+```
+# A tibble: 3 x 5
+  student_id stress_score burnout_score support_score satisfaction_score
+  <chr>             <dbl>         <dbl>         <dbl>              <dbl>
+1 S001               3.33          2.83          3.5                3.75
+2 S002               2.17          1.83          4.17               4.25
+3 S003               4.5           4.17          2.33               2.00
+```
+
+---
+
+## Step 7: Reshaping Semester Measurements with `.value`
+
+In `responses`, 28 columns represent repeated measures: `GPA_S1`, `Sleep_S1`, ..., `Wellbeing_S4`.
+
+We pivot all 4 semesters simultaneously into a clean panel dataset:
+
+```r
+semesters_clean <- responses |>
+  select(student_id, matches("_S[1-4]$")) |>
+  pivot_longer(
+    cols      = -student_id,
+    names_to  = c(".value", "semester"),
+    names_sep = "_S"
+  )
+
+head(semesters_clean, 4)
+```
+
+```
+# A tibble: 4 x 9
+  student_id semester GPA   Sleep Study Exercise Caffeine Meetings Wellbeing
+  <chr>      <chr>    <chr> <chr> <chr> <chr>    <chr>    <chr>    <chr>    
+1 S001       1        3.4   7 hrs 25    3        150      2        62       
+2 S001       2        3.5   7.5   28    4        120      3        68       
+3 S001       3        3.6   7     30    3        140      2        71       
+4 S001       4        3.7   8     32    4        100      3        74       
+```
+
+The special token `".value"` extracts the variable name (`GPA`, `Sleep`), while `"semester"` captures the digit (`1`–`4`)!
+
+---
+
+## Cleaning the Longitudinal Metrics
+
+```r
+semesters_clean <- semesters_clean |>
+  rename(
+    gpa                 = GPA, 
+    sleep_hours         = Sleep, 
+    study_hours         = Study,
+    exercise_days       = Exercise, 
+    caffeine_mg         = Caffeine,
+    supervisor_meetings = Meetings, 
+    wellbeing           = Wellbeing
+  ) |>
+  mutate(
+    semester    = as.integer(semester),
+    sleep_hours = parse_number(str_replace(sleep_hours, ",", ".")),
+    across(c(gpa, study_hours, exercise_days, caffeine_mg, supervisor_meetings, wellbeing),
+           parse_number),
+    # Biological plausibility bounds:
+    sleep_hours = if_else(sleep_hours > 24, NA_real_, sleep_hours),
+    study_hours = if_else(study_hours > 168, NA_real_, study_hours),
+    gpa         = if_else(gpa > 4.0, NA_real_, gpa)
+  ) |>
+  # Drop empty rows where students had already left the study:
+  filter(!if_all(gpa:wellbeing, is.na))
+```
+
+`if_all(gpa:wellbeing, is.na)` detects rows where every measurement is missing.
+
+---
+
+## Step 8: Auditing Residual Missing Data
+
+Always inspect missingness across the entire table before saving:
+
+```r
+semesters_clean |> 
+  summarise(across(everything(), ~ sum(is.na(.x))))
+```
+
+```
+# A tibble: 1 x 9
+  student_id semester   gpa sleep_hours study_hours exercise_days caffeine_mg supervisor_meetings wellbeing
+       <int>    <int> <int>       <int>       <int>         <int>       <int>               <int>     <int>
+1          0        0    18          22          15            12          19                  14        16
+```
+
+- ~1% missingness distributed across variables.
+- These represent genuine unanswered questions and impossible values recoded to `NA`.
+- Ready for imputation or handling in Chapter 6.
+
+---
+
+## Step 9: Regression Testing Against Canonical Baseline
+
+How do we prove our cleaning code has zero defects? By comparing with package ground truth:
+
+```r
+same <- function(mine, theirs) {
+  mine   <- as.data.frame(mine)[, names(mine)]
+  theirs <- as.data.frame(theirs)[, names(mine)]
+  isTRUE(all.equal(mine, theirs, check.attributes = FALSE))
+}
+
+# Verify questionnaire cleaning:
+same(questionnaire_clean |> arrange(student_id),
+     questionnaire |> arrange(student_id))
+#> [1] TRUE
+
+# Verify longitudinal semester cleaning:
+same(semesters_clean |> arrange(student_id, semester),
+     semesters |> arrange(student_id, semester))
+#> [1] TRUE
+```
+
+**100% exact numerical match.**
+
+---
+
+# Real-World Extension: Environmental Health
+
+### Analyzing Air Quality Missingness Patterns
+
+---
+
+## The `airquality` Dataset
+
+Real observational data frequently exhibits temporal gaps and environmental missingness:
+
+```r
+# Built-in New York Air Quality dataset:
+airquality |> head(4)
+```
+
+```
+  Ozone Solar.R Wind Temp Month Day
+1    41     190  7.4   67     5   1
+2    36     118  8.0   72     5   2
+3    12     149 12.6   74     5   3
+4    18     313 11.5   62     5   4
+```
+
+---
+
+## Grouped Missingness and Extreme Auditing
+
+Using dplyr verbs to inspect seasonal gaps:
+
+```r
+airquality |>
+  summarise(
+    mean_ozone   = round(mean(Ozone, na.rm = TRUE), 1),
+    median_ozone = median(Ozone, na.rm = TRUE),
+    missing_days = sum(is.na(Ozone)),
+    total_days   = n(),
+    .by          = Month
+  )
+```
+
+```
+# A tibble: 5 x 5
+  Month mean_ozone median_ozone missing_days total_days
+  <int>      <dbl>        <dbl>        <int>      <int>
+1     5       23.6         18              5         31
+2     6       29.4         23             21         30
+3     7       59.1         60              5         31
+4     8       60.0         45              5         31
+5     9       31.4         23              1         30
+```
+
+**Substantive finding:** June has 21 missing ozone readings out of 30 days. If those days were unrecorded due to extreme heat causing sensor failures, the June average is systematically biased downwards!
+
+---
+
+# Writing the Thesis Methodology Section
+
+### Transparent Reporting of Data Preprocessing
+
+---
+
+## Formal APA Data Preparation Report
+
+In your thesis Chapter 3 (Methodology), data cleaning should be reported formally and concisely:
+
+> "The raw survey export contained 624 responses. Preliminary data screening identified and removed 14 test entries and 10 duplicate submissions, yielding a final analytical sample of 600 unique students. Inconsistent category representations were harmonized, and missing-answer codes (99 and −9) were recoded to system missing (`NA`). 
+> 
+> A total of 4 biological impossible values (e.g., age = 250 years, sleep > 24 hours) were set to missing, as true values could not be determined. The reverse-worded item `stress_4` was recoded prior to psychometric index construction. Scale scores were computed as the arithmetic mean of available items for each participant."
+
+---
+
+## Structuring the Thesis Data Pipeline
+
+```
+my_thesis_project/
+|-- data-raw/
+|   +-- wellbeing_raw.xlsx          <-- IMMUTABLE RAW EXPORT
+|-- R/
+|   |-- 01-clean-data.R             <-- READS RAW, RUNS CLEANING PIPELINE
+|   |-- 02-scale-validation.R
+|   +-- 03-models.R
+|-- data/
+|   |-- students_clean.rds          <-- REPRODUCIBLE CLEAN ARTIFACTS
+|   +-- semesters_clean.rds
++-- thesis.qmd                      <-- RENDERS FINAL DISSERTATION
+```
+
+```r
+# End of 01-clean-data.R:
+readr::write_rds(students_clean, here::here("data", "students_clean.rds"))
+readr::write_rds(semesters_clean, here::here("data", "semesters_clean.rds"))
+```
+
+---
+
+## The Thesis Data Hygiene Checklist
+
+Before conducting hypothesis tests, verify:
+
+- [ ] **Raw files untouched:** No cells modified by hand in Microsoft Excel.
+- [ ] **Unique observations:** No duplicated subject identifiers or test accounts.
+- [ ] **Missing codes eradicated:** No `99`, `999`, or `-9` left as numeric values.
+- [ ] **Impossible values bounded:** No 250-year-old humans or 26-hour sleep days.
+- [ ] **Scales reversed:** Negatively keyed items inverted prior to scale averaging.
+- [ ] **Tidy layout:** 1 column per variable, 1 row per unit of observation.
+- [ ] **Complete reproducibility:** Script runs from end-to-end with fresh R session.
+
+---
+
+## Summary of Key Functions
+
+| Purpose | Function | Example |
+|---|---|---|
+| Filter rows | `filter()` | `filter(sleep < 7, faculty == "Edu")` |
+| Pick columns | `select()` | `select(student_id, starts_with("stress"))` |
+| Sort rows | `arrange()` | `arrange(desc(gpa))` |
+| Compute columns | `mutate()` | `mutate(sleep_hrs = sleep_min / 60)` |
+| Recode values | `case_when()` | `case_when(x >= 4 ~ "High", .default = "Low")` |
+| Aggregate | `summarise()` | `summarise(m = mean(x), .by = group)` |
+| Wide $\rightarrow$ Long | `pivot_longer()` | `pivot_longer(cols = s1:s4, names_to = "sem")` |
+| Long $\rightarrow$ Wide | `pivot_wider()` | `pivot_wider(names_from = sem, values_from = y)` |
+| Match merge | `left_join()` | `left_join(df2, join_by(student_id))` |
+| Find missing links | `anti_join()` | `anti_join(df2, join_by(student_id))` |
+| Text replacement | `str_replace()` | `str_replace(x, ",", ".")` |
+| Convert code to NA | `na_if()` | `na_if(x, 99)` |
+
+---
+
+# Questions & Hands-On Practice
+
+Open the Chapter 3 Interactive Playground:
+[playground/chapter03.html](../playground/chapter03.html)
+
+**Next Lecture:**
+*Chapter 4 · Exploratory Data Visualization with ggplot2*
