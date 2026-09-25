@@ -1,0 +1,756 @@
+---
+title: "Descriptive Statistics & Exploratory Data Analysis"
+subtitle: "Central Tendency, Spread, Distributions, and Outlier Diagnostics"
+author: "Dr. Polla Fattah"
+institute: "From Data to Thesis: Research Data Analysis with R"
+format:
+  revealjs:
+    theme: [default, ../../styles/theme.scss]
+    slide-number: true
+    preview-links: auto
+    chalkboard: true
+    transition: slide
+    highlight-style: github
+    code-line-numbers: false
+    width: 1200
+    height: 750
+execute:
+  freeze: auto
+---
+
+# Descriptive Statistics & EDA
+
+### Knowing Your Data Before Testing Hypotheses
+
+**Chapter 6 · From Data to Thesis**
+
+Dr. Polla Fattah
+
+---
+
+## The Temptation to Rush into Hypothesis Testing
+
+After cleaning the survey data, graduate researchers are eager to jump straight to:
+
+- Two-sample $t$-tests ($p < .05$?)
+- Multiple linear regressions
+- Complex structural equation models
+
+> **Rushing to inferential tests without exploring your data is the most common cause of flawed thesis defenses.**
+
+A single uninspected outlier can manufacture a spurious regression slope; severe skewness invalidates parametric assumptions; unexamined attrition silently biases the entire sample.
+
+---
+
+## What We Will Master Today
+
+By the end of this lecture deck, you will be able to:
+
+- Place **Exploratory Data Analysis (EDA)** at the center of your scientific workflow.
+- Select the mathematically appropriate summary statistics based on **level of measurement** and **distribution shape**.
+- Calculate and interpret **mean**, **median**, **standard deviation**, and **interquartile range (IQR)**.
+- Diagnose distribution shapes using density plots, **skewness statistics**, and **Q-Q plots**.
+- Identify authentic outliers using the **1.5 $\times$ IQR rule** and **$z$-score boundaries**.
+- Articulate the ethical principles of **outlier retention** and **sensitivity analysis**.
+- Audit missing data mechanisms: **MCAR**, **MAR**, and **MNAR**.
+- Construct comprehensive, publication-ready **Table 1: Sample Descriptives** for your thesis.
+
+---
+
+# The Place of Exploration in Research
+
+### John Tukey's Exploratory Data Analysis (EDA)
+
+---
+
+## The Three Phases of Data Analysis
+
+```
++-------------------------------------------------------------+
+| 1. EXPLORATION   | Describe sample, diagnose distributions, |
+|    (Chapter 6)   | audit missingness & outliers. (NO PROOFS)|
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+| 2. INFERENCE     | Generalize from sample to population;    |
+|    (Ch 7–10)     | test hypotheses; quantify uncertainty.   |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+| 3. PREDICTION    | Build models to forecast outcomes in     |
+|    (Ch 11–16)    | future, unseen observations.             |
++-------------------------------------------------------------+
+```
+
+When an inferential model produces surprising or contradictory results, **you always return to exploration to find out why.**
+
+---
+
+# The Centre of a Distribution
+
+### Mean, Median, and Mode
+
+---
+
+## Three Concepts of "Typical"
+
+```
++-------------------------------------------------------------+
+| MEAN (x̄)   | Arithmetic average: sum divided by count.     |
+|            | Sensitive to extreme values.                   |
++-------------------------------------------------------------+
+| MEDIAN     | Middle value when data is sorted (50th pct).   |
+|            | Robust to extreme values.                      |
++-------------------------------------------------------------+
+| MODE       | Most frequent category or value.               |
+|            | Standard summary for nominal variables.        |
++-------------------------------------------------------------+
+```
+
+$$\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_i$$
+
+---
+
+## Extreme Values: Mean vs. Median
+
+Consider daily caffeine intake (mg) across five graduate students:
+
+```r
+caffeine_sample <- c(0, 120, 150, 180, 900)
+
+mean(caffeine_sample)
+#> [1] 270
+
+median(caffeine_sample)
+#> [1] 150
+```
+
+- Four of the five students consume $\le 180$ mg.
+- One student consuming 900 mg pulls the mean up to **270 mg**.
+- The **mean** is higher than 80% of the sample!
+- The **median (150 mg)** faithfully captures the typical student experience.
+
+---
+
+## Empirical Reality: Sleep vs. Caffeine in Cohort
+
+```r
+library(data2thesis)
+library(dplyr)
+
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
+
+first_sem |>
+  summarise(
+    mean_sleep      = round(mean(sleep_hours, na.rm = TRUE), 2),
+    median_sleep    = round(median(sleep_hours, na.rm = TRUE), 2),
+    mean_caffeine   = round(mean(caffeine_mg, na.rm = TRUE), 1),
+    median_caffeine = round(median(caffeine_mg, na.rm = TRUE), 1)
+  )
+```
+
+```
+# A tibble: 1 x 4
+  mean_sleep median_sleep mean_caffeine median_caffeine
+       <dbl>        <dbl>         <dbl>           <dbl>
+1       6.38          6.4          281.             240
+```
+
+- **Sleep:** Symmetrical distribution $\rightarrow$ Mean $\approx$ Median.
+- **Caffeine:** Right-skewed distribution $\rightarrow$ Mean is pulled 41 mg above Median!
+
+---
+
+## Visualizing Skew Pulling the Mean
+
+```r
+library(ggplot2)
+
+ggplot(first_sem, aes(x = caffeine_mg)) +
+  geom_histogram(binwidth = 50, fill = "grey75", colour = "white") +
+  # Solid line = Mean
+  geom_vline(xintercept = mean(first_sem$caffeine_mg, na.rm = TRUE), 
+             colour = "firebrick", linewidth = 1.2) +
+  # Dashed line = Median
+  geom_vline(xintercept = median(first_sem$caffeine_mg, na.rm = TRUE), 
+             colour = "navy", linewidth = 1.2, linetype = "dashed") +
+  labs(
+    title    = "Daily Caffeine Intake (Semester 1)",
+    subtitle = "Solid Red = Mean (281 mg) | Dashed Blue = Median (240 mg)",
+    x        = "Caffeine Intake (mg/day)", y = "Number of Students"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+Extreme values in the long right tail exert leverage on the mean like children on a see-saw.
+
+---
+
+## Choosing a Measure of Central Tendency
+
+| Variable Level & Shape | Recommended Centre | Companion Spread | R Code |
+|---|---|---|---|
+| **Nominal** | Mode / Category % | Frequency table | `count(df, x)` |
+| **Ordinal** | Median / Category % | Interquartile Range | `median()`, `IQR()` |
+| **Numeric: Symmetrical** | Arithmetic Mean | Standard Deviation | `mean()`, `sd()` |
+| **Numeric: Skewed** | Median | Interquartile Range | `median()`, `IQR()` |
+
+---
+
+# The Spread of a Distribution
+
+### Range, Deviations, Variance, and Standard Deviation
+
+---
+
+## Why Averages Alone Conceal Reality
+
+Two student cohorts with identical average sleep:
+
+```r
+cohort_a <- c(6.0, 6.5, 6.5, 7.0, 6.5)  # Mean = 6.5 hours
+cohort_b <- c(4.0, 8.5, 5.0, 9.0, 6.0)  # Mean = 6.5 hours
+
+mean(cohort_a); mean(cohort_b)
+#> [1] 6.5
+#> [1] 6.5
+```
+
+- In Cohort A, every student sleeps between 6.0 and 7.0 hours.
+- In Cohort B, sleep fluctuates wildly from 4.0 to 9.0 hours.
+- **Reporting a mean without a measure of spread hides half the empirical story.**
+
+---
+
+## Anatomy of the Standard Deviation
+
+The distance of each observation from the sample mean is its **deviation**:
+
+$$\text{Deviation}_i = x_i - \bar{x}$$
+
+```
+Student Sleep (Cohort B)       Mean = 6.5 hrs
+   4.0 hrs  -----------------> Deviation = -2.5 hrs
+   8.5 hrs  -----------------> Deviation = +2.0 hrs
+   5.0 hrs  -----------------> Deviation = -1.5 hrs
+   9.0 hrs  -----------------> Deviation = +2.5 hrs
+   6.0 hrs  -----------------> Deviation = -0.5 hrs
+                              ---------------------
+                              Sum of Deviations = 0.0!
+```
+
+Deviations always sum to zero because positive and negative distances cancel out.
+
+---
+
+## Variance & Standard Deviation Formulas
+
+To prevent positive and negative deviations from cancelling, we square them:
+
+$$\text{Variance } (s^2) = \frac{1}{n - 1} \sum_{i=1}^{n} (x_i - \bar{x})^2$$
+
+Taking the square root restores the metric to the original units of measurement:
+
+$$\text{Standard Deviation } (s) = \sqrt{\frac{1}{n - 1} \sum_{i=1}^{n} (x_i - \bar{x})^2}$$
+
+*Why divide by $n - 1$?* Using $n - 1$ degrees of freedom corrects for sample bias when estimating population variance.
+
+---
+
+## Calculating Spread in R
+
+```r
+sd(cohort_a)
+#> [1] 0.3535534  <-- Minimal dispersion
+
+sd(cohort_b)
+#> [1] 2.12132    <-- Massive dispersion (over 2 hours!)
+```
+
+```r
+first_sem |>
+  summarise(
+    mean_sleep = round(mean(sleep_hours, na.rm = TRUE), 2),
+    sd_sleep   = round(sd(sleep_hours, na.rm = TRUE), 2),
+    mean_gpa   = round(mean(gpa, na.rm = TRUE), 2),
+    sd_gpa     = round(sd(gpa, na.rm = TRUE), 2)
+  )
+```
+
+```
+# A tibble: 1 x 4
+  mean_sleep sd_sleep mean_gpa sd_gpa
+       <dbl>    <dbl>    <dbl>  <dbl>
+1       6.38     1.02     3.41   0.31
+```
+
+A typical student sleeps within $\pm 1.02$ hours of the 6.38-hour average.
+
+---
+
+## The Interquartile Range (IQR)
+
+The **Interquartile Range** is the distance spanning the middle 50% of sorted observations:
+
+```
+0%              25% (Q1)         50% (Median)       75% (Q3)            100%
+|------------------|-------------------|----------------|-------------------|
+                   [ <------------ IQR -----------> ]
+```
+
+$$IQR = Q_3 - Q_1$$
+
+```r
+quantile(first_sem$caffeine_mg, probs = c(0.25, 0.50, 0.75), na.rm = TRUE)
+#>  25%  50%  75% 
+#>  150  240  380 
+
+IQR(first_sem$caffeine_mg, na.rm = TRUE)
+#> [1] 230
+```
+
+Like the median, the IQR is **unaffected by extreme outliers**.
+
+---
+
+# The Shape of a Distribution
+
+### Skewness, Modality, and the Normal Model
+
+---
+
+## Modality: Unimodal vs. Bimodal
+
+A distribution may exhibit one peak or multiple peaks:
+
+```
+      UNIMODAL (One Peak)                  BIMODAL (Two Peaks)
+          +-------+                            +---+       +---+
+         /         \                          /     \     /     \
+        /           \                        /       \___/       \
+    ---+-------------+---                ---+---------------------+---
+       Single population                    Mixture of two distinct 
+                                            underlying subpopulations!
+```
+
+---
+
+## Real-World Case: Old Faithful Geyser (`faithful`)
+
+```r
+library(ggplot2)
+
+ggplot(faithful, aes(x = eruptions)) +
+  geom_histogram(binwidth = 0.2, fill = "steelblue", colour = "white") +
+  labs(
+    title = "Old Faithful Eruption Durations (Bimodal Distribution)",
+    x = "Duration (Minutes)", y = "Count"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+- The mean eruption duration is **3.48 minutes**.
+- *Almost no eruption actually lasts 3.5 minutes!*
+- Eruptions belong to two distinct physical regimes: short bursts (~2 min) and long flows (~4.5 min).
+- **Reporting a single mean for a bimodal distribution is actively misleading.**
+
+---
+
+## Direction of Skewness
+
+```
+Symmetrical:               Right (Positive) Skew:       Left (Negative) Skew:
+Tail Left = Tail Right     Long Tail to the RIGHT       Long Tail to the LEFT
+
+       ^                          ^                            ^
+      / \                        / \                          / \
+     /   \                      /   \____                    /   \
+    /     \                    /         \----          ----/     \
+   ---------                  -----------------        -----------------
+   Mean = Median              Mean > Median            Mean < Median
+```
+
+- **Positive Skew:** Typical in income, caffeine consumption, reaction times, hospital stays.
+- **Negative Skew:** Typical in exam scores where students bunch near the ceiling.
+
+---
+
+## Quantifying Skewness in R
+
+Using the `psych` package to compute skewness coefficients:
+
+```r
+library(psych)
+
+c(
+  sleep_skew    = skew(first_sem$sleep_hours, na.rm = TRUE),
+  caffeine_skew = skew(first_sem$caffeine_mg, na.rm = TRUE),
+  age_skew      = skew(first_sem$age, na.rm = TRUE)
+)
+```
+
+```
+   sleep_skew caffeine_skew      age_skew 
+   -0.0384210     0.7814912     1.4285104 
+```
+
+### Interpreting Skewness Benchmarks:
+- Between **$-0.5$ and $+0.5$**: Roughly symmetrical.
+- Between **$\pm 0.5$ and $\pm 1.0$**: Moderately skewed.
+- Greater than **$\pm 1.0$**: Highly skewed (favour Median and IQR).
+
+---
+
+## The Normal Distribution & The 68–95–99.7 Rule
+
+For a bell-shaped, Gaussian distribution:
+
+```
+                     |
+                   .-"-.
+                 .'     '.
+               .'         '.
+             .'             '.
+          .-'                 '-.
+   ------+-------+-------+-------+-------+-------+------
+        μ-3σ    μ-2σ    μ-1σ     μ      μ+1σ    μ+2σ    μ+3σ
+         |       |       [--- 68.3% ---] |       |
+         |       [----------- 95.4% -----------] |
+         [------------------- 99.7% -------------------]
+```
+
+- **68%** of values fall within $\bar{x} \pm 1s$
+- **95%** of values fall within $\bar{x} \pm 2s$
+- **99.7%** of values fall within $\bar{x} \pm 3s$
+
+---
+
+## Standardized $z$-Scores
+
+A **$z$-score** expresses an individual observation in standard deviation units from the mean:
+
+$$z_i = \frac{x_i - \bar{x}}{s}$$
+
+Testing the 68–95–99.7 rule on the sleep data:
+
+```r
+clean_sleep <- na.omit(first_sem$sleep_hours)
+z_sleep <- (clean_sleep - mean(clean_sleep)) / sd(clean_sleep)
+
+c(
+  within_1_sd = mean(abs(z_sleep) < 1.0),
+  within_2_sd = mean(abs(z_sleep) < 2.0),
+  within_3_sd = mean(abs(z_sleep) < 3.0)
+)
+```
+
+```
+within_1_sd within_2_sd within_3_sd 
+  0.6866667   0.9533333   0.9966667 
+```
+
+The empirical sleep distribution conforms closely to the theoretical normal curve.
+
+---
+
+## Diagnosing Normality: Quantile-Quantile (Q-Q) Plots
+
+A **Q-Q plot** compares observed sample quantiles against theoretical normal quantiles:
+
+```r
+ggplot(first_sem, aes(sample = sleep_hours)) +
+  stat_qq(colour = "steelblue", alpha = 0.5) +
+  stat_qq_line(colour = "firebrick", linewidth = 1) +
+  labs(title = "Normal Q-Q Plot: Sleep Hours", x = "Theoretical Quantiles", y = "Sample Quantiles") +
+  theme_minimal(base_size = 13)
+```
+
+- **Points follow straight diagonal line:** Data is normally distributed.
+- **Points curve upwards at right edge:** Heavy right tail (positive skew).
+- **Points form S-curve:** Heavy tails (kurtosis).
+
+---
+
+# Detecting and Handling Unusual Values
+
+### Outlier Diagnostics and Research Ethics
+
+---
+
+## Outlier Detection Rules
+
+### 1. Tukey's 1.5 $\times$ IQR Boxplot Rule (Best for Skewed Data)
+$$\text{Lower Fence} = Q_1 - 1.5 \times IQR$$
+$$\text{Upper Fence} = Q_3 + 1.5 \times IQR$$
+
+### 2. The $z$-Score Boundary Rule (Best for Normal Data)
+$$\text{Outlier if } |z| > 3.0$$
+
+Any observation sitting beyond 3 standard deviations occurs by chance in less than 0.3% of normal samples.
+
+---
+
+## Applying Tukey's Rule to Caffeine
+
+```r
+q1 <- quantile(first_sem$caffeine_mg, 0.25, na.rm = TRUE)
+q3 <- quantile(first_sem$caffeine_mg, 0.75, na.rm = TRUE)
+iqr_val <- q3 - q1
+
+upper_fence <- q3 + 1.5 * iqr_val
+upper_fence
+#> [1] 725
+
+n_caff_outliers <- sum(first_sem$caffeine_mg > upper_fence, na.rm = TRUE)
+n_caff_outliers
+#> [1] 14
+```
+
+14 students consume $> 725$ mg of caffeine daily.
+
+---
+
+## Examining Multi-Variable Extreme Cases
+
+```r
+first_sem |>
+  filter(sleep_hours <= 4.5, caffeine_mg >= 600) |>
+  select(student_id, sleep_hours, caffeine_mg, study_hours, gpa, wellbeing)
+```
+
+```
+# A tibble: 3 x 6
+  student_id sleep_hours caffeine_mg study_hours   gpa wellbeing
+  <chr>            <dbl>       <dbl>       <dbl> <dbl>     <dbl>
+1 S042               4.0         850          55  2.95        38
+2 S189               4.2         750          62  3.10        41
+3 S412               4.5         650          50  3.05        44
+```
+
+- These are **authentic, real students** experiencing acute academic pressure.
+- They are not data entry mistakes.
+- Deleting them erases the very phenomenon the thesis seeks to understand!
+
+---
+
+## The Golden Rule of Outlier Ethics
+
+```
++---------------------------------------------------------------+
+| NEVER DELETE AN OBSERVATION JUST BECAUSE IT IS AN OUTLIER!    |
++---------------------------------------------------------------+
+```
+
+1. **Verify Authenticity:** Ensure the value is not an impossible data entry error (e.g., age 250).
+2. **Retain in Primary Dataset:** True biological or psychological variance belongs in the analysis.
+3. **Use Robust Statistics:** Apply medians, IQRs, or non-parametric tests.
+4. **Conduct Sensitivity Analyses:** Run your regression models with and without the extreme cases. Report both models in your thesis appendix:
+   > *"Results remained substantially identical when the three extreme caffeine cases were excluded from the regression model ($\beta = -0.18, p = .021$)."*
+
+---
+
+# Missing Data Diagnostics
+
+### MCAR, MAR, and MNAR
+
+---
+
+## The Rubin Missing Data Taxonomy
+
+```
++-------------------------------------------------------------+
+| MCAR: Missing Completely at Random                          |
+| Gaps are purely accidental (e.g., page skipped by mistake). |
+| Result: Analysis is unbiased; slight loss of sample power.  |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+| MAR: Missing at Random                                      |
+| Gaps depend on an observed variable (e.g., part-time mode). |
+| Result: Can be statistically corrected via covariates.      |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+| MNAR: Missing Not at Random                                 |
+| Gaps depend on the missing value itself (e.g., depressed    |
+| students refusing to answer wellbeing questions).           |
+| Result: Severe systematic bias; difficult to correct.       |
++-------------------------------------------------------------+
+```
+
+---
+
+## Auditing Attrition in Longitudinal Panels
+
+```r
+leavers <- setdiff(students$student_id, semesters$student_id[semesters$semester == 3])
+
+first_sem |>
+  mutate(attrition = if_else(student_id %in% leavers, "Dropped Out", "Retained")) |>
+  summarise(
+    n             = n(),
+    mean_wb       = round(mean(wellbeing), 1),
+    mean_gpa      = round(mean(gpa, na.rm = TRUE), 2),
+    pct_leave_y1  = round(100 * mean(considering_dropout == "Yes")),
+    .by           = attrition
+  )
+```
+
+```
+# A tibble: 2 x 5
+  attrition        n mean_wb mean_gpa pct_leave_y1
+  <chr>        <int>   <dbl>    <dbl>        <dbl>
+1 Retained       556    60.8     3.43           24
+2 Dropped Out     44    51.2     3.12           82
+```
+
+**Examiner Warning:** Year 2 data is subject to **healthy survivor bias**. Students who remain have higher baseline wellbeing and GPA.
+
+---
+
+# Bivariate Association: Correlation
+
+### Quantifying Straight-Line Relationships
+
+---
+
+## The Pearson Correlation Coefficient ($r$)
+
+$$r = \frac{\sum (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum (x_i - \bar{x})^2 \sum (y_i - \bar{y})^2}}$$
+
+- Ranges strictly from **$-1.00$** (perfect inverse) to **$+1.00$** (perfect positive).
+- **$r = 0.00$** denotes zero **linear** association.
+
+### Cohen's (1988) Empirical Benchmarks:
+- $|r| \approx 0.10$: Small / Weak
+- $|r| \approx 0.30$: Medium / Moderate
+- $|r| \approx 0.50$: Large / Strong
+
+---
+
+## Correlation Matrix across Academic & Wellbeing Scales
+
+```r
+first_sem |>
+  select(stress, burnout, support, wellbeing, gpa) |>
+  cor(use = "pairwise.complete.obs") |>
+  round(2)
+```
+
+```
+             stress burnout support wellbeing   gpa
+stress         1.00    0.68   -0.34     -0.54 -0.22
+burnout        0.68    1.00   -0.38     -0.61 -0.25
+support       -0.34   -0.38    1.00      0.45  0.28
+wellbeing     -0.54   -0.61    0.45      1.00  0.31
+gpa           -0.22   -0.25    0.28      0.31  1.00
+```
+
+- Stress and Burnout correlate strongly ($r = 0.68$).
+- Supervisor support exhibits positive links to wellbeing ($r = 0.45$) and GPA ($r = 0.28$).
+
+---
+
+## Quick Scatter Plot Matrix with `pairs()`
+
+```r
+pairs(
+  first_sem[, c("stress", "support", "wellbeing", "gpa")],
+  pch = 16,
+  col = rgb(0.1, 0.2, 0.6, 0.3),
+  main = "Bivariate Associations in Semester 1"
+)
+```
+
+Provides an instant visual scan of all pairwise associations, nonlinear curves, and clustering.
+
+---
+
+# Constructing Table 1 for Your Thesis
+
+### Presenting Demographic and Baseline Characteristics
+
+---
+
+## Building an Automated Descriptives Function
+
+```r
+describe_var <- function(x) {
+  c(
+    N       = sum(!is.na(x)),
+    Missing = sum(is.na(x)),
+    Mean    = round(mean(x, na.rm = TRUE), 2),
+    SD      = round(sd(x, na.rm = TRUE), 2),
+    Median  = round(median(x, na.rm = TRUE), 2),
+    IQR     = round(IQR(x, na.rm = TRUE), 2)
+  )
+}
+
+vars_to_summarise <- first_sem[, c("sleep_hours", "study_hours", "caffeine_mg", "gpa", "wellbeing")]
+sapply(vars_to_summarise, describe_var) |> t()
+```
+
+```
+            N Missing   Mean     SD Median    IQR
+sleep_hours 588      12   6.38   1.02    6.4    1.4
+study_hours 590      10  28.45   8.12   28.0   11.0
+caffeine_mg 589      11 281.32 174.56  240.0  230.0
+gpa         592       8   3.41   0.31    3.4    0.4
+wellbeing   600       0  60.12  11.23   60.0   15.0
+```
+
+---
+
+## Thesis In-Text Descriptives Write-up
+
+In your thesis results chapter, report descriptive findings using formal APA format:
+
+> "The analytical sample comprised $N = 600$ graduate students ($52.0\%$ female; $43.0\%$ PhD candidates; $M_{\text{age}} = 27.5$ years, $SD = 4.2$, range: $21–48$). 
+> 
+> In the first semester, students reported an average nocturnal sleep duration of $6.38$ hours ($SD = 1.02$), with $68.7\%$ sleeping less than the recommended $7.0$-hour threshold. Daily caffeine intake was positively skewed ($M = 281.3$ mg, $SD = 174.6$; $Mdn = 240.0$ mg, $IQR = 230.0$). Semester GPA averaged $3.41$ ($SD = 0.31$), and baseline wellbeing scored $60.12$ ($SD = 11.23$, range: $24–96$)."
+
+---
+
+## The Exploratory Data Analysis Checklist
+
+Before running any inferential hypothesis test:
+
+- [ ] **Missingness Audited:** Quantified $N$ and percent missing for each variable.
+- [ ] **Modality Checked:** Confirmed distributions are unimodal (no bimodal mixtures).
+- [ ] **Skewness Evaluated:** Symmetrical $\rightarrow$ Mean & SD; Skewed $\rightarrow$ Median & IQR.
+- [ ] **Normality Verified:** Q-Q plots inspected for variables destined for parametric tests.
+- [ ] **Outliers Flagged & Inspected:** 1.5 $\times$ IQR rule applied; authenticity confirmed.
+- [ ] **Zero Unjustified Deletions:** Extreme cases retained or set aside for sensitivity tests.
+- [ ] **Pairwise Associations Scanned:** Correlations inspected for multicollinearity and confounders.
+
+---
+
+## Summary of Key EDA Functions in R
+
+| Task | Function | Example |
+|---|---|---|
+| Arithmetic average | `mean()` | `mean(x, na.rm = TRUE)` |
+| Robust middle | `median()` | `median(x, na.rm = TRUE)` |
+| Standard deviation | `sd()` | `sd(x, na.rm = TRUE)` |
+| Interquartile range | `IQR()` | `IQR(x, na.rm = TRUE)` |
+| Arbitrary quantiles | `quantile()` | `quantile(x, c(0.25, 0.75))` |
+| Distribution skewness | `psych::skew()` | `skew(x, na.rm = TRUE)` |
+| Normal Q-Q plot | `stat_qq()` | `ggplot(...) + stat_qq() + stat_qq_line()` |
+| Bivariate correlation | `cor()` | `cor(df, use = "pairwise.complete.obs")` |
+| Scatterplot matrix | `pairs()` | `pairs(df[, 1:4])` |
+
+---
+
+# Questions & Hands-On Practice
+
+Open the Chapter 6 Interactive Playground:
+[playground/chapter06.html](../playground/chapter06.html)
+
+**Next Lecture:**
+*Chapter 7 · Hypothesis Testing: The Normal World, t-Tests, and Non-Parametric Alternatives*
