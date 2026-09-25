@@ -1,0 +1,899 @@
+---
+title: "Machine Learning Foundations: Prediction vs. Inference"
+subtitle: "Generalization, Overfitting, the Bias-Variance Tradeoff, and Tidymodels in R"
+author: "Dr. Polla Fattah"
+institute: "From Data to Thesis: Research Data Analysis with R"
+format:
+  revealjs:
+    theme: [default, ../../styles/theme.scss]
+    slide-number: true
+    preview-links: auto
+    chalkboard: true
+    transition: slide
+    highlight-style: github
+    code-line-numbers: false
+    width: 1200
+    height: 750
+execute:
+  freeze: auto
+---
+
+# Machine Learning Foundations
+
+### From Explanation to Generalizable Prediction
+
+**Chapter 11 · From Data to Thesis**
+
+Dr. Polla Fattah
+
+---
+
+## Two Cultures of Data Analysis
+
+In 2001, statistician Leo Breiman published a landmark paper: *"Statistical Modeling: The Two Cultures"*.
+
+Until now in this course, we have lived in the **Inference & Explanation Culture**:
+- We asked: *"Does sleep statistically influence GPA after controlling for stress?"*
+- We judged models by **$p$-values, confidence intervals, and theoretical interpretability**.
+- We focused on **unbiased parameter estimation** ($\hat{\beta}$).
+
+Now, we cross the frontier into the **Predictive Machine Learning Culture**:
+- We ask: *"Can we accurately identify which incoming students will drop out before it happens?"*
+- We judge models by one criterion only: **How accurately do they predict on data they have never seen?**
+
+---
+
+## Prediction vs. Explanation: Side by Side
+
+| Dimension | Explanation (Chapters 7–10) | Prediction (Chapters 11–16) |
+| :--- | :--- | :--- |
+| **Guiding Question** | *Why* did this outcome happen? | *What* will happen for a new case? |
+| **Evaluation Metric** | $p$-values, effect sizes, adjusted $R^2$ | Out-of-sample ROC-AUC, RMSE, F1 |
+| **Model Structure** | Parsimonious, causally interpretable | Any architecture that generalizes well |
+| **Primary Hazard** | Confounding, omitted variable bias | **Overfitting**, data leakage |
+| **Data Usage** | Fit to 100% of historical sample | Strict **Train / Validation / Test** split |
+
+> A model can be a brilliant explainer yet a terrible predictor.  
+> Conversely, a powerful predictor may offer zero causal explanation.
+
+---
+
+## Research Question 9: Early Dropout Detection
+
+The university leadership approaches Elaf's research team with an urgent operational challenge:
+
+> **Research Question 9 (Predictive Risk)**:  
+> *"Can we build a predictive model using data available at the end of Semester 1 to identify students at high risk of considering dropout, so targeted academic and counseling support can be deployed before Year 2?"*
+
+- **The Stakes**: Intervening early saves degrees; missing an at-risk student leads to unaddressed crisis.
+- **The Constraint**: The model can *only* use data available at the end of Semester 1. Anything later is illegal **data leakage**!
+
+---
+
+# Generalization & Overfitting
+
+---
+
+## What is Generalization?
+
+Any real dataset is composed of two distinct components:
+
+$$\text{Observed Data} = \text{Underlying True Pattern (Signal)} + \text{Sample Noise}$$
+
+- The **Signal** is the true, repeatable law of nature (e.g., higher chronic stress elevates dropout risk).
+- The **Noise** is the accidental idiosyncrasy of the specific sample (e.g., student #42 was bitten by a dog on survey day).
+
+> **A model generalises when it learns the signal and ignores the noise.**  
+> A model **overfits** when it mistakes the noise for the signal!
+
+---
+
+## Visualizing the Spectrum: Underfitting vs. Overfitting
+
+Let us simulate a simple wave: $y = \sin(2x) + \epsilon$ with 15 training points:
+
+```
+    Underfitting (High Bias)            Good Fit (Balanced)             Overfitting (High Variance)
+          Degree 1 (Linear)               Degree 3 (Cubic)                  Degree 12 (Wiggly)
+          
+          ^                               ^                               ^     *
+          │      *     *                  │      *     *                  │    / \   *
+          │    *   *                      │    /¯ \  *                    │   /   \ / \ *
+          │  *       *                    │  /     \                      │  *     V   \
+          │─────────────────>             │/─────────\──────>             │─────────────\───>
+          Too rigid to see wave!          Captures true wave!             Chases every random dot!
+```
+
+---
+
+## Simulating Overfitting in R
+
+Let us run this exact simulation:
+
+```r
+library(dplyr)
+library(ggplot2)
+
+true_curve  <- function(x) sin(2 * x)
+make_points <- function(n) {
+  x <- runif(n, 0, 3)
+  tibble(x = x, y = true_curve(x) + rnorm(n, sd = 0.3))
+}
+
+set.seed(3)
+train_points <- make_points(15)  # 15 training points
+new_points   <- make_points(300) # 300 unseen test points from same generator
+```
+
+We fit three polynomial models:
+- **Degree 1**: Straight line (`lm(y ~ x)`)
+- **Degree 3**: Gentle curve (`lm(y ~ poly(x, 3))`)
+- **Degree 12**: Ultra-flexible curve (`lm(y ~ poly(x, 12))`)
+
+---
+
+## The Simulation Results
+
+```r
+rmse <- function(actual, pred) sqrt(mean((actual - pred)^2))
+
+# Model Evaluation Comparison:
+# Degree 1 (Linear):     Train RMSE = 0.54 | Test RMSE = 0.58
+# Degree 3 (Cubic):      Train RMSE = 0.28 | Test RMSE = 0.31  <-- Optimal Generalization!
+# Degree 12 (Complex):   Train RMSE = 0.08 | Test RMSE = 2.45  <-- Severe Overfitting!
+```
+
+Look at Degree 12:
+- On its **training data**, it looks miraculous ($\text{RMSE} = 0.08$, nearly zero error!).
+- On **new data**, it explodes ($\text{RMSE} = 2.45$, eight times worse than the straight line!).
+
+> **Training error is a dangerous illusion.**  
+> The more complex the model, the better it fits its own training data, and the worse it performs in the real world!
+
+---
+
+## The Bias-Variance Tradeoff
+
+Every predictive model faces an inescapable mathematical tension:
+
+$$\text{Expected Test MSE} = \text{Bias}^2 + \text{Variance} + \text{Irreducible Noise } \sigma^2$$
+
+```
+   Prediction Error
+         ^                                    Total Test Error (U-Shape)
+         │  \                                /
+         │   \                              /      / Variance (Rises with complexity)
+         │    \                            /      /
+         │     \                          /      /
+         │      \___________*____________/______/
+         │       \                      /
+         │        \  Optimal Model     /
+         │         \                  /
+         │          \________________/__________> Bias^2 (Falls with complexity)
+         └───────────────────────────────────────> Model Flexibility / Complexity
+```
+
+- **Bias**: Error from erroneous assumptions (underfitting; missing the real signal).
+- **Variance**: Error from sensitivity to small fluctuations in training data (overfitting).
+
+---
+
+# Designing a Fair Test: The Tidymodels Framework
+
+---
+
+## The Tidymodels Philosophy
+
+In modern R, the standard ecosystem for machine learning is **`tidymodels`** (developed by Max Kuhn and the Posit team):
+
+```
+                     The Tidymodels Modular Ecosystem
+                     
+     [ rsample ]     Data Splitting (Train/Test) & Cross-Validation Folds
+          │
+          ▼
+     [ recipes ]     Preprocessing, Imputation, Dummy Coding, Normalization
+          │
+          ▼
+     [ parsnip ]     Unified Model Specification (consistent API across engines)
+          │
+          ▼
+    [ workflows ]    Glues Recipe + Model Specification into one pipeline
+          │
+          ▼
+      [ tune ]       Hyperparameter Grid Search & Bayesian Optimization
+          │
+          ▼
+    [ yardstick ]    Performance Metrics (ROC-AUC, Accuracy, Precision, Recall)
+```
+
+```r
+library(tidymodels)
+tidymodels_prefer() # Resolves namespace conflicts in favor of tidymodels
+```
+
+---
+
+## The Machine Learning Pipeline
+
+```
+                     ┌───────────────────────────────┐
+                     │       All Raw Data (N)        │
+                     └───────────────┬───────────────┘
+                                     │
+                    initial_split() (75% / 25%)
+                     ┌───────────────┴───────────────┐
+                     ▼                               ▼
+       ┌───────────────────────────┐   ┌───────────────────────────┐
+       │     Training Set (75%)    │   │      Test Set (25%)       │
+       └─────────────┬─────────────┘   │   (Locked in a safe!      │
+                     │                 │    Never seen during      │
+      vfold_cv() (10 Folds)            │    model development)     │
+                     ▼                 │                           │
+       ┌───────────────────────────┐   │                           │
+       │ Recipe + Model Tuning     │   │                           │
+       │ Select Best Hyperparam    │   │                           │
+       └─────────────┬─────────────┘   │                           │
+                     │                 │                           │
+          last_fit() │                 │                           │
+                     └─────────────────┼───────────────────────────┘
+                                       ▼
+                       ┌───────────────────────────────┐
+                       │ One-Time Final Evaluation     │
+                       │   (Honest Real-World Metric)  │
+                       └───────────────────────────────┘
+```
+
+---
+
+# Data Preparation & Preventing Data Leakage
+
+---
+
+## Assembling the Semester 1 Dataset
+
+We assemble our prediction dataset strictly using variables known at the end of Semester 1:
+
+```r
+# 1. Questionnaire scores computed at Year 1 orientation
+scores <- questionnaire |>
+  mutate(
+    stress_4     = 6 - stress_4,
+    stress       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    burnout      = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, burnout, support, satisfaction)
+
+# 2. Link student demographics + Semester 1 performance records
+dropout_data <- students |>
+  left_join(scores, join_by(student_id)) |>
+  left_join(semesters |> filter(semester == 1) |> select(-semester), join_by(student_id)) |>
+  mutate(considering_dropout = factor(considering_dropout, levels = c("Yes", "No"))) |>
+  select(-student_id, -supervisor_id, -workshop, -workshop_sessions)
+```
+
+---
+
+## Beware of Data Leakage!
+
+Why did we explicitly remove `workshop` and `workshop_sessions`?
+
+```r
+select(-student_id, -supervisor_id, -workshop, -workshop_sessions)
+```
+
+- The wellbeing workshop took place in **Semester 2**.
+- If we include Semester 2 variables in a model designed to run at the **end of Semester 1**, we have committed **Temporal Data Leakage**!
+- Data leakage gives the model information from the future that will not be available in real deployment.
+
+> **Rule**: If a variable does not exist at the exact moment of decision, it must NOT enter the predictive model!
+
+---
+
+## The Target Variable: Class Imbalance
+
+Let us inspect the distribution of our outcome variable `considering_dropout`:
+
+```r
+dropout_data |> count(considering_dropout) |> mutate(Share = round(n / sum(n), 3))
+```
+
+```
+  considering_dropout   n Share
+1 Yes                  88 0.147
+2 No                  512 0.853
+```
+
+- Only **14.7%** of students consider dropping out ("Yes").
+- **85.3%** do not ("No").
+- This is an **Imbalanced Classification Problem**.
+- As we will see, class imbalance makes standard accuracy completely useless!
+
+---
+
+# Data Splitting & Preprocessing Recipes
+
+---
+
+## Splitting with `rsample`
+
+We split our data: 75% for model training, 25% locked away for testing:
+
+```r
+set.seed(2026)
+
+# Stratify by considering_dropout to guarantee 14.7% "Yes" in both splits!
+dropout_split <- initial_split(
+  dropout_data, 
+  prop = 0.75, 
+  strata = considering_dropout
+)
+
+dropout_train <- training(dropout_split) # 450 students
+dropout_test  <- testing(dropout_split)  # 150 students
+```
+
+Why is `strata = considering_dropout` essential?
+- If we split purely at random, rare "Yes" cases might accidentally clump into the test set, starving the training algorithm of positive examples.
+
+---
+
+## Building a Preprocessing `recipe`
+
+A `recipe` specifies the step-by-step transformations needed before data enters a machine learning algorithm:
+
+```r
+dropout_recipe <- recipe(considering_dropout ~ ., data = dropout_train) |>
+  step_impute_median(all_numeric_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_normalize(all_numeric_predictors())
+```
+
+What each step executes:
+1. `step_impute_median`: Replaces missing numeric values with the predictor's median.
+2. `step_dummy`: Converts factors (`faculty`, `gender`) into $0/1$ binary columns.
+3. `step_normalize`: Converts all numeric variables to $z$-scores ($\text{mean} = 0, SD = 1$).
+
+---
+
+## The Leak-Free Preprocessing Rule
+
+```
+                                  TRAINING SET
+                                       │
+                      Calculate Median, Mean, SD
+                                       │
+                     ┌─────────────────┴─────────────────┐
+                     ▼                                   ▼
+             Transform Train Set                 Transform Test Set
+             (Using Train Stats)                 (Using Train Stats!)
+```
+
+> **Critical Principle**:  
+> The medians, means, and standard deviations used to normalize the data are computed **from the training set only**!
+
+If you compute the mean across all 600 students before splitting, test set information leaks into your training preprocessing. `recipes` handles this automatically and safely.
+
+---
+
+# Model Specification with `parsnip` & `workflows`
+
+---
+
+## Model Specification with `parsnip`
+
+In standard R, every package has its own idiosyncratic syntax:
+- `glm(..., family = binomial)`
+- `randomForest(..., ntree = 500)`
+- `e1071::svm(..., kernel = "radial")`
+
+`parsnip` standardizes model definitions into three clean components:
+1. **Type**: What kind of model? (`logistic_reg()`, `decision_tree()`)
+2. **Mode**: `classification` or `regression`?
+3. **Engine**: Which R package executes it? (`set_engine("glm")`)
+
+```r
+logistic_spec <- logistic_reg() |>
+  set_engine("glm") |>
+  set_mode("classification")
+```
+
+---
+
+## Bundling with `workflows`
+
+A `workflow` packages your preprocessing recipe and your model specification into a single, cohesive bundle:
+
+```r
+logistic_wf <- workflow() |>
+  add_recipe(dropout_recipe) |>
+  add_model(logistic_spec)
+
+# Fit workflow on training data in one step:
+logistic_fit <- fit(logistic_wf, data = dropout_train)
+```
+
+When you call `fit(logistic_wf)`:
+1. It trains the recipe on `dropout_train`.
+2. It bakes `dropout_train`.
+3. It fits the logistic regression model on the baked data.
+4. It remembers all transformation parameters for future test predictions!
+
+---
+
+# Classifier Evaluation: The Accuracy Paradox & ROC-AUC
+
+---
+
+## Generating Predictions with `augment()`
+
+We test the trained model on our unseen `dropout_test` set:
+
+```r
+test_results <- augment(logistic_fit, new_data = dropout_test)
+
+test_results |> 
+  select(considering_dropout, .pred_class, .pred_Yes, .pred_No) |> 
+  head(4)
+```
+
+```
+  considering_dropout .pred_class .pred_Yes .pred_No
+1 No                  No              0.042    0.958
+2 Yes                 Yes             0.781    0.219
+3 No                  No              0.115    0.885
+4 No                  No              0.038    0.962
+```
+
+- `.pred_class`: The hard categorical classification (using standard 0.50 cutoff).
+- `.pred_Yes`: The predicted continuous probability of considering dropout.
+
+---
+
+## The Accuracy Paradox
+
+Let us calculate overall classification accuracy using `yardstick`:
+
+```r
+test_results |> accuracy(truth = considering_dropout, estimate = .pred_class)
+```
+
+```
+.metric  .estimator .estimate
+accuracy binary         0.867
+```
+
+**86.7% Accuracy sounds impressive!**  
+... But look at what happens if we build a "Lazy Model" that simply predicts "No" for every student:
+
+```r
+mean(dropout_test$considering_dropout == "No")
+# [1] 0.853 (85.3% Accuracy!)
+```
+
+> **The Accuracy Paradox**:  
+> A completely useless model that predicts "No" for everyone achieves **85.3% accuracy**, but catches **0%** of at-risk students!  
+> For imbalanced data, **accuracy is a dangerously deceptive metric.**
+
+---
+
+## The Confusion Matrix
+
+To understand classifier performance, we inspect the **Confusion Matrix**:
+
+```r
+conf_mat(test_results, truth = considering_dropout, estimate = .pred_class)
+```
+
+```
+          Truth
+Prediction Yes  No
+       Yes  14   7   <-- 14 True Positives (Caught!), 7 False Alarms
+       No    8 121   <-- 8 False Negatives (Missed!), 121 True Negatives
+```
+
+Key Diagnostic Ratios:
+- **Sensitivity (Recall)**: $\frac{TP}{TP + FN} = \frac{14}{22} = \mathbf{63.6\%}$ (Share of at-risk students successfully detected).
+- **Specificity**: $\frac{TN}{TN + FP} = \frac{121}{128} = \mathbf{94.5\%}$ (Share of safe students correctly left alone).
+- **Precision (PPV)**: $\frac{TP}{TP + FP} = \frac{14}{21} = \mathbf{66.7\%}$ (When flagged, probability student is truly at-risk).
+
+---
+
+## The ROC Curve & ROC-AUC
+
+Instead of evaluating a single arbitrary cutoff ($0.50$), the **Receiver Operating Characteristic (ROC)** curve plots Sensitivity vs. (1 - Specificity) across **all possible probability thresholds**:
+
+```
+    Sensitivity (True Positive Rate)
+        1.0 ^              /¯¯¯¯¯¯¯¯\
+            │            /           \   <-- High AUC (e.g., 0.88)
+            │          /
+            │        /
+            │      /                     <-- Diagonal Line: AUC = 0.50
+            │    /                           (Completely Random Guessing!)
+            │  /
+            │/─────────────────────────> 
+            0.0                       1.0   (1 - Specificity) [False Positive Rate]
+```
+
+- **ROC-AUC (Area Under the Curve)**:
+  - Measures the probability that the model ranks a randomly chosen at-risk student higher than a safe student.
+  - $\text{AUC} = 0.50$: Pure random coin flip.
+  - $\text{AUC} \ge 0.80$: **Good discriminative ability**.
+  - **Invariant to class imbalance!**
+
+---
+
+## Calculating Test ROC-AUC
+
+```r
+test_results |> roc_auc(truth = considering_dropout, .pred_Yes)
+```
+
+```
+.metric .estimator .estimate
+roc_auc binary         0.882
+```
+
+- **Test ROC-AUC = 0.882**:
+- If we pick one random student who considered dropping out and one who did not, our Semester 1 model correctly assigns the higher risk score to the struggling student **88.2% of the time**.
+- This is a highly effective, practically deployable screening tool!
+
+---
+
+# Demonstrating Overfitting: The 1-Nearest Neighbor Trap
+
+---
+
+## 1-Nearest Neighbor ($k=1$)
+
+To prove why evaluating on training data is fatal, consider **1-Nearest Neighbor (1-NN)**:
+- To predict an outcome, it searches for the single most similar student in the dataset and copies their answer.
+
+```r
+knn1_spec <- nearest_neighbor(neighbors = 1) |>
+  set_engine("kknn") |>
+  set_mode("classification")
+
+knn1_wf <- workflow() |>
+  add_recipe(dropout_recipe) |>
+  add_model(knn1_spec)
+
+knn1_fit <- fit(knn1_wf, data = dropout_train)
+```
+
+---
+
+## The Illusion of Perfection
+
+Let us test 1-NN on its **Training Data** vs. its **Test Data**:
+
+```r
+# Evaluated on Training Data:
+augment(knn1_fit, new_data = dropout_train) |> 
+  roc_auc(considering_dropout, .pred_Yes)
+# [1] 1.0000000  <-- "PERFECT" AUC OF 1.0!
+
+# Evaluated on Unseen Test Data:
+augment(knn1_fit, new_data = dropout_test) |> 
+  roc_auc(considering_dropout, .pred_Yes)
+# [1] 0.6481250  <-- Collapses to 0.65!
+```
+
+- On training data, every student's nearest neighbor is *themselves*, so it achieves 100% accuracy and an AUC of 1.0.
+- On test data, it collapses to near-worthless performance ($\text{AUC} = 0.65$).
+- It memorized the noise without learning the pattern!
+
+---
+
+# Resampling with V-Fold Cross-Validation
+
+---
+
+## The Dilemma: How to Compare Models Honestly?
+
+- We need to choose between algorithms (Logistic Regression vs Decision Trees vs Random Forests).
+- We need to select tuning settings (e.g., how deep should a decision tree be?).
+- **The Catch**: We cannot use the training data (rewards overfitting), and we **must not touch the test set** (that burns our one-time final exam!).
+
+> **The Solution**: **$V$-Fold Cross-Validation** (resampling the training set).
+
+---
+
+## How 10-Fold Cross-Validation Works
+
+We partition the training set (450 students) into 10 equal folds (45 students each):
+
+```
+Round 1:  [ Train on Folds 2 to 10 (405 students) ]  ──>  [ Evaluate on Fold 1 (45) ]
+Round 2:  [ Train on Folds 1, 3 to 10 (405 students)] ──>  [ Evaluate on Fold 2 (45) ]
+Round 3:  [ Train on Folds 1 to 2, 4 to 10 (405)    ] ──>  [ Evaluate on Fold 3 (45) ]
+...
+Round 10: [ Train on Folds 1 to 9 (405 students)   ]  ──>  [ Evaluate on Fold 10 (45) ]
+
+Average the 10 evaluation scores ──> Honest Out-of-Sample Performance Estimate!
+```
+
+Every single training student is used for evaluation exactly once, by a model that **never saw them during training**!
+
+---
+
+## Running Cross-Validation in R
+
+```r
+set.seed(2026)
+
+# Create 10 stratified cross-validation folds
+dropout_folds <- vfold_cv(dropout_train, v = 10, strata = considering_dropout)
+
+# Evaluate logistic regression workflow across all 10 folds
+logistic_cv <- fit_resamples(
+  logistic_wf, 
+  resamples = dropout_folds,
+  metrics = metric_set(roc_auc, accuracy)
+)
+
+collect_metrics(logistic_cv)
+```
+
+```
+.metric  .estimator  mean     n std_err
+accuracy binary     0.858    10 0.0142
+roc_auc  binary     0.871    10 0.0215
+```
+
+- **Cross-validated AUC = 0.871 ($\pm 0.02$)**:
+- We obtain an honest estimate of real-world generalization without ever touching the test set!
+
+---
+
+# Hyperparameter Tuning with `tune_grid`
+
+---
+
+## Parameters vs. Hyperparameters
+
+| Type | Definition | How It Is Determined | Examples |
+| :--- | :--- | :--- | :--- |
+| **Model Parameter** | Internal weights learned directly from data | Optimized during `fit()` via MLE or OLS | Regression $\beta_0, \beta_1$, Tree branch splits |
+| **Hyperparameter** | Structural setting governing model flexibility | **Tuned** by researcher using cross-validation | Tree depth ($D$), Neighbors ($k$), Penalty ($\lambda$) |
+
+---
+
+## Decision Trees: Tuning `tree_depth`
+
+A **Decision Tree** partitions data by asking a sequence of binary questions (e.g., *"Is stress > 3.4?"* $\rightarrow$ *"Is support < 2.1?"*).
+
+- A tree of **Depth 1** (one question) is too simple $\rightarrow$ **High Bias (Underfitting)**.
+- A tree of **Depth 10** (10 questions deep) memorizes individual students $\rightarrow$ **High Variance (Overfitting)**.
+
+```r
+# Mark tree_depth for tuning with tune()
+tree_spec <- decision_tree(
+  tree_depth = tune(), 
+  min_n = 10, 
+  cost_complexity = 0
+) |>
+set_engine("rpart") |>
+set_mode("classification")
+
+tree_wf <- workflow() |>
+  add_recipe(dropout_recipe) |>
+  add_model(tree_spec)
+```
+
+---
+
+## Executing the Grid Search
+
+We test depths from 1 to 10 across our 10 cross-validation folds:
+
+```r
+set.seed(2026)
+tree_tuning <- tune_grid(
+  tree_wf,
+  resamples = dropout_folds,
+  grid = tibble(tree_depth = 1:10),
+  metrics = metric_set(roc_auc)
+)
+
+# Visualize the tuning curve
+autoplot(tree_tuning) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Cross-Validated ROC-AUC Across Tree Depths",
+    x = "Tree Depth (Flexibility)",
+    y = "10-Fold CV ROC-AUC"
+  )
+```
+
+---
+
+## Interpreting the Tuning Curve
+
+```
+      ROC-AUC
+        0.85 ^                 * Peak: Depth 3 (AUC = 0.82)
+             │                / \
+        0.80 │               /   \______* Depth 5 (AUC = 0.79)
+             │              /            \
+        0.70 │             /              \____* Depth 10 (AUC = 0.74, Overfitting!)
+             │            /
+        0.50 │  * Depth 1 (Underfitting)
+             └───────────────────────────────────────> Tree Depth
+```
+
+- Depth 1 (Stump): AUC $\approx 0.62$ (Too simple).
+- **Depth 3**: Peaks at $\text{AUC} \approx \mathbf{0.824}$ (Sweet spot!).
+- Depths 5–10: Performance degrades back down to $0.74$ as the tree overfits training noise.
+
+```r
+best_depth <- select_best(tree_tuning, metric = "roc_auc")
+best_depth
+# # A tibble: 1 x 2
+#   tree_depth .config             
+#        <int> <chr>               
+# 1          3 Preprocessor1_Model03
+```
+
+---
+
+# The Final Test: `last_fit()` & Model Comparison
+
+---
+
+## Finalizing the Workflow & The Test Set Exam
+
+Now that our hyperparameter is chosen, we unlock the test set:
+
+1. `finalize_workflow()`: Injects `tree_depth = 3` into the tree workflow.
+2. `last_fit()`: Fits the finalized workflow on the **entire 75% training set**, and evaluates it **once on the 25% test set**:
+
+```r
+final_tree <- tree_wf |>
+  finalize_workflow(best_depth) |>
+  last_fit(dropout_split, metrics = metric_set(roc_auc, accuracy))
+
+collect_metrics(final_tree)
+```
+
+```
+.metric  .estimator .estimate
+accuracy binary         0.840
+roc_auc  binary         0.815
+```
+
+---
+
+## The Head-to-Head Showdown
+
+We also evaluate our baseline Logistic Regression on the exact same test set:
+
+```r
+final_logistic <- last_fit(
+  logistic_wf, 
+  dropout_split, 
+  metrics = metric_set(roc_auc, accuracy)
+)
+
+collect_metrics(final_logistic)
+```
+
+```
+.metric  .estimator .estimate
+accuracy binary         0.867
+roc_auc  binary         0.882
+```
+
+| Model Architecture | 10-Fold CV AUC | Test Set ROC-AUC | Test Accuracy |
+| :--- | :---: | :---: | :---: |
+| **Tuned Decision Tree ($D=3$)** | 0.824 | 0.815 | 84.0% |
+| **Simple Logistic Regression** | **0.871** | **0.882** | **86.7%** |
+
+---
+
+## Occam's Razor in Machine Learning
+
+Why did a simple 200-year-old logistic regression outperform a modern machine learning decision tree?
+
+1. **Nature of the Data Generating Process**:
+   - In student psychology, dropout risk increases **smoothly and continuously** with stress and lack of support.
+   - Logistic regression models smooth, linear log-odds surfaces.
+   - Decision trees slice feature space into rigid, orthogonal rectangular boxes, struggling with smooth additive relationships.
+2. **Sample Size Constraints**:
+   - With $N = 450$ training rows, flexible non-parametric algorithms struggle to estimate high-dimensional partitions reliably.
+
+> **Golden Rule of Applied Machine Learning**:  
+> Always establish a linear baseline (e.g., Logistic Regression). Make complex algorithms *earn* their place by demonstrably beating the baseline!
+
+---
+
+# Case Study: Financial Risk Scoring (`credit_data`)
+
+---
+
+## Universal Transferability of Tidymodels
+
+The exact same workflow translates seamlessly to banking, credit risk, or healthcare:
+
+```r
+data(credit_data, package = "modeldata")
+
+set.seed(1)
+credit_split <- initial_split(credit_data, strata = Status)
+
+# Recipe handles missing numbers (median) and missing categories (mode)
+credit_recipe <- recipe(Status ~ ., data = training(credit_split)) |>
+  step_impute_median(all_numeric_predictors()) |>
+  step_impute_mode(all_nominal_predictors()) |>
+  step_dummy(all_nominal_predictors())
+
+credit_wf <- workflow() |>
+  add_recipe(credit_recipe) |>
+  add_model(logistic_reg())
+
+last_fit(credit_wf, credit_split) |> collect_metrics()
+```
+
+- Whether predicting student dropout, hospital readmission, or mortgage default: **the workflow structure is identical.**
+
+---
+
+# Ethical Considerations in Predictive Modeling
+
+---
+
+## Algorithmic Fairness & Human Impact
+
+Predictive models deployed on human beings have profound ethical consequences:
+
+1. **The Cost of Errors is Asymmetric**:
+   - **False Positive** (Flagging a safe student as at-risk): Minor advisor check-in; minimal harm.
+   - **False Negative** (Failing to detect a struggling student): Student drops out unassisted; catastrophic harm!
+2. **Algorithmic Bias**:
+   - A model with 0.88 AUC overall may have 0.92 AUC for majority students but only 0.65 AUC for international or minority students.
+   - Always audit performance across demographic subgroups (`faculty`, `gender`, `mode`).
+3. **Purpose of Modeling**:
+   - Early warning models must be used **constructively to offer supportive resources**, never punitively (e.g., to withhold funding).
+
+---
+
+# Thesis Checkpoint: Reporting Machine Learning Results
+
+---
+
+## How to Report ML in an Academic Thesis (Methods)
+
+> *"To address Research Question 9 regarding the early identification of students at risk of dropout, a supervised classification framework was developed using the tidymodels ecosystem in R. The analytical sample was restricted to predictors available at the conclusion of Semester 1 to prevent temporal data leakage. The dataset (N = 600) was partitioned into a 75% training set (n = 450) and a 25% holdout test set (n = 150), stratified by dropout consideration.*
+>
+> *Within the training set, feature preprocessing included median imputation for missing numerical predictors, one-hot dummy coding for categorical factors, and z-score standardization. Model selection and hyperparameter optimization were performed using 10-fold stratified cross-validation. Candidate architectures included penalized logistic regression, k-nearest neighbors, and decision trees tuned across tree depths from 1 to 10.*
+>
+> *Final performance was quantified using the Area Under the Receiver Operating Characteristic Curve (ROC-AUC) on the untouched holdout test set."*
+
+---
+
+## How to Report ML in an Academic Thesis (Results)
+
+> *"Cross-validation results indicated that logistic regression achieved the highest generalization performance (CV ROC-AUC = .871, SE = .021), outperforming the optimized decision tree (depth = 3, CV ROC-AUC = .824, SE = .026). When evaluated on the holdout test set, the logistic regression model maintained high discriminative accuracy (ROC-AUC = .882, Sensitivity = .636, Specificity = .945, Accuracy = 86.7%), markedly exceeding the baseline no-information rate (85.3%).*
+>
+> *Substantively, the model demonstrated that psychological survey metrics (elevated academic burnout and low supervisor support) measured at matriculation, combined with Semester 1 GPA, provide sufficient predictive signal to reliably flag at-risk candidates three semesters prior to potential attrition."*
+
+---
+
+## Chapter 11 Summary: Core Principles
+
+1. **Prediction vs Inference**: Predictive models are judged solely on unseen data. High $R^2$ or low $p$-values on training data mean nothing out-of-sample.
+2. **The Bias-Variance Tradeoff**: Complex models overfit by memorizing sample noise; simple models underfit by missing the signal.
+3. **No Peeking**: The test set is locked away immediately; preprocessing statistics (means, medians) must derive strictly from training data.
+4. **Prevent Leakage**: Exclude any variable occurring after the moment of prediction (e.g., Semester 2 workshops).
+5. **Beware Accuracy**: For imbalanced classes, raw accuracy is deceptive. Use ROC-AUC, sensitivity, specificity, and precision.
+6. **Cross-Validation**: 10-fold CV provides an honest out-of-sample performance estimate for model comparison without touching the test set.
+7. **Occam's Razor**: Linear models often beat complex machine learning algorithms on smooth psychological and social phenomena.
+
+---
+
+# Questions & Practical Workshop
+
+### Next Step: Open `content/playground/chapter11.qmd` to build tidymodels recipes, tune decision trees, and evaluate ROC curves live in R!
