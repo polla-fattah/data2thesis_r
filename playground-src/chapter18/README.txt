@@ -40,4 +40,4 @@ computer program to look realistic, and its patterns were built in by the
 author. It describes no real people and is not evidence about real students;
 do not cite or use it as research findings.
 Browser exercises for this chapter are at:
-https://polla-fattah.github.io/data2thesis/playground/chapter18.html
+https://polla-fattah.github.io/data2thesis_r/playground/chapter18.html

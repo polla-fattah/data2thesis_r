@@ -436,6 +436,6 @@ The project contains the data (as CSV, Excel, and SPSS files) and all four parts
 - Or type this one line in RStudio's Console:
 
 ```r
-usethis::use_course("https://polla-fattah.github.io/data2thesis/playground/chapter02.zip")
+usethis::use_course("https://polla-fattah.github.io/data2thesis_r/playground/chapter02.zip")
 ```
 :::

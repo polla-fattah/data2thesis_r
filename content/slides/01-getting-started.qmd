@@ -566,7 +566,7 @@ Install it once directly from the course website:
 
 ```r
 install.packages(
-  "https://polla-fattah.github.io/data2thesis/downloads/data2thesis_1.1.0.tar.gz",
+  "https://polla-fattah.github.io/data2thesis_r/downloads/data2thesis_1.1.0.tar.gz",
   repos = NULL, 
   type = "source"
 )

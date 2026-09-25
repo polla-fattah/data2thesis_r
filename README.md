@@ -2,7 +2,7 @@
 
 A practical guide to analysing research data with R, for researchers with no programming or statistics background. The book follows Elaf, a Master's student, through her thesis on graduate student wellbeing, introducing each method as the answer to one of her research questions.
 
-**Read it online:** https://polla-fattah.github.io/data2thesis
+**Read it online:** https://polla-fattah.github.io/data2thesis_r
 
 ## Repository layout
 

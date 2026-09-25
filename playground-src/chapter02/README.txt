@@ -31,4 +31,4 @@ do not cite or use it as research findings.
 
 All four parts, except the SPSS and Excel tasks, can also be done in your
 browser at:
-https://polla-fattah.github.io/data2thesis/playground/chapter02.html
+https://polla-fattah.github.io/data2thesis_r/playground/chapter02.html

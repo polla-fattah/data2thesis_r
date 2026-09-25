@@ -13,7 +13,7 @@ Choose one of these. Both install the same package.
 **From the book's website** (needs nothing else):
 
 ```r
-install.packages("https://polla-fattah.github.io/data2thesis/downloads/data2thesis_1.1.0.tar.gz",
+install.packages("https://polla-fattah.github.io/data2thesis_r/downloads/data2thesis_1.1.0.tar.gz",
                  repos = NULL, type = "source")
 ```
 
@@ -21,7 +21,7 @@ install.packages("https://polla-fattah.github.io/data2thesis/downloads/data2thes
 
 ```r
 install.packages("remotes")
-remotes::install_github("polla-fattah/data2thesis", subdir = "data2thesis")
+remotes::install_github("polla-fattah/data2thesis_r", subdir = "data2thesis")
 ```
 
 ## Using
@@ -50,7 +50,7 @@ haven::read_sav(data2thesis_example("wellbeing.sav"))           # SPSS file with
 
 ## The same data as files
 
-Every dataset is also available as a file: in the [`data/`](../data) folder of the repository, and in the downloads folder of the website (https://polla-fattah.github.io/data2thesis/downloads/).
+Every dataset is also available as a file: in the [`data/`](../data) folder of the repository, and in the downloads folder of the website (https://polla-fattah.github.io/data2thesis_r/downloads/).
 
 ## How the data was made
 

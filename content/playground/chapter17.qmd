@@ -485,6 +485,6 @@ A small Quarto project: `results.qmd`, a results chapter with inline numbers, a 
 - Or type this one line in RStudio's Console:
 
 ```r
-usethis::use_course("https://polla-fattah.github.io/data2thesis/playground/chapter17.zip")
+usethis::use_course("https://polla-fattah.github.io/data2thesis_r/playground/chapter17.zip")
 ```
 :::

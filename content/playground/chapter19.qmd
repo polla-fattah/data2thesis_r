@@ -507,6 +507,6 @@ The complete thesis project, with the folders `data-raw`, `R`, `data`, and `outp
 - Or type this one line in RStudio's Console:
 
 ```r
-usethis::use_course("https://polla-fattah.github.io/data2thesis/playground/chapter19.zip")
+usethis::use_course("https://polla-fattah.github.io/data2thesis_r/playground/chapter19.zip")
 ```
 :::

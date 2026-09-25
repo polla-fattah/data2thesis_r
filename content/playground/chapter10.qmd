@@ -468,6 +468,6 @@ The project contains the data and all four parts of this page as an R script: th
 - Or type this one line in RStudio's Console:
 
 ```r
-usethis::use_course("https://polla-fattah.github.io/data2thesis/playground/chapter10.zip")
+usethis::use_course("https://polla-fattah.github.io/data2thesis_r/playground/chapter10.zip")
 ```
 :::

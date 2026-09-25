@@ -30,4 +30,4 @@ author. It describes no real people and is not evidence about real students;
 do not cite or use it as research findings.
 
 All four parts, except Tasks 4 and 5, can also be done in your browser at:
-https://polla-fattah.github.io/data2thesis/playground/chapter03.html
+https://polla-fattah.github.io/data2thesis_r/playground/chapter03.html

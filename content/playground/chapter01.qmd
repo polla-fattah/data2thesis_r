@@ -427,7 +427,7 @@ The project contains the data and all four parts of this page as an R script: th
 - Or type this one line in RStudio's Console to download, unzip, and open it:
 
 ```r
-usethis::use_course("https://polla-fattah.github.io/data2thesis/playground/chapter01.zip")
+usethis::use_course("https://polla-fattah.github.io/data2thesis_r/playground/chapter01.zip")
 ```
 
 If R says there is no package called `usethis`, install it first with `install.packages("usethis")`.

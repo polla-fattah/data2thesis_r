@@ -126,7 +126,7 @@ The **tidyverse** package installs dplyr, tidyr, stringr, readr, ggplot2, and se
 Elaf's data is in the **data2thesis** package, which is installed from this book's website rather than from CRAN:
 
 ```r
-install.packages("https://polla-fattah.github.io/data2thesis/downloads/data2thesis_1.1.0.tar.gz",
+install.packages("https://polla-fattah.github.io/data2thesis_r/downloads/data2thesis_1.1.0.tar.gz",
                  repos = NULL, type = "source")
 ```
 
