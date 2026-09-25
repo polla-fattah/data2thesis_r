@@ -21,6 +21,10 @@ Many of the things researchers most want to study cannot be measured directly. S
 - Check the reliability of a questionnaire scale with Cronbach's alpha.
 - Group cases with k-means and hierarchical clustering, choose the number of clusters, and describe the clusters as summaries rather than natural groups.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/09-multivariate.html) · [Browser Playground Exercises](../playground/chapter09.html)
+:::
+
 
 ## Constructs and latent variables
 

@@ -22,6 +22,10 @@ This chapter introduces the two families of methods built on that idea, which to
 - Fit and interpret a logistic regression model in terms of odds ratios and probabilities.
 - Report ANOVA and regression results in a thesis.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/08-anova-regression.html) · [Browser Playground Exercises](../playground/chapter08.html)
+:::
+
 
 The chapter uses each student's first-semester records, their background information, and their questionnaire scores, calculated as in Chapter 3:
 

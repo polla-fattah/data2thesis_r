@@ -20,6 +20,10 @@ This chapter develops these ideas and the methods built on them, using the **fab
 - Produce benchmark forecasts, and forecasts from exponential smoothing (ETS) and ARIMA models, with fable.
 - Evaluate forecasts on a test period, and report forecasts with prediction intervals.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/16-time-series.html) · [Browser Playground Exercises](../playground/chapter16.html)
+:::
+
 
 ## Time series data
 

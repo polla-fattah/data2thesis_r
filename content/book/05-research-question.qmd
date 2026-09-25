@@ -23,6 +23,10 @@ Most problems that examiners find in a thesis start here, not in the analysis: a
 - Explain why a biased sample cannot be fixed by making it larger.
 - Plan an analysis before collecting data, including a first estimate of the sample size, and use R to check levels of measurement, balance between groups, and sampling by simulation.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/05-research-question.html) · [Browser Playground Exercises](../playground/chapter05.html)
+:::
+
 
 ## What data analysis is for
 

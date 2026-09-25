@@ -26,6 +26,10 @@ Elaf had used Excel for coursework and had once clicked through an SPSS menu in 
 - Organise your work in an RStudio Project and install packages.
 - Open the student wellbeing data and answer a first question about it.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/01-getting-started.html) · [Browser Playground Exercises](../playground/chapter01.html)
+:::
+
 
 ## Research written in code
 
@@ -273,7 +277,7 @@ A useful comparison is a library book: installing a package is like buying a boo
 The data for this book comes as a package too, called **data2thesis**. It is not on CRAN, so you install it from this book's website:
 
 ```r
-install.packages("https://polla-fattah.github.io/R4NTR/downloads/data2thesis_1.1.0.tar.gz",
+install.packages("https://polla-fattah.github.io/data2thesis/downloads/data2thesis_1.1.0.tar.gz",
                  repos = NULL, type = "source")
 ```
 

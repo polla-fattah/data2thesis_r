@@ -34,4 +34,4 @@ author. It describes no real people and is not evidence about real students;
 do not cite or use it as research findings.
 
 Browser exercises for this chapter are at:
-https://polla-fattah.github.io/R4NTR/playground/chapter17.html
+https://polla-fattah.github.io/data2thesis/playground/chapter17.html

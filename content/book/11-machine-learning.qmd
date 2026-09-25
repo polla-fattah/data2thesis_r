@@ -20,6 +20,10 @@ Some research questions are not about why something happens, but about what will
 - Evaluate a classification model, and explain why accuracy alone can mislead.
 - Use cross-validation to estimate performance honestly, tune a model's hyperparameters, and evaluate the final model on the test set.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/11-machine-learning.html) · [Browser Playground Exercises](../playground/chapter11.html)
+:::
+
 
 ## Machine learning and prediction
 

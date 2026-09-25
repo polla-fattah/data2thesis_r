@@ -19,6 +19,10 @@ This chapter introduces two families of methods that make many predictors usable
 - Explain how boosting builds a model from many small trees, and tune an XGBoost model.
 - Choose between models with cross-validation, and report the final model's accuracy on the test set.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/13-predictive-regression.html) · [Browser Playground Exercises](../playground/chapter13.html)
+:::
+
 
 ## Data for predicting final GPA
 

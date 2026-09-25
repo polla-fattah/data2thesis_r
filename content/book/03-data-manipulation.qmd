@@ -21,6 +21,10 @@ Cleaning is therefore part of the analysis, not a chore before it, and it deserv
 - Clean a real survey export: remove test and duplicate rows, rename variables, fix inconsistent categories, convert text to numbers, and handle missing codes and impossible values.
 - Compute questionnaire scale scores, including reversed items, and report the cleaning in a thesis.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/03-data-manipulation.html) · [Browser Playground Exercises](../playground/chapter03.html)
+:::
+
 
 ## What clean data means
 

@@ -21,6 +21,10 @@ A graph is also an argument. The choices behind it, which graph, which scale, wh
 - Judge whether a graph is honest, and improve a misleading one.
 - Prepare and export figures at the size and resolution a journal or thesis requires.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/04-data-visualization.html) · [Browser Playground Exercises](../playground/chapter04.html)
+:::
+
 
 ## What a graph is for
 

@@ -532,6 +532,6 @@ The project contains the data, the language model's saved results, and all four 
 - Or type this one line in RStudio's Console:
 
 ```r
-usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter18.zip")
+usethis::use_course("https://polla-fattah.github.io/data2thesis/playground/chapter18.zip")
 ```
 :::

@@ -27,4 +27,4 @@ author. It describes no real people and is not evidence about real students;
 do not cite or use it as research findings.
 
 All four parts, except saving files, can also be done in your browser at:
-https://polla-fattah.github.io/R4NTR/playground/chapter04.html
+https://polla-fattah.github.io/data2thesis/playground/chapter04.html

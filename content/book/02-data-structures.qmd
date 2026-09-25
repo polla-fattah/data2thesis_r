@@ -21,6 +21,10 @@ Research data rarely arrives in one neat file. In the wellbeing study, the surve
 - Build a codebook that links each variable to the question behind it.
 - Map familiar SPSS and Excel tasks to R, and read R's most common error messages.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/02-data-structures.html) · [Browser Playground Exercises](../playground/chapter02.html)
+:::
+
 
 ## Data as measurement
 

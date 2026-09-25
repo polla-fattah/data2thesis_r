@@ -18,8 +18,8 @@ Description: The Graduate Wellbeing Study, the simulated case study used
     the data (a messy Excel export and an SPSS file) are included for the
     chapters on importing and cleaning data.
 License: Apache License (== 2.0)
-URL: https://polla-fattah.github.io/R4NTR, https://github.com/polla-fattah/R4NTR
-BugReports: https://github.com/polla-fattah/R4NTR/issues
+URL: https://polla-fattah.github.io/data2thesis, https://github.com/polla-fattah/data2thesis
+BugReports: https://github.com/polla-fattah/data2thesis/issues
 Depends: R (>= 3.5)
 Encoding: UTF-8
 LazyData: true

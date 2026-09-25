@@ -15,8 +15,8 @@ project:
 
 website:
   title: "From Data to Thesis"
-  site-url: https://polla-fattah.github.io/R4NTR
-  repo-url: https://github.com/polla-fattah/R4NTR
+  site-url: https://polla-fattah.github.io/data2thesis
+  repo-url: https://github.com/polla-fattah/data2thesis
   page-navigation: true
   search: true
   navbar:
@@ -33,7 +33,7 @@ website:
         href: index.qmd#get-the-data
     right:
       - icon: github
-        href: https://github.com/polla-fattah/R4NTR
+        href: https://github.com/polla-fattah/data2thesis
         aria-label: GitHub
   sidebar:
     - id: book

@@ -28,4 +28,4 @@ author. It describes no real people and is not evidence about real students;
 do not cite or use it as research findings.
 
 The browser version, which uses base R instead of tidymodels, is at:
-https://polla-fattah.github.io/R4NTR/playground/chapter12.html
+https://polla-fattah.github.io/data2thesis/playground/chapter12.html

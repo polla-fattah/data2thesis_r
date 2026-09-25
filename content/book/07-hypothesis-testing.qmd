@@ -22,6 +22,10 @@ This chapter builds that discipline from the ground up. It starts with what happ
 - Test relationships between categorical variables with chi-square tests.
 - Choose an appropriate test for a question, and report the result in a thesis.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/07-hypothesis-testing.html) · [Browser Playground Exercises](../playground/chapter07.html)
+:::
+
 
 ## Samples and populations
 

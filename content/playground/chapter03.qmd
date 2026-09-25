@@ -484,6 +484,6 @@ The project contains the data, the raw survey export, and all four parts of this
 - Or type this one line in RStudio's Console:
 
 ```r
-usethis::use_course("https://polla-fattah.github.io/R4NTR/playground/chapter03.zip")
+usethis::use_course("https://polla-fattah.github.io/data2thesis/playground/chapter03.zip")
 ```
 :::

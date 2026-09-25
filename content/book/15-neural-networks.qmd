@@ -19,6 +19,10 @@ This chapter builds a neural network from a single "neuron", shows by hand what 
 - Compare a neural network fairly with simpler models, and judge when one is worth using.
 - Explain what deep learning is, and when it is (and is not) the right tool.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/15-neural-networks.html) · [Browser Playground Exercises](../playground/chapter15.html)
+:::
+
 
 ## A single neuron
 

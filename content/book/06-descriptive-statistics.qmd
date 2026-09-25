@@ -22,6 +22,10 @@ This chapter develops the ideas behind the main descriptive statistics: what "ty
 - Measure and interpret correlations, and explain why correlation is not causation.
 - Present a description of your sample in a thesis, with every number accompanied by its spread and its sample size.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/06-descriptive-statistics.html) · [Browser Playground Exercises](../playground/chapter06.html)
+:::
+
 
 ## The place of exploration
 

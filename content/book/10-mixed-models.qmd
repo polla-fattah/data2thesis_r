@@ -20,6 +20,10 @@ Every test in the previous chapters assumed that the observations were independe
 - Model a count outcome with a generalised linear mixed model.
 - Report a mixed-effects model in a thesis.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/10-mixed-models.html) · [Browser Playground Exercises](../playground/chapter10.html)
+:::
+
 
 ## Data with a structure
 

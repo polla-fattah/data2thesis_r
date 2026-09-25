@@ -20,6 +20,10 @@ In the story, it is the final semester. Elaf's analyses are spread over two year
 - Choose an appropriate method for a research question, using the map of this book.
 - Recognise common challenges in real research projects, and know where to learn more.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/19-putting-it-together.html) · [Browser Playground Exercises](../playground/chapter19.html)
+:::
+
 
 ## The shape of a research project
 

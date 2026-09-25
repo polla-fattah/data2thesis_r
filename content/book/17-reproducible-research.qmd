@@ -21,6 +21,10 @@ The problem is easy to meet in a thesis. Three weeks before the deadline, Elaf's
 - Build a small Shiny dashboard with inputs, outputs, and reactive code.
 - Apply open science practices: sharing data and code, protecting participants, preregistration, and citing software.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/17-reproducible-research.html) · [Browser Playground Exercises](../playground/chapter17.html)
+:::
+
 
 ## Reproducibility and credibility
 

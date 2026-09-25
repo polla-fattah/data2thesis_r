@@ -18,6 +18,10 @@ Chapter 9 used k-means, which takes the first definition. It divided the student
 - Find dense clusters and noise points with DBSCAN, and choose its settings.
 - Evaluate a clustering with the silhouette, agreement between methods (the adjusted Rand index), and interpretability.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/14-advanced-clustering.html) · [Browser Playground Exercises](../playground/chapter14.html)
+:::
+
 
 ## The profile data
 

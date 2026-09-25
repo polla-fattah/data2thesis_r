@@ -32,6 +32,10 @@ Artificial intelligence (AI) tools now appear everywhere in research: assistants
 - Validate AI coding of text against human coding with accuracy and Cohen's kappa.
 - Use AI responsibly: protect data, keep work reproducible, and disclose its use.
 :::
+::: {.callout-note appearance="simple" icon="false"}
+**Teaching & Practice:** [Interactive Lecture Slides](../slides/18-ai.html) · [Browser Playground Exercises](../playground/chapter18.html)
+:::
+
 
 ## The reliability of coding
 

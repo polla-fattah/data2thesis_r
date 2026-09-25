@@ -2,12 +2,12 @@
 
 A practical guide to analysing research data with R, for researchers with no programming or statistics background. The book follows Elaf, a Master's student, through her thesis on graduate student wellbeing, introducing each method as the answer to one of her research questions.
 
-**Read it online:** https://polla-fattah.github.io/R4NTR
+**Read it online:** https://polla-fattah.github.io/data2thesis
 
 ## Repository layout
 
 ```text
-R4NTR/
+data2thesis/
 ├── content/book/        chapter and appendix manuscript (.qmd)
 ├── content/playground/  practical chapter exercises and datasets
 ├── content/slides/      lecture decks for each chapter
