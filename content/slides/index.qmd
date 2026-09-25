@@ -31,6 +31,7 @@ These presentation decks accompany the book chapters, designed for classroom ins
 | **Chapter 16** | Time Series Analysis & Forecasting | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](16-time-series.html) · [Source](16-time-series.qmd) |
 | **Chapter 17** | Reproducible Research, Quarto & Shiny | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](17-reproducible-research.html) · [Source](17-reproducible-research.qmd) |
 | **Chapter 18** | Artificial Intelligence in Academic Research | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](18-ai.html) · [Source](18-ai.qmd) |
+| **Chapter 19** | The Complete Thesis Project | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](19-putting-it-together.html) · [Source](19-putting-it-together.qmd) |
 
 ### Using the Slide Decks
 
