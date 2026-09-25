@@ -21,7 +21,8 @@ These presentation decks accompany the book chapters, designed for classroom ins
 | **Chapter 6** | Descriptive Statistics and Exploratory Data Analysis | Interactive RevealJS (56 slides) | [**Open Presentation Deck**](06-descriptive-statistics.html) · [Source](06-descriptive-statistics.qmd) |
 | **Chapter 7** | Hypothesis Testing & Statistical Inference | Interactive RevealJS (62 slides) | [**Open Presentation Deck**](07-hypothesis-testing.html) · [Source](07-hypothesis-testing.qmd) |
 | **Chapter 8** | ANOVA and Multiple Regression | Interactive RevealJS (65 slides) | [**Open Presentation Deck**](08-anova-regression.html) · [Source](08-anova-regression.qmd) |
-| **Chapter 9** | Multivariate Statistical Methods | Interactive RevealJS (64 slides) | [**Open Presentation Deck**](09-multivariate.html) · [Source](09-multivariate.qmd) |
+| **Chapter 9** | Multivariate Statistical Methods | Interactive RevealJS (77 slides) | [**Open Presentation Deck**](09-multivariate.html) · [Source](09-multivariate.qmd) |
+| **Chapter 10** | Longitudinal & Hierarchical Data: Mixed Models | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](10-mixed-models.html) · [Source](10-mixed-models.qmd) |
 
 ### Using the Slide Decks
 
