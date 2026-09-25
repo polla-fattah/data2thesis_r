@@ -1,0 +1,784 @@
+---
+title: "Data Visualization with ggplot2"
+subtitle: "Graphical Perception, the Grammar of Graphics, and Publication-Ready Figures"
+author: "Dr. Polla Fattah"
+institute: "From Data to Thesis: Research Data Analysis with R"
+format:
+  revealjs:
+    theme: [default, ../../styles/theme.scss]
+    slide-number: true
+    preview-links: auto
+    chalkboard: true
+    transition: slide
+    highlight-style: github
+    code-line-numbers: false
+    width: 1200
+    height: 750
+execute:
+  freeze: auto
+---
+
+# Data Visualization with ggplot2
+
+### Graphical Perception & Publication-Ready Figures
+
+**Chapter 4 · From Data to Thesis**
+
+Dr. Polla Fattah
+
+---
+
+## Why Numerical Summaries Are Not Enough
+
+A table of 600 numbers says almost nothing at a glance.
+
+A well-crafted figure reveals within seconds:
+
+- Where most values cluster.
+- The degree of spread and dispersion.
+- Outliers, data entry errors, and multimodal distributions.
+- Non-linear relationships that Pearson correlations conceal.
+
+> **Graphs are not cosmetic decorations added at the end of a project; they are primary instruments of scientific reasoning.**
+
+---
+
+## Anscombe's Quartet (1973)
+
+Francis Anscombe constructed four synthetic datasets to demonstrate that identical summary statistics can describe radically different realities:
+
+| Metric | Dataset 1 | Dataset 2 | Dataset 3 | Dataset 4 |
+|---|---|---|---|---|
+| **Mean of X** | 9.00 | 9.00 | 9.00 | 9.00 |
+| **Mean of Y** | 7.50 | 7.50 | 7.50 | 7.50 |
+| **Variance of X** | 11.00 | 11.00 | 11.00 | 11.00 |
+| **Variance of Y** | 4.13 | 4.13 | 4.13 | 4.13 |
+| **Correlation ($r$)** | **0.82** | **0.82** | **0.82** | **0.82** |
+| **Regression line** | $y = 3 + 0.5x$ | $y = 3 + 0.5x$ | $y = 3 + 0.5x$ | $y = 3 + 0.5x$ |
+
+*Judged purely by the numbers, all four datasets appear identical!*
+
+---
+
+## Seeing Anscombe's Quartet in R
+
+```r
+library(ggplot2)
+library(dplyr)
+library(tibble)
+
+anscombe_long <- tibble(
+  set = rep(paste("Set", 1:4), each = 11),
+  x   = c(anscombe$x1, anscombe$x2, anscombe$x3, anscombe$x4),
+  y   = c(anscombe$y1, anscombe$y2, anscombe$y3, anscombe$y4)
+)
+
+ggplot(anscombe_long, aes(x = x, y = y)) +
+  geom_point(size = 2.5, colour = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, colour = "grey40") +
+  facet_wrap(~ set) +
+  theme_minimal(base_size = 13)
+```
+
+```
++-------------------+-------------------+
+| Set 1: Standard   | Set 2: Curvilinear|
+| linear scatter    | quadratic parabola|
++-------------------+-------------------+
+| Set 3: Strict line| Set 4: Vertical   |
+| + 1 extreme outlier| column + 1 anchor |
++-------------------+-------------------+
+```
+
+Only Set 1 satisfies the assumptions of linear correlation. **Looking first is not optional.**
+
+---
+
+## Exploratory vs. Explanatory Graphics
+
+Scientific visualization serves two distinct purposes:
+
+### 1. Exploratory Graphics (For the Researcher)
+- Produced rapidly in large volumes during data analysis.
+- Goal: diagnose missingness, test distribution shapes, detect coding bugs.
+- Minimal polish required; speed and iteration are key.
+
+### 2. Explanatory Graphics (For the Reader & Thesis Committee)
+- Selected carefully from dozens of exploratory iterations.
+- Goal: communicate one core substantive insight with maximum clarity.
+- Demands rigorous labeling, accessible palettes, and disciplined layout.
+
+---
+
+# Graphical Perception
+
+### The Cognitive Science of How Humans Read Data
+
+---
+
+## The Cleveland & McGill Hierarchy (1984)
+
+William Cleveland and Robert McGill conducted psychophysical experiments to measure how accurately the human eye decodes quantitative information:
+
+```
+MOST ACCURATE
+   ^    1. Position along a common scale  (Scatter plots, dot plots)
+   |    2. Position along non-aligned scales (Facets, small multiples)
+   |    3. Length                         (Bar charts)
+   |    4. Direction / Angle / Slope      (Line charts, pie slices)
+   |    5. Area                           (Bubble charts)
+   v    6. Volume / 3D Perspective        (3D bar charts - AVOID)
+LEAST   7. Color saturation & shading     (Heat maps)
+ACCURATE
+```
+
+> **Core Rule:** Always encode your primary research comparison into **position along a common scale** or **length**.
+
+---
+
+## The Pie Chart vs. Bar Chart Experiment
+
+Why do statisticians and journal editors advise against pie charts?
+
+- In a **pie chart**, the brain must evaluate angles and surface areas.
+- When slices are close (e.g., 23%, 21%, 20%, 19%, 17%), ranking them requires reading the legend or numerical labels.
+- In a **bar chart**, the exact same numbers are encoded as lengths along a shared baseline:
+
+```
+Pie Chart:                  Bar Chart (Shared Baseline):
+     ( )                        A |======================= (23%)
+  ( 21% | 23% )                 B |=====================   (21%)
+ (------+------)                C |====================    (20%)
+  ( 19% | 20% )                 D |===================     (19%)
+     ( 17% )                    E |=================       (17%)
+(Hard to order!)            (Immediate, effortless perceptual ranking!)
+```
+
+---
+
+## Principles of Honest Data Encoding
+
+### 1. Align Comparisons on a Single Baseline
+Comparing bars across separate pages or separate unaligned panels introduces cognitive error.
+
+### 2. Avoid Area-Based Encodings
+Doubling the diameter of a circle quadruples its area ($A = \pi r^2$), exaggerating differences by a factor of 4.
+
+### 3. Color as Categorical Distinction, Not Magnitude
+Use color to distinguish 2–5 discrete groups. Do not rely on subtle color shades to convey precise quantitative values.
+
+---
+
+# Choosing the Right Graph
+
+### Matching Research Questions to Geometries
+
+---
+
+## Decision Matrix for Scientific Plots
+
+| Research Question | Variable Types | Recommended Graph | ggplot2 Geom |
+|---|---|---|---|
+| Distribution of 1 metric | 1 Numeric | Histogram, Density plot | `geom_histogram()`, `geom_density()` |
+| Counts across categories | 1 Categorical | Bar chart | `geom_bar()`, `geom_col()` |
+| Group differences | Numeric by Categorical | Box plot, Jittered strip plot | `geom_boxplot()`, `geom_jitter()` |
+| Bivariate association | 2 Numeric | Scatter plot + Trend line | `geom_point()`, `geom_smooth()` |
+| Longitudinal trajectory | Numeric over Time | Line chart | `geom_line()`, `geom_point()` |
+| High-dimensional matrix | Many Numeric | Correlation heat map | `geom_tile()`, `geom_text()` |
+
+---
+
+# The Grammar of Graphics
+
+### The Conceptual Foundation of ggplot2
+
+---
+
+## What is the "Grammar of Graphics"?
+
+Created by Leland Wilkinson (2005) and implemented in R by Hadley Wickham:
+
+> **A statistical graphic is a mapping from data variables to visual aesthetic properties of geometric objects.**
+
+Every plot in ggplot2 is built from three core components:
+
+1. **Data:** A tidy data frame or tibble.
+2. **Aesthetic Mappings (`aes()`):** Which variable links to `x`, `y`, `colour`, `fill`, `shape`, `size`.
+3. **Geometric Layers (`geoms`):** Visual marks representing data (`point`, `bar`, `line`, `boxplot`).
+
+---
+
+## Building a Plot Step-by-Step
+
+Consider a pilot study of 5 students:
+
+```r
+library(tibble)
+library(ggplot2)
+
+pilot <- tibble(
+  student = c("S1", "S2", "S3", "S4", "S5"),
+  sleep   = c(6.5, 7.5, 5.5, 8.0, 6.0),
+  stress  = c(3.2, 2.1, 4.5, 1.8, 3.9)
+)
+```
+
+Step 1: Define data and aesthetic mappings:
+
+```r
+# Generates an empty canvas with calibrated axes, but NO data marks:
+ggplot(data = pilot, mapping = aes(x = sleep, y = stress))
+```
+
+---
+
+## Adding the Geometric Layer
+
+Step 2: Add geometric marks with the `+` operator:
+
+```r
+ggplot(pilot, aes(x = sleep, y = stress)) +
+  geom_point(size = 3.5, colour = "navy")
+```
+
+```
+Stress
+ 4.5 |       * (S3: 5.5h, 4.5)
+     |
+ 3.5 |           * (S5: 6.0h, 3.9)
+     |             * (S1: 6.5h, 3.2)
+ 2.5 |                 * (S2: 7.5h, 2.1)
+     |                     * (S4: 8.0h, 1.8)
+ 1.5 +--------------------------------------
+     5.0    6.0    7.0    8.0   Sleep (hrs)
+```
+
+Adding layers with `+` allows modular composition: points, trend lines, error bars, and labels stack seamlessly.
+
+---
+
+# Core Geometries for Empirical Research
+
+### Histograms, Bars, Boxes, Scatters, and Lines
+
+---
+
+## Histograms: Inspecting Distributions
+
+Histograms partition continuous variables into contiguous **bins** and count observations in each bin:
+
+```r
+library(data2thesis)
+
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
+
+ggplot(first_sem, aes(x = sleep_hours)) +
+  geom_histogram(binwidth = 0.5, fill = "steelblue", colour = "white") +
+  labs(x = "Sleep per night (hours)", y = "Count") +
+  theme_minimal(base_size = 13)
+```
+
+### The Sensitivity of `binwidth`
+- **Too wide (`binwidth = 3`):** Masks skewness and multimodality.
+- **Too narrow (`binwidth = 0.05`):** Introduces distracting random sampling noise.
+- **Best Practice:** Test 3 to 4 binwidths before choosing the explanatory view.
+
+---
+
+## Bar Charts: `geom_bar()` vs. `geom_col()`
+
+Understanding the distinction between counting and displaying pre-calculated values:
+
+### 1. `geom_bar()`: R Computes Frequencies Automatically
+```r
+# Given raw categorical rows, geom_bar() tabulates counts:
+ggplot(students, aes(x = faculty)) +
+  geom_bar(fill = "grey40")
+```
+
+### 2. `geom_col()`: You Supply Pre-Calculated Heights
+```r
+faculty_summary <- students |> count(faculty)
+
+ggplot(faculty_summary, aes(x = faculty, y = n)) +
+  geom_col(fill = "steelblue")
+```
+
+Both produce identical plots, but `geom_col()` is used when displaying means or percentages.
+
+---
+
+## Box Plots: Visualizing Group Differences
+
+The Tukey box plot summarizes five key statistics:
+
+```
+       Outlier (*) > 1.5 * IQR above Q3
+          |
+     +----+----+   Upper Whisker (highest non-outlier)
+     |         |   Third Quartile (Q3, 75th percentile)
+     |=========|   MEDIAN (Q2, 50th percentile)
+     |         |   First Quartile (Q1, 25th percentile)
+     +----+----+   Lower Whisker (lowest non-outlier)
+          |
+       Outlier (*) < 1.5 * IQR below Q1
+```
+
+```r
+ggplot(first_sem, aes(x = study_mode, y = wellbeing)) +
+  geom_boxplot(fill = "grey90", colour = "grey30", width = 0.5) +
+  labs(x = "Study Mode", y = "Wellbeing (0–100)") +
+  theme_minimal(base_size = 13)
+```
+
+---
+
+## Scatter Plots & Overplotting
+
+When plotting 600 students, points clump and overlap (**overplotting**):
+
+```r
+ggplot(first_sem, aes(x = sleep_hours, y = gpa)) +
+  # alpha = 0.4 adds transparency: dense regions become darker
+  geom_point(alpha = 0.4, size = 2, colour = "navy") +
+  # method = "lm" draws an ordinary least squares linear regression line
+  geom_smooth(method = "lm", colour = "darkred", se = TRUE) +
+  labs(x = "Sleep (hours)", y = "Grade Point Average (GPA)") +
+  theme_minimal(base_size = 13)
+```
+
+- `alpha` ranges from 0 (invisible) to 1 (opaque).
+- `se = TRUE` renders the 95% confidence interval ribbon around the trend line.
+
+---
+
+## Longitudinal Trajectories with Line Charts
+
+Visualizing cohort changes across time:
+
+```r
+wellbeing_by_sem <- semesters |>
+  left_join(students, join_by(student_id)) |>
+  summarise(mean_wellbeing = mean(wellbeing), .by = c(semester, workshop))
+
+ggplot(wellbeing_by_sem, aes(x = semester, y = mean_wellbeing, colour = workshop)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  labs(x = "Semester", y = "Mean Wellbeing", colour = "Workshop Cohort") +
+  theme_minimal(base_size = 13)
+```
+
+- Connecting points with lines implies continuous time or sequential progression.
+- Never use line charts across unordered categorical groups (e.g., across faculties)!
+
+---
+
+# The Classic Pitfall: Mapping vs. Setting
+
+### Why Does My Plot Turn Salmon Pink?
+
+---
+
+## Aesthetic Mapping vs. Fixed Aesthetic Setting
+
+### The Error: Putting Fixed Values Inside `aes()`
+```r
+# WRONG:
+ggplot(first_sem, aes(x = sleep_hours, fill = "steelblue")) +
+  geom_histogram(binwidth = 0.5)
+```
+
+**What happens?**
+
+1. ggplot2 interprets `"steelblue"` not as a color, but as a categorical variable containing one level.
+2. It assigns that level the default categorical color (salmon pink).
+3. It adds a nonsensical legend labeled `"fill: steelblue"`.
+
+---
+
+## The Correct Rule
+
+```
+INSIDE aes()   ==> Dynamic: Value depends on data variable
+                   Example: aes(colour = workshop, size = gpa)
+
+OUTSIDE aes()  ==> Fixed: Value is constant across all marks
+                   Example: geom_point(colour = "steelblue", size = 3)
+```
+
+```r
+# RIGHT:
+ggplot(first_sem, aes(x = sleep_hours)) +
+  geom_histogram(binwidth = 0.5, fill = "steelblue", colour = "white")
+```
+
+All bars are rendered in steelblue, with white borders, and no redundant legend.
+
+---
+
+# Polishing Explanatory Graphs for Publication
+
+### Labels, Scales, Themes, and Annotations
+
+---
+
+## The Four Pillars of Publication Polish
+
+```
++-------------------------------------------------------------+
+| 1. LABELS      | Meaningful titles, units on axes (labs)    |
+| 2. SCALES      | Discontinuous breaks, colorblind palettes  |
+| 3. THEMES      | Clean backgrounds, legible font sizes      |
+| 4. ANNOTATIONS | Explicit thresholds & reference lines      |
++-------------------------------------------------------------+
+```
+
+---
+
+## Pillar 1: Comprehensive Labeling with `labs()`
+
+Never leave raw code variable names (`sleep_hours`, `gpa`, `n`) on a thesis figure:
+
+```r
+p <- ggplot(wellbeing_by_sem, aes(x = semester, y = mean_wellbeing, colour = workshop)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  labs(
+    title    = "Student Wellbeing Trajectory Over Two Years",
+    subtitle = "Mean wellbeing score (0–100) per semester, stratified by workshop intervention",
+    x        = "Academic Semester",
+    y        = "Average Wellbeing Score",
+    colour   = "Intervention Group",
+    caption  = "Source: Graduate Wellbeing Longitudinal Study (N = 600)"
+  )
+```
+
+---
+
+## Pillar 2: Scales & Colorblind Accessibility
+
+Approximately 8% of men and 0.5% of women have color vision deficiency. Standard green/red palettes fail accessibility tests.
+
+```r
+p <- p +
+  # Force integer ticks on the semester axis:
+  scale_x_continuous(breaks = 1:4) +
+  # Apply perceptually uniform, colorblind-safe Viridis palette:
+  scale_colour_viridis_d(end = 0.8)
+```
+
+Viridis palettes:
+
+- Remain distinct under deuteranopia, protanopia, and tritanopia.
+- Convert cleanly to greyscale when printed on monochrome laser printers.
+
+---
+
+## Pillar 3: Academic Theme Styling
+
+The default grey grid of ggplot2 is intended for interactive screen exploration, not formal dissertations:
+
+```r
+p <- p +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position    = "bottom",
+    plot.title         = element_text(face = "bold", size = 15),
+    panel.grid.minor   = element_blank(),
+    axis.title         = element_text(face = "bold")
+  )
+```
+
+- `base_size = 13`: Scales all text elements proportionally.
+- `legend.position = "bottom"`: Widens the plot plotting area.
+
+---
+
+## Pillar 4: Direct Graphical Annotations
+
+Guide the reader's eye directly to substantive thresholds:
+
+```r
+ggplot(first_sem, aes(x = sleep_hours)) +
+  geom_histogram(binwidth = 0.5, fill = "steelblue", colour = "white") +
+  # Reference line at recommended sleep:
+  geom_vline(xintercept = 7.0, linetype = "dashed", colour = "firebrick", linewidth = 1) +
+  # Direct text annotation:
+  annotate(
+    "text", x = 7.15, y = Inf, 
+    label = "Recommended Minimum: 7.0 hrs", 
+    hjust = 0, vjust = 1.8, colour = "firebrick", fontface = "bold"
+  ) +
+  labs(x = "Sleep (hours/night)", y = "Number of Students") +
+  theme_minimal(base_size = 13)
+```
+
+`y = Inf` automatically pins the text to the top edge of the plot coordinate space regardless of histogram height.
+
+---
+
+# Honest vs. Misleading Visualizations
+
+### Case Study: Detecting and Correcting Visual Distortion
+
+---
+
+## The Four Cardinal Sins of Visual Distortion
+
+### 1. Truncated Baselines on Bar Charts
+A bar encodes value through its length. Truncating the y-axis (e.g., starting at 58 instead of 0) turns a 3% difference into an apparent 300% surge.
+
+### 2. Distorted Aspect Ratios
+Stretching or compressing axes exaggerates or flattens regression slopes.
+
+### 3. Chartjunk & 3D Extrusion
+Drop shadows, 3D perspective tilts, and decorative clip art distort angles and obscure measurement points.
+
+### 4. Rainbow Palettes (Jet / Rainbow)
+Rainbow colormaps introduce sharp artificial boundaries that do not correspond to true discontinuities in the underlying data.
+
+---
+
+## The "Before" Attempt: The Truncated Bar Chart
+
+```r
+faculty_means <- first_sem |>
+  summarise(wellbeing = mean(wellbeing), .by = faculty)
+
+# MISLEADING: Truncated axis from 58 to 62.5
+ggplot(faculty_means, aes(x = faculty, y = wellbeing, fill = faculty)) +
+  geom_col() +
+  coord_cartesian(ylim = c(58, 62.5))
+```
+
+```
+Wellbeing
+62.5 |      [====]              [====]
+60.0 |      [====]    [====]    [====]
+58.0 +----------------------------------
+          Education  Health   Humanities
+     (Education looks 4x taller than Health!)
+```
+
+**The Reality:** The means differ by only 1.8 points on a 100-point instrument.
+
+---
+
+## The "After" Redesign: The Honest Strip Plot
+
+```r
+ggplot(first_sem, aes(x = wellbeing, y = reorder(faculty, wellbeing))) +
+  # 1. Show individual student variation with faint jittered points:
+  geom_jitter(height = 0.18, alpha = 0.25, colour = "grey40") +
+  # 2. Overlay group means prominently in red:
+  stat_summary(fun = mean, geom = "point", size = 3.5, colour = "firebrick") +
+  # 3. Informative labels and clean styling:
+  labs(
+    title    = "Student Wellbeing Across Academic Faculties",
+    subtitle = "Individual student scores (grey points) with faculty group means (red dots)",
+    x        = "Wellbeing Score (Semester 1, 0–100 Scale)",
+    y        = NULL
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+**Substantive Truth Revealed:** The variance *within* faculties is vast (scores from 25 to 95); the variance *between* faculty means is negligible.
+
+---
+
+# Advanced Visualization Techniques
+
+### Small Multiples, Density Curves, and Correlation Tiles
+
+---
+
+## Small Multiples with `facet_wrap()`
+
+Faceting partitions a dataset into separate panels sharing identical scale axes:
+
+```r
+ggplot(first_sem, aes(x = sleep_hours, y = gpa)) +
+  geom_point(alpha = 0.35, colour = "navy") +
+  geom_smooth(method = "lm", colour = "firebrick", se = FALSE) +
+  # Split across degree programme:
+  facet_wrap(~ programme) +
+  labs(x = "Sleep Hours", y = "Cumulative GPA") +
+  theme_minimal(base_size = 13)
+```
+
+- Facilitates parallel visual comparisons without overlapping clutter.
+- For 2 grouping variables (e.g., `programme` $\times$ `study_mode`), use `facet_grid(programme ~ study_mode)`.
+
+---
+
+## Density Plots: Comparing Distributions
+
+`geom_density()` calculates a smoothed kernel density estimate:
+
+```r
+semesters |>
+  filter(semester == 2) |>
+  left_join(students, join_by(student_id)) |>
+  ggplot(aes(x = wellbeing, fill = workshop)) +
+  geom_density(alpha = 0.45) +
+  scale_fill_viridis_d(end = 0.8) +
+  labs(
+    title = "Wellbeing Distribution Following Workshop (Semester 2)",
+    x     = "Wellbeing Score", 
+    y     = "Probability Density", 
+    fill  = "Workshop Cohort"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+Reveals that the entire intervention distribution shifted rightward, not just a subset of high performers.
+
+---
+
+## Correlation Heat Maps with `geom_tile()`
+
+Visualizing multi-variable association matrices:
+
+```r
+library(tidyr)
+
+cor_matrix <- first_sem |>
+  select(gpa, sleep_hours, study_hours, wellbeing) |>
+  cor(use = "complete.obs")
+
+cor_long <- cor_matrix |>
+  as.data.frame() |>
+  mutate(var1 = rownames(cor_matrix)) |>
+  pivot_longer(-var1, names_to = "var2", values_to = "r")
+
+ggplot(cor_long, aes(x = var1, y = var2, fill = r)) +
+  geom_tile(colour = "white") +
+  geom_text(aes(label = round(r, 2)), size = 4.5) +
+  scale_fill_gradient2(low = "#2166ac", mid = "white", high = "#b2182b", limits = c(-1, 1)) +
+  labs(x = NULL, y = NULL, fill = "Pearson r") +
+  theme_minimal(base_size = 13)
+```
+
+The diverging color gradient (`scale_fill_gradient2`) highlights positive associations in red, negative in blue, and zero correlation in neutral white.
+
+---
+
+# Exporting High-Resolution Figures
+
+### Preparing Graphics for Dissertations and Journals
+
+---
+
+## `ggsave()`: Syntax and Parameters
+
+Never take low-resolution screenshots of RStudio graphics! Use `ggsave()`:
+
+```r
+# Vector PDF for lossless print quality:
+ggsave(
+  filename = "figures/fig01_wellbeing_trajectory.pdf",
+  plot     = p,
+  width    = 16,
+  height   = 10,
+  units    = "cm"
+)
+
+# High-resolution raster PNG for web or Word submissions (300 DPI):
+ggsave(
+  filename = "figures/fig01_wellbeing_trajectory.png",
+  plot     = p,
+  width    = 16,
+  height   = 10,
+  units    = "cm",
+  dpi      = 300
+)
+```
+
+---
+
+## Vector vs. Raster Formats
+
+| Format | Extension | Type | Scalability | Best Used For |
+|---|---|---|---|---|
+| **PDF** | `.pdf` | Vector | Infinite (lossless zoom) | LaTeX, Quarto, Journal Print |
+| **SVG** | `.svg` | Vector | Infinite (web native) | HTML presentations, Websites |
+| **PNG** | `.png` | Raster | Fixed (300+ DPI recommended) | Word documents, PowerPoints |
+| **TIFF** | `.tiff` | Raster | Uncompressed | Medical/Biology Journals |
+
+### Sizing Guidelines:
+- Single-column journal figure: ~8–9 cm width.
+- Two-column / Full-page thesis figure: ~15–17 cm width.
+
+---
+
+# Real-World Extension: Macroeconomics
+
+### Visualizing Temporal Shocks with `economics`
+
+---
+
+## The `economics` Dataset
+
+ggplot2 includes historical US macroeconomic records (1967–2015):
+
+```r
+ggplot(economics, aes(x = date, y = unemploy)) +
+  geom_line(colour = "navy", linewidth = 0.9) +
+  labs(
+    title    = "United States Unemployment Over Time",
+    subtitle = "Number of unemployed civilians in thousands (1967–2015)",
+    x        = "Year",
+    y        = "Unemployed (Thousands)"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+**Substantive Nuance:** The plot displays absolute raw counts, not the unemployment *rate*. Because population doubled between 1967 and 2015, the 2008 peak looks disproportionately massive. Clear axis labels prevent analytical misinterpretation.
+
+---
+
+# Thesis Figure Checklist & Chapter Review
+
+---
+
+## The Thesis Figure Defense Checklist
+
+Before binding figures into your thesis document:
+
+- [ ] **Accurate Baseline:** Bar charts start strictly at zero.
+- [ ] **No Raw Column Names:** Every axis displays plain English and metric units.
+- [ ] **Accessible Color Palette:** Viridis or colorblind-verified custom scales.
+- [ ] **Visible Data Variance:** Averages are accompanied by standard error bars or jittered points.
+- [ ] **Resolved Overplotting:** Transparency (`alpha`) applied to dense scatter plots.
+- [ ] **Appropriate Geometry:** Lines reserved for temporal/sequential data; bars for counts; boxes for distributions.
+- [ ] **High Resolution:** Vector PDF or 300+ DPI raster export.
+
+---
+
+## Summary of Core ggplot2 Functions
+
+| Purpose | Function | Example |
+|---|---|---|
+| Initialize canvas | `ggplot()` | `ggplot(data, aes(x, y))` |
+| Draw points | `geom_point()` | `geom_point(alpha = 0.4)` |
+| Draw bars / columns | `geom_bar()`, `geom_col()` | `geom_col(fill = "steelblue")` |
+| Draw boxplots | `geom_boxplot()` | `geom_boxplot(width = 0.5)` |
+| Draw lines | `geom_line()` | `geom_line(linewidth = 1)` |
+| Draw smooth trend | `geom_smooth()` | `geom_smooth(method = "lm")` |
+| Partition panels | `facet_wrap()` | `facet_wrap(~ programme)` |
+| Set labels | `labs()` | `labs(title = "...", x = "...")` |
+| Colorblind scale | `scale_colour_viridis_d()` | `scale_colour_viridis_d()` |
+| Clean theme | `theme_minimal()` | `theme_minimal(base_size = 13)` |
+| Save figure | `ggsave()` | `ggsave("fig.pdf", width=16, height=10, units="cm")` |
+
+---
+
+# Questions & Hands-On Practice
+
+Open the Chapter 4 Interactive Playground:
+[playground/chapter04.html](../playground/chapter04.html)
+
+**Next Lecture:**
+*Chapter 5 · Framing Research Questions and Building an Analysis Plan*
