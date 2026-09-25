@@ -27,6 +27,7 @@ These presentation decks accompany the book chapters, designed for classroom ins
 | **Chapter 12** | Classification Models & Supervised Learning | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](12-classification.html) · [Source](12-classification.qmd) |
 | **Chapter 13** | Predictive Regression & Regularization | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](13-predictive-regression.html) · [Source](13-predictive-regression.qmd) |
 | **Chapter 14** | Advanced Clustering & Unsupervised Learning | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](14-advanced-clustering.html) · [Source](14-advanced-clustering.qmd) |
+| **Chapter 15** | Neural Networks & Deep Learning | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](15-neural-networks.html) · [Source](15-neural-networks.qmd) |
 
 ### Using the Slide Decks
 
