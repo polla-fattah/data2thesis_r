@@ -1,0 +1,683 @@
+---
+title: "Multivariate Statistical Methods"
+subtitle: "Factor Analysis, Principal Component Analysis, Scale Reliability, and Clustering"
+author: "Dr. Polla Fattah"
+institute: "From Data to Thesis: Research Data Analysis with R"
+format:
+  revealjs:
+    theme: [default, ../../styles/theme.scss]
+    slide-number: true
+    preview-links: auto
+    chalkboard: true
+    transition: slide
+    highlight-style: github
+    code-line-numbers: false
+    width: 1200
+    height: 750
+execute:
+  freeze: auto
+---
+
+# Multivariate Statistical Methods
+
+### Factor Analysis, PCA, and Person-Centered Clustering
+
+**Chapter 9 · From Data to Thesis**
+
+Dr. Polla Fattah
+
+---
+
+## Measuring What Cannot Be Directly Seen
+
+In social, biological, and health sciences, our most critical phenomena are **unobservable latent constructs**:
+
+- *Psychological Stress*
+- *Academic Burnout*
+- *Perceived Supervisor Support*
+- *Educational Satisfaction*
+
+> **No single questionnaire item can capture a latent construct without noise.**
+
+How do we prove to a thesis examiner that our 22 questionnaire items faithfully reflect four distinct psychological dimensions? And how do we discover latent student profiles across dozens of variables?
+
+---
+
+## What We Will Master Today
+
+By the end of this lecture deck, you will be able to:
+
+- Demonstrate mathematically why **multi-item scales** dramatically boost measurement reliability.
+- Visualize multi-variable correlation structures using **hierarchical heatmaps (`corrplot`)**.
+- Perform **Principal Component Analysis (PCA)** to achieve data dimensionality reduction.
+- Articulate the vital theoretical distinction between **formative PCA** and **reflective Factor Analysis (EFA)**.
+- Determine the optimal number of dimensions using **Kaiser’s rule**, **Scree plots**, and **Parallel Analysis**.
+- Interpret factor loadings, cross-loadings, and **oblique factor rotations (`oblimin`)**.
+- Evaluate psychometric scale reliability using **Cronbach’s alpha ($\alpha$)**.
+- Segment participants into behavioral archetypes using **k-means** and **hierarchical clustering (Ward's method)**.
+- Guard against the dangerous illusion of **clustering pure random noise**.
+
+---
+
+# Constructs and Latent Variables
+
+### Why Single Questionnaire Items Fail
+
+---
+
+## Signal vs. Noise in Survey Measurement
+
+Consider the survey question: *"I feel unable to control important things in my studies."*
+
+A student's numerical answer reflects two components:
+
+$$\text{Observed Answer} = \text{Latent Construct (Signal)} + \text{Unique Error (Noise)}$$
+
+- **The Signal:** Their authentic underlying stress level.
+- **The Noise:** Transient mood, phrasing ambiguity, misinterpretation of Likert anchors, fatigue on survey day.
+
+Averaging multiple items allows independent random errors to **cancel out**, isolating the shared latent signal.
+
+---
+
+## Simulation: Testing the Signal-to-Noise Ratio
+
+Simulating 600 students with a known latent stress score, measured by 1 to 6 noisy items:
+
+```r
+set.seed(42)
+true_stress <- rnorm(600)
+
+# Generate 6 items: True Signal + Random Noise (SD = 1)
+simulated_items <- sapply(1:6, function(i) true_stress + rnorm(600, sd = 1))
+
+# Correlation of composite average with true latent score:
+sapply(1:6, function(k) {
+  cor(rowMeans(simulated_items[, 1:k, drop = FALSE]), true_stress)
+}) |> setNames(paste(1:6, "items")) |> round(2)
+```
+
+```
+ 1 items  2 items  3 items  4 items  5 items  6 items 
+    0.72     0.82     0.87     0.89     0.91     0.92 
+```
+
+- A single item correlates at **$r = 0.72$** with reality.
+- Averaging 6 items raises fidelity to **$r = 0.92$**!
+- This is the mathematical justification for multi-item psychometric batteries.
+
+---
+
+# Visualizing High-Dimensional Data
+
+### The 22-Item Correlation Matrix
+
+---
+
+## Exploring the 231 Pairwise Correlations
+
+Our survey battery contains 22 items across 600 students:
+
+```r
+library(data2thesis)
+library(dplyr)
+library(corrplot)
+
+items <- questionnaire |> select(-student_id)
+ncol(items)
+#> [1] 22
+```
+
+22 items produce $\frac{22 \times 21}{2} = 231$ distinct correlation pairs.
+
+We use `corrplot` with **hierarchical clustering (`order = "hclust"`)** to automatically group correlated items into diagonal blocks:
+
+```r
+corrplot(
+  cor(items, use = "pairwise.complete.obs"),
+  method = "color", 
+  order  = "hclust", 
+  tl.col = "black", 
+  tl.cex = 0.7
+)
+```
+
+---
+
+## The Clustered Correlation Heatmap
+
+```
++-------------------------------------------------------------+
+| [ Support 1-6 ]     (Blue block: Strong positive r ~ 0.5)   |
+|                                                             |
+|           [ Satisfaction 1-4 ] (Blue block: r ~ 0.5)        |
+|                                                             |
+|                     [ Burnout 1-6 ]   (Strong blue r ~ 0.6) |
+|                     [ Stress 1-6 ]    (Strong blue r ~ 0.5) |
+|                                       (Negative r with Supp)|
++-------------------------------------------------------------+
+```
+
+### Visual Discoveries:
+1. Four distinct square blocks appear along the diagonal, confirming construct validity.
+2. Stress and Burnout correlate positively with each other.
+3. Item `stress_4` shows red (negative) correlations against all other stress items—confirming its **reverse wording**!
+
+---
+
+# Principal Component Analysis (PCA)
+
+### Geometric Dimension Reduction
+
+---
+
+## What is PCA?
+
+PCA transforms $p$ correlated observed variables into a smaller set of $k$ uncorrelated linear combinations called **Principal Components (PCs)**:
+
+$$PC_1 = w_{11} X_1 + w_{12} X_2 + \dots + w_{1p} X_p$$
+
+- **$PC_1$:** Captures the maximum possible variance across all 22 items.
+- **$PC_2$:** Captures the maximum remaining variance orthogonal (perpendicular) to $PC_1$.
+- **Goal:** Summarize 22 questions with 3 or 4 composite index scores without losing substantive information.
+
+---
+
+## Running PCA with `prcomp()`
+
+```r
+items_complete <- na.omit(items)
+
+pca_fit <- prcomp(items_complete, scale. = TRUE)
+summary(pca_fit)$importance[, 1:6] |> round(3)
+```
+
+```
+                            PC1   PC2   PC3   PC4   PC5   PC6
+Standard deviation     2.441 2.012 1.681 1.452 0.892 0.851
+Proportion of Variance 0.271 0.184 0.128 0.096 0.036 0.033
+Cumulative Proportion  0.271 0.455 0.583 0.679 0.715 0.748
+```
+
+- $PC_1$ alone explains **$27.1\%$** of total survey variance.
+- The first 4 components together account for **$67.9\%$** of all variation.
+- From $PC_5$ onwards, individual components account for $< 3.6\%$ each.
+
+---
+
+## Deciding How Many Components to Retain
+
+### 1. Kaiser's Rule (Eigenvalue > 1.0)
+Keep components that explain more variance than a single standardized original variable ($\text{Eigenvalue} = \text{SD}^2 > 1.0$):
+$$\text{Eigenvalues for PC1–PC5: } [5.96, 4.05, 2.83, 2.11, 0.79] \rightarrow \text{Keep 4}$$
+
+### 2. Scree Plot Elbow Test
+Look for the inflection "elbow" where the variance line flattens out:
+
+```r
+library(factoextra)
+fviz_eig(pca_fit, addlabels = TRUE, ncp = 8)
+```
+
+---
+
+## Horn's Parallel Analysis (The Gold Standard)
+
+Scree plots and Kaiser's rule often overestimate components. **Parallel Analysis** generates 1,000 synthetic random datasets of identical dimensions ($N = 600, p = 22$) and retains only components that exceed random chance:
+
+```r
+library(psych)
+
+set.seed(1)
+parallel_res <- fa.parallel(items, fa = "fa", plot = FALSE)
+parallel_res$nfact
+#> [1] 4
+```
+
+Kaiser's rule, the Scree plot, and Parallel Analysis **all converge on exactly 4 dimensions**.
+
+---
+
+# PCA vs. Exploratory Factor Analysis (EFA)
+
+### The Most Common Conceptual Confusion in Theses
+
+---
+
+## Comparing the Two Paradigms
+
+```
++-------------------------------------------------------------+
+| PRINCIPAL COMPONENT ANALYSIS (PCA)                          |
+| Paradigm:   FORMATIVE / DATA REDUCTION                      |
+| Model:      Components are weighted linear sums of items.   |
+| Assumption: No underlying latent theory. Merely summarizes  |
+|             total variance (including noise).               |
++-------------------------------------------------------------+
+                              vs.
++-------------------------------------------------------------+
+| EXPLORATORY FACTOR ANALYSIS (EFA)                           |
+| Paradigm:   REFLECTIVE / PSYCHOMETRIC MEASUREMENT           |
+| Model:      Latent factors CAUSE the observed responses.    |
+| Assumption: Separates shared common variance from unique    |
+|             measurement noise.                              |
++-------------------------------------------------------------+
+```
+
+> **Examiner Rule:** Never use PCA to validate a psychological questionnaire scale! Use **Factor Analysis**.
+
+---
+
+# Exploratory Factor Analysis (EFA)
+
+### Uncovering the Latent Architecture
+
+---
+
+## The Factor Analysis Mathematical Model
+
+Each observed survey item $X_i$ is modeled as a function of common latent factors plus unique item error $\epsilon_i$:
+
+$$X_i = \lambda_{i1} F_1 + \lambda_{i2} F_2 + \lambda_{i3} F_3 + \lambda_{i4} F_4 + \epsilon_i$$
+
+- **$F_1 \dots F_4$:** Latent constructs (*Stress, Burnout, Support, Satisfaction*).
+- **$\lambda_{ij}$:** **Factor Loading** (correlation between item $i$ and factor $j$).
+- **$\epsilon_i$:** Unique error / item specificity.
+
+---
+
+## Factor Rotation: Orthogonal vs. Oblique
+
+Factors emerge from initial extraction in mathematical space. **Rotation** turns the axes to achieve **simple structure** (items load cleanly on one factor and near zero on others).
+
+```
++-------------------------------------------------------------+
+| ORTHOGONAL ROTATION (e.g., Varimax)                         |
+| Forces factors to be completely uncorrelated (angle = 90°). |
+| Unrealistic for human psychology: Stress and Burnout DO     |
+| correlate in real life!                                     |
++-------------------------------------------------------------+
+| OBLIQUE ROTATION (e.g., Oblimin / Promax)                   |
+| Allows factors to correlate naturally.                      |
+| THE SCIENTIFIC STANDARD FOR SOCIAL & HEALTH RESEARCH.       |
++-------------------------------------------------------------+
+```
+
+---
+
+## Fitting EFA with `psych::fa()`
+
+```r
+library(psych)
+
+# Maximum Likelihood extraction with Oblique (oblimin) rotation:
+efa_fit <- fa(items, nfactors = 4, rotate = "oblimin", fm = "ml")
+
+# Print loadings suppressing trivial values (< 0.30):
+print(efa_fit$loadings, cutoff = 0.30, sort = TRUE)
+```
+
+---
+
+## Interpreting the Factor Loading Matrix
+
+```
+                      ML1 (Support) ML2 (Burnout) ML3 (Stress) ML4 (Satisfact)
+support_1                 0.78
+support_2                 0.82
+support_3                 0.74
+...
+burnout_1                               0.81
+burnout_2                               0.77
+burnout_3                               0.42          0.38   <-- CROSS-LOADING!
+...
+stress_1                                              0.76
+stress_2                                              0.71
+stress_4                                             -0.65   <-- NEGATIVE LOADING!
+...
+satisfaction_1                                                      0.84
+```
+
+---
+
+## Diagnosing EFA Nuances
+
+### 1. Reverse Items Load Negatively
+`stress_4` (*"I feel confident handling problems"*) loaded at **$-0.65$** on the Stress factor. This confirms that confidence represents the inverse of stress, validating the reverse-scoring step ($6 - \text{item}$) in Chapter 3.
+
+### 2. Cross-Loading Items
+`burnout_3` (*"Deadlines make me feel overwhelmed"*) loaded on both Burnout ($0.42$) and Stress ($0.38$). Substantively, feeling overwhelmed by deadlines bridges acute stress and chronic burnout.
+
+---
+
+## Inter-Factor Correlation Matrix ($\Phi$)
+
+Because we used oblique rotation (`rotate = "oblimin"`), R estimates correlations among the latent factors:
+
+```r
+round(efa_fit$Phi, 2)
+```
+
+```
+                 ML1 (Supp) ML2 (Burn) ML3 (Stress) ML4 (Satis)
+ML1 (Support)          1.00      -0.34        -0.31        0.48
+ML2 (Burnout)         -0.34       1.00         0.64       -0.42
+ML3 (Stress)          -0.31       0.64         1.00       -0.38
+ML4 (Satisfaction)     0.48      -0.42        -0.38        1.00
+```
+
+- Stress and Burnout correlate strongly ($r = 0.64$), but remain distinct constructs.
+- Support correlates positively with Satisfaction ($r = 0.48$) and negatively with Burnout ($r = -0.34$).
+- **Construct validity for RQ6 is fully confirmed.**
+
+---
+
+# Scale Reliability: Cronbach’s Alpha ($\alpha$)
+
+### Quantifying Internal Consistency
+
+---
+
+## What is Cronbach’s Alpha?
+
+Cronbach's $\alpha$ estimates the internal consistency of a multi-item scale:
+
+$$\alpha = \frac{k}{k - 1} \left(1 - \frac{\sum s_i^2}{s_{\text{total}}^2}\right)$$
+
+- $k$: Number of items on the scale.
+- Increases as items correlate more strongly with each other.
+- Increases as more items are added to the scale.
+
+### Reliability Thresholds:
+- $\alpha \ge 0.80$: Good to Excellent
+- $0.70 \le \alpha < 0.80$: Acceptable
+- $\alpha < 0.70$: Questionable / Inadequate for research
+
+---
+
+## Computing Alpha in R: Watch the Namespace!
+
+> **Critical R Trap:** Both `ggplot2` and `psych` have a function named `alpha()`! Whichever package was loaded last overrides the other. Always write `psych::alpha()`!
+
+```r
+# Reverse stress_4 first:
+q_clean <- questionnaire
+q_clean$stress_4 <- 6 - q_clean$stress_4
+
+c(
+  Stress_Alpha       = psych::alpha(q_clean[, paste0("stress_", 1:6)])$total$raw_alpha,
+  Burnout_Alpha      = psych::alpha(q_clean[, paste0("burnout_", 1:6)])$total$raw_alpha,
+  Support_Alpha      = psych::alpha(q_clean[, paste0("support_", 1:6)])$total$raw_alpha,
+  Satisfaction_Alpha = psych::alpha(q_clean[, paste0("satisfaction_", 1:4)])$total$raw_alpha
+) |> round(2)
+```
+
+```
+      Stress_Alpha      Burnout_Alpha      Support_Alpha Satisfaction_Alpha 
+              0.84               0.88               0.86               0.82 
+```
+
+All four scales exceed the $\alpha \ge 0.80$ benchmark for high research quality.
+
+---
+
+# Cluster Analysis: Unsupervised Profiling
+
+### Grouping People Instead of Variables
+
+---
+
+## Variable-Centered vs. Person-Centered Methods
+
+```
++-------------------------------------------------------------+
+| VARIABLE-CENTERED (EFA, Regression)                         |
+| Focus:   How do variables relate to each other?             |
+| Output:  Factor loadings, beta weights, correlations.       |
++-------------------------------------------------------------+
+                              vs.
++-------------------------------------------------------------+
+| PERSON-CENTERED (Cluster Analysis, Latent Class Analysis)   |
+| Focus:   Which individuals share similar multi-trait        |
+|          lifestyle profiles?                                |
+| Output:  Subgroups, behavioral archetypes (RQ7).            |
++-------------------------------------------------------------+
+```
+
+---
+
+## The Metric Distance Problem & Standardization
+
+We describe each student by 7 dimensions:
+
+- Lifestyle: `sleep_hours`, `study_hours`, `caffeine_mg`, `exercise_days`
+- Wellbeing: `stress`, `support`, `satisfaction`
+
+```r
+profiles <- semesters |>
+  summarise(across(c(sleep_hours, study_hours, caffeine_mg, exercise_days), 
+                   ~ mean(.x, na.rm = TRUE)), .by = student_id) |>
+  left_join(scale_scores, join_by(student_id)) |>
+  na.omit()
+
+# CRITICAL STEP: Standardize with scale()!
+profile_scaled <- scale(profiles |> select(-student_id))
+```
+
+> **Warning:** Caffeine is measured in hundreds of milligrams ($0–900$); sleep is measured in single hours ($4–9$). Without `scale()`, **caffeine would dictate 98% of Euclidean distance calculations!**
+
+---
+
+## k-Means Clustering Algorithm
+
+```
+Step 1: Choose k cluster centroids at random.
+Step 2: Assign each participant to their nearest centroid.
+Step 3: Recalculate centroids as the mean of assigned members.
+Step 4: Repeat Steps 2 & 3 until cluster assignments stabilize.
+```
+
+Because results depend on the initial random start, always specify `nstart = 25` to evaluate 25 distinct random starts and select the optimal partition.
+
+---
+
+## Determining k: Elbow and Silhouette Heuristics
+
+```r
+library(factoextra)
+
+# 1. Total Within-Cluster Sum of Squares (Elbow method):
+fviz_nbclust(profile_scaled, kmeans, method = "wss", nstart = 25)
+
+# 2. Average Silhouette Width:
+fviz_nbclust(profile_scaled, kmeans, method = "silhouette", nstart = 25)
+```
+
+- **Elbow Method:** Look for the bend where additional clusters yield diminishing reductions in variance.
+- **Silhouette Width:** Measures how well-separated clusters are (ranges from $-1$ to $+1$).
+- **The Empirical Reality:** Real human data rarely exhibits sharp elbows. Theoretical interpretability and prior literature guide the final choice of $k = 4$.
+
+---
+
+## Profiling the Four Student Archetypes
+
+```r
+set.seed(123)
+k4_fit <- kmeans(profile_scaled, centers = 4, nstart = 25)
+
+profiles |>
+  mutate(cluster = k4_fit$cluster) |>
+  summarise(
+    n = n(),
+    across(sleep_hours:satisfaction, ~ round(mean(.x), 1)),
+    .by = cluster
+  ) |> arrange(cluster)
+```
+
+```
+# A tibble: 4 x 9
+  cluster     n sleep_hours study_hours caffeine_mg exercise_days stress support satisf
+    <int> <int>       <dbl>       <dbl>       <dbl>         <dbl>  <dbl>   <dbl>  <dbl>
+1       1   162         7.2        24.1       185.            3.8    2.3     4.2    4.1
+2       2   184         5.8        34.2       310.            1.2    3.8     3.2    3.1
+3       3    98         4.9        38.5       680.            0.8    4.4     2.8    2.4
+4       4   144         6.5        18.2       210.            2.1    3.4     2.1    2.2
+```
+
+---
+
+## The Four Archetypes Characterized
+
+### 1. The Balanced Scholar ($N = 162, 28\%$)
+High sleep (7.2h), frequent exercise (3.8 days), low stress (2.3), strong support.
+
+### 2. The Overextended Striver ($N = 184, 31\%$)
+High study hours (34h), short sleep (5.8h), elevated stress (3.8).
+
+### 3. The Acute Crisis Profile ($N = 98, 17\%$)
+Severe sleep deficit (4.9h), massive caffeine (680 mg), high stress (4.4), low satisfaction.
+
+### 4. The Isolated / Disengaged ($N = 144, 24\%$)
+Low study hours (18h), critically low supervisor support (2.1) and satisfaction (2.2).
+
+---
+
+## Visualizing Clusters on PC1 and PC2
+
+```r
+fviz_cluster(
+  k4_fit, 
+  data = profile_scaled, 
+  geom = "point", 
+  ellipse.type = "convex",
+  ggtheme = theme_minimal(base_size = 12)
+)
+```
+
+Clusters display moderate overlap in the center.
+
+> **Methodological Nuance:** Clusters in social science are **heuristic archetypes for targeted intervention**, not mutually exclusive biological species.
+
+---
+
+## Hierarchical Clustering (Ward’s Dendrogram)
+
+An alternative agglomerative algorithm that requires **no pre-specified $k$**:
+
+```r
+# Compute Euclidean distance matrix and Ward's minimum variance clustering:
+dist_matrix <- dist(profile_scaled)
+tree_fit    <- hclust(dist_matrix, method = "ward.D2")
+
+# Visualize dendrogram cut into 4 clusters:
+fviz_dend(tree_fit, k = 4, show_labels = FALSE, rect = TRUE)
+```
+
+Hierarchical clustering and $k$-means show strong concordance on the extreme profiles (Balanced and Crisis).
+
+---
+
+## The Dangerous Illusion: Clusters in Pure Noise!
+
+> **Warning:** A clustering algorithm will force data into clusters even when the data is 100% pure random Gaussian noise!
+
+```r
+set.seed(7)
+fake_noise <- tibble(x = rnorm(300), y = rnorm(300))
+fake_clusters <- kmeans(fake_noise, centers = 4, nstart = 25)
+
+ggplot(fake_noise, aes(x, y, colour = factor(fake_clusters$cluster))) +
+  geom_point(size = 2.5) +
+  labs(title = "k-Means on Pure Random Noise", subtitle = "Creates 4 artificial 'clusters' from a single Gaussian cloud") +
+  theme_minimal(base_size = 13)
+```
+
+**Takeaway:** Never claim you have discovered "natural groups" without testing cluster stability and external predictive validity!
+
+---
+
+# Real-World Extension: Criminology
+
+### Macro-Level Dimensionality Reduction
+
+---
+
+## Crime Metrics: The `USArrests` Dataset
+
+Statistics on 50 US states across Murder, Assault, Urban Population, and Rape:
+
+```r
+pca_arrests <- prcomp(USArrests, scale. = TRUE)
+summary(pca_arrests)$importance[, 1:2] |> round(2)
+```
+
+```
+                            PC1  PC2
+Standard deviation         1.57 1.00
+Proportion of Variance     0.62 0.25
+Cumulative Proportion      0.62 0.87
+```
+
+- **$PC_1$ (62%):** Loads heavily on Murder, Assault, and Rape $\rightarrow$ *Overall Violent Crime Index*.
+- **$PC_2$ (25%):** Loads heavily on UrbanPop $\rightarrow$ *State Urbanization Index*.
+- Two principal components capture **$87\%$ of all variance** across the 50 states!
+
+---
+
+# Thesis Writing Templates for Multivariate Methods
+
+---
+
+## APA Psychometric Validation Report (RQ6)
+
+> "An Exploratory Factor Analysis (Maximum Likelihood extraction with Oblique Oblimin rotation) was conducted on the 22 survey items. Parallel analysis indicated the retention of four factors, explaining $67.9\%$ of the cumulative variance. 
+> 
+> All items loaded strongly on their hypothesised latent constructs ($|\lambda| \ge 0.65$), with one cross-loading item (*burnout_3*: $\lambda_{\text{burnout}} = 0.42, \lambda_{\text{stress}} = 0.38$). The reverse-worded item *stress_4* exhibited a negative loading ($\lambda = -0.65$) as anticipated. 
+> 
+> Scale reliability demonstrated high internal consistency across all four scales: Stress ($\alpha = .84$), Burnout ($\alpha = .88$), Supervisor Support ($\alpha = .86$), and Academic Satisfaction ($\alpha = .82$)."
+
+---
+
+## APA Cluster Analysis Report (RQ7)
+
+> "A $k$-means cluster analysis was performed on standardized lifestyle and psychometric metrics across four semesters ($N = 588$). Evaluation of the within-cluster sum of squares and silhouette diagnostics supported a four-cluster solution. 
+> 
+> The resulting archetypes comprised: (1) Balanced Scholars ($n = 162$), characterized by high sleep and exercise; (2) Overextended Strivers ($n = 184$); (3) Acute Crisis ($n = 98$), characterized by chronic sleep deficit and high caffeine consumption; and (4) Isolated/Disengaged ($n = 144$), characterized by low study duration and poor supervisor support."
+
+---
+
+## Multivariate Methodology Checklist
+
+- [ ] **Data Standardized:** Variables scaled to $z$-scores before running Euclidean distance clustering.
+- [ ] **Oblique Rotation Applied:** Oblimin/Promax used for EFA (avoiding artificial orthogonality).
+- [ ] **Parallel Analysis Reported:** Retained factor count justified by comparing against random permutations.
+- [ ] **Reverse Items Checked:** Negatively worded items load negatively on EFA and inverted before computing $\alpha$.
+- [ ] **Namespace Disambiguated:** Explicitly invoked `psych::alpha()` to avoid `ggplot2` collision.
+- [ ] **Cluster Solution Validated:** Checked convergence between $k$-means and hierarchical Ward's clustering.
+
+---
+
+## Summary of Core R Multivariate Functions
+
+| Purpose | Function | Example |
+|---|---|---|
+| Clustered correlation plot | `corrplot()` | `corrplot(cor(df), order = "hclust")` |
+| Principal Component Analysis | `prcomp()` | `prcomp(df, scale. = TRUE)` |
+| Scree plot visualization | `fviz_eig()` | `factoextra::fviz_eig(pca_fit)` |
+| Horn's Parallel Analysis | `fa.parallel()` | `psych::fa.parallel(df, fa = "fa")` |
+| Exploratory Factor Analysis | `fa()` | `psych::fa(df, nfactors = 4, rotate = "oblimin")` |
+| Scale Reliability ($\alpha$) | `psych::alpha()` | `psych::alpha(df[, items])` |
+| Center and scale | `scale()` | `scale(df)` |
+| $k$-Means Clustering | `kmeans()` | `kmeans(scaled_df, centers = 4, nstart = 25)` |
+| Cluster visualization | `fviz_cluster()` | `factoextra::fviz_cluster(k_fit, data = df)` |
+| Hierarchical Clustering | `hclust()` | `hclust(dist(df), method = "ward.D2")` |
+
+---
+
+# Questions & Hands-On Practice
+
+Open the Chapter 9 Interactive Playground:
+[playground/chapter09.html](../playground/chapter09.html)
+
+**Next Lecture:**
+*Chapter 10 · Longitudinal and Hierarchical Data: Mixed-Effects Models*
