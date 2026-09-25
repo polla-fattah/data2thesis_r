@@ -25,6 +25,7 @@ These presentation decks accompany the book chapters, designed for classroom ins
 | **Chapter 10** | Longitudinal & Hierarchical Data: Mixed Models | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](10-mixed-models.html) · [Source](10-mixed-models.qmd) |
 | **Chapter 11** | Machine Learning Foundations: Prediction vs. Inference | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](11-machine-learning.html) · [Source](11-machine-learning.qmd) |
 | **Chapter 12** | Classification Models & Supervised Learning | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](12-classification.html) · [Source](12-classification.qmd) |
+| **Chapter 13** | Predictive Regression & Regularization | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](13-predictive-regression.html) · [Source](13-predictive-regression.qmd) |
 
 ### Using the Slide Decks
 

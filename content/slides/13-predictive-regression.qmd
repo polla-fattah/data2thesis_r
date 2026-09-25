@@ -1,0 +1,616 @@
+---
+title: "Predictive Regression & Regularization"
+subtitle: "Ridge, Lasso, Elastic Net, and Gradient Boosting (XGBoost) in R"
+author: "Dr. Polla Fattah"
+institute: "From Data to Thesis: Research Data Analysis with R"
+format:
+  revealjs:
+    theme: [default, ../../styles/theme.scss]
+    slide-number: true
+    preview-links: auto
+    chalkboard: true
+    transition: slide
+    highlight-style: github
+    code-line-numbers: false
+    width: 1200
+    height: 750
+execute:
+  freeze: auto
+---
+
+# Predictive Regression & Regularization
+
+### High-Dimensional Feature Spaces, Shrinkage, and Ensembles
+
+**Chapter 13 · From Data to Thesis**
+
+Dr. Polla Fattah
+
+---
+
+## When Predictors Outnumber Insights
+
+In empirical graduate research, datasets routinely present **many correlated predictors**:
+
+- 22 individual survey questionnaire items.
+- Demographic, financial, and enrollment attributes.
+- Multi-wave behavioral logs (sleep, study hours, exercise, attendance across Semesters 1 and 2).
+
+> **The Problem**:  
+> In a sample of 60 to 100 students, estimating 50 regression coefficients gives OLS regression so much mathematical freedom that it **fits sample noise almost perfectly**, while producing catastrophic predictions on new cases!
+
+Today, we master **Penalized Regularization** (Ridge, Lasso, Elastic Net) and **Gradient Tree Boosting** (XGBoost) to predict continuous outcomes with clinical precision.
+
+---
+
+## Research Question 10: Forecasting Final GPA
+
+At the end of Year 1, academic advisors meet with every doctoral and master's student:
+
+> **Research Question 10 (Predictive Academics)**:  
+> *"Using data available exclusively at the end of Year 1, can we accurately forecast each student's final graduation GPA, so that tailored academic coaching can be deployed prior to the thesis dissertation phase?"*
+
+- **Outcome Variable**: Final GPA in Semester 4 (continuous numerical scale, 0.0 to 4.0).
+- **Candidate Predictors**: 50+ Year 1 features (demographics, all 22 raw survey items, Semester 1 & 2 performance logs).
+- **The Challenge**: Extreme multicollinearity and high dimensionality.
+
+---
+
+# Evaluating Numeric Predictions
+
+---
+
+## Quantifying Prediction Error
+
+For a continuous target $y$, every prediction generates a residual error:
+
+$$e_i = y_i - \hat{y}_i \quad (\text{Actual} - \text{Predicted})$$
+
+Three core metrics summarize these errors across an evaluation dataset:
+
+1. **Mean Absolute Error (MAE)**:
+   $$\text{MAE} = \frac{1}{n} \sum_{i=1}^n |y_i - \hat{y}_i|$$
+   - Linear penalty; represents the typical average error in raw GPA points.
+   - Robust against extreme outliers.
+
+---
+
+## RMSE & Out-of-Sample $R^2$
+
+2. **Root Mean Squared Error (RMSE)**:
+   $$\text{RMSE} = \sqrt{\frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2}$$
+   - Penalizes large misses heavily due to squaring.
+   - Always $\ge \text{MAE}$; if $\text{RMSE} \gg \text{MAE}$, the model has a few disastrously huge errors!
+
+3. **Coefficient of Determination ($R^2$)**:
+   $$R^2 = \text{cor}(y, \hat{y})^2$$
+   - Proportion of outcome variance captured by predictions ($0.0$ to $1.0$).
+
+---
+
+## The Baseline Benchmark: The Null Model
+
+A predictive metric is meaningless without a reference baseline!
+
+For continuous regression, the simplest possible benchmark is the **Null Model**:
+- It ignores every single predictor and predicts the **training sample mean ($\bar{y}$)** for every new student:
+
+```r
+library(tidymodels)
+tidymodels_prefer()
+
+null_spec <- null_model(mode = "regression")
+null_wf   <- workflow(gpa_recipe, null_spec)
+
+null_cv <- fit_resamples(null_wf, resamples = gpa_folds, metrics = metric_set(rmse, mae))
+collect_metrics(null_cv)
+```
+
+- **Null Model Baseline**: $\text{RMSE} = 0.35\text{ GPA points}$.
+- Any statistical or machine learning model that cannot comfortably beat $0.35$ is worthless!
+
+---
+
+# The Collapse of Ordinary Regression in High Dimensions
+
+---
+
+## OLS Regression on a Small Sample: The Experiment
+
+Let us simulate what happens in typical graduate studies with modest sample sizes:
+- We draw a small training sample of **$N = 60$ students**.
+- We fit an ordinary least squares (OLS) regression using all 50 Year-1 predictors:
+
+```r
+set.seed(3)
+small_train <- gpa_train |> slice_sample(n = 60)
+
+lm_small <- workflow(gpa_recipe, linear_reg()) |> fit(data = small_train)
+
+# Evaluate on Training Data vs Unseen Test Data:
+augment(lm_small, new_data = small_train) |> rmse(final_gpa, .pred)
+# [1] 0.162  <-- Looks miraculous on training data!
+
+augment(lm_small, new_data = gpa_test) |> rmse(final_gpa, .pred)
+# [1] 0.485  <-- WORSE THAN THE NULL BASELINE (0.35)!
+```
+
+---
+
+## Why Did OLS Collapse? Multicollinearity & Variance
+
+Look at the contrast:
+- **Training RMSE = 0.16**: OLS fits the 60 students with near-perfection.
+- **Test RMSE = 0.48**: On new students, its error explodes, performing **worse than predicting the average for everyone**!
+
+```
+     Training Data (N = 60)                        Unseen Test Data (N = 150)
+     ┌────────────────────────────┐                ┌────────────────────────────┐
+     │ OLS spreads massive        │                │ Unstable coefficients blow │
+     │ opposing coefficients:     │                │ up on new students:        │
+     │  beta_gpa1 = -2.8          │                │                            │
+     │  beta_gpa2 = +3.4          │                │ Actual GPA:    3.2         │
+     │ (They cancel out nicely    │                │ Predicted GPA: 5.8!        │
+     │  on training rows!)        │                │ (Disaster!)                │
+     └────────────────────────────┘                └────────────────────────────┘
+```
+
+When predictors correlate, OLS assigns wildly unstable, counter-intuitive weights (e.g., negative weights for Semester 1 GPA!).
+
+---
+
+# Regularized Regression: Ridge, Lasso, and Elastic Net
+
+---
+
+## The Philosophy of Shrinkage
+
+**Regularization** prevents overfitting by introducing an explicit penalty on coefficient magnitude during model fitting:
+
+$$\text{Loss Function} = \text{Sum of Squared Residuals (OLS)} + \lambda \times \text{Complexity Penalty}(\beta)$$
+
+Where:
+- $\lambda \ge 0$ (Lambda) is the **regularization penalty strength**.
+- When $\lambda = 0$: The penalty vanishes $\rightarrow$ **Ordinary OLS Regression**.
+- As $\lambda \rightarrow \infty$: All coefficients are dragged (**shrunk**) toward zero $\rightarrow$ **Null Intercept Model**.
+
+> **The Tradeoff**:  
+> By accepting a tiny increase in training bias, shrinkage dramatically slashes coefficient variance, yielding **massively superior test set accuracy**!
+
+---
+
+## Three Flavors of Regularization
+
+```
+       RIDGE REGRESSION                   LASSO REGRESSION                  ELASTIC NET
+         (Hoerl, 1970)                   (Tibshirani, 1996)             (Zou & Hastie, 2005)
+         
+          L2 Penalty:                       L1 Penalty:                 L1 + L2 Mixture:
+       lambda * sum(beta_j^2)            lambda * sum(|beta_j|)        lambda * [ alpha*|b| + 
+                                                                               (1-alpha)*b^2 ]
+                                                                               
+     Shrinks all weights               Shrinks weights AND sets        Balances shrinkage and
+     proportionally toward 0.          redundant weights to EXACTLY    feature selection.
+     Retains all predictors.           ZERO (Feature Selection!).      Handles collinear groups.
+```
+
+**Non-Negotiable Preprocessing Rule**:
+All predictors must be standardized ($z$-scores) via `step_normalize()`! Otherwise, variables with large raw numbers (e.g., caffeine in mg) would be unfairly penalized compared to GPA.
+
+---
+
+## The Geometry of Shrinkage: Why Lasso Sets Coefficients to Zero
+
+```
+         RIDGE (L2: Smooth Circle)                     LASSO (L1: Sharp Diamond)
+                  beta_2 ^                                      beta_2 ^
+                         │                                             │  /
+                 . - ~ ~ │ ~ ~ - .                             /\     /
+             . '         │         ' .                        /  \   / Contours of OLS
+            /            │            \                      /    \ /  Residual Error
+           │             │             │                    /      * <-- Contact Point
+           │─────────────┼─────────────│──> beta_1         /──────/──────> beta_1
+            \            │            /                    \    /  (Touches at axis corner:
+             .           │           .                      \  /    beta_2 = 0 exactly!)
+               ' - ~ ~ _ │ _ ~ ~ - '                         \/
+           Contact point touches off-axis:
+           Both beta_1 and beta_2 remain non-zero.
+```
+
+Because the $L_1$ diamond has **sharp corners on the coordinate axes**, the expanding OLS error contours almost always touch a corner first, driving that coefficient to **precisely zero**!
+
+---
+
+## Testing Lasso on the 60-Student Sample
+
+Let us refit the exact same 60 students using a Lasso model ($\lambda = 0.03, \text{mixture} = 1$):
+
+```r
+lasso_small <- workflow(
+  gpa_recipe,
+  linear_reg(penalty = 0.03, mixture = 1) |> set_engine("glmnet")
+) |> 
+fit(data = small_train)
+
+augment(lasso_small, new_data = gpa_test) |> rmse(final_gpa, .pred)
+# [1] 0.201  <-- Slashes error from 0.485 down to 0.201!
+```
+
+**What did the Lasso do?**
+- Of the 50 candidate predictors, Lasso drove **44 coefficients to exactly zero**!
+- It retained only 6 vital predictors (chiefly Semester 1 & 2 GPA).
+- It stabilized the model, completely immunizing it against sample noise.
+
+---
+
+# Hyperparameter Tuning with `glmnet`
+
+---
+
+## Tuning Penalty ($\lambda$) and Mixture ($\alpha$)
+
+We tune both dials across our full 10-fold cross-validation training set:
+
+- **Penalty ($\lambda$)**: Tested across 20 values logarithmically spaced from $10^{-4}$ to $1.0$.
+- **Mixture ($\alpha$)**: $0.0$ (Pure Ridge), $0.5$ (Balanced Elastic Net), $1.0$ (Pure Lasso).
+
+```r
+glmnet_spec <- linear_reg(penalty = tune(), mixture = tune()) |>
+  set_engine("glmnet")
+
+glmnet_wf <- workflow() |>
+  add_recipe(gpa_recipe) |>
+  add_model(glmnet_spec)
+
+glmnet_grid <- expand_grid(
+  penalty = 10^seq(-4, 0, length.out = 20),
+  mixture = c(0, 0.5, 1)
+)
+
+set.seed(2026)
+glmnet_tuning <- tune_grid(
+  glmnet_wf, 
+  resamples = gpa_folds, 
+  grid = glmnet_grid, 
+  metrics = metric_set(rmse)
+)
+```
+
+---
+
+## The Regularization Tuning Curves
+
+```r
+autoplot(glmnet_tuning) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Cross-Validated RMSE Across Regularization Penalties",
+    x = "Penalty (Lambda, Log Scale)",
+    y = "10-Fold CV RMSE"
+  )
+```
+
+```
+     RMSE
+     0.35 ^                                              / All models converge
+          │                                             /  to Null Mean Baseline
+     0.25 │                                    ________/
+          │            Optimal Dip            /
+     0.18 │      \______*________*___________/
+          │       \      Lasso   Elastic Net
+     0.17 │________\____________________________________>
+          10^-4               10^-2                    10^0  (Lambda)
+          (Like OLS)         (Sweet Spot)           (Over-Shrunk)
+```
+
+- When $\lambda < 10^{-3}$: Models behave like OLS.
+- At $\lambda \approx 0.01$: RMSE reaches its minimum ($\approx 0.174$).
+- When $\lambda > 0.1$: Over-shrinkage destroys true signal, collapsing to baseline.
+
+---
+
+## Inspecting the Lasso Coefficient Path
+
+How do coefficients behave as the penalty dial relaxes from left to right?
+
+```
+    Standardized
+    Coefficient
+        0.5 ^                                          / gpa_s2 (Surges first & highest!)
+            │                                         /
+        0.3 │                                        /  gpa_s1 (Enters second)
+            │                         ______________/
+        0.0 ┼────────────────────────/──────────────/──────> Lambda (Decreasing ->)
+            │                       /  \   \__ [40+ Survey Items stay locked at 0]
+       -0.1 │                      /    \_____ burnout_s1 (Small adjustment)
+            └─────────────────────┴─────────────────────────>
+                              Lambda = 0.01 (Selected Penalty)
+```
+
+- At heavy penalties, every coefficient is zero.
+- The first variable to wake up and enter the model is **Semester 2 GPA**, followed immediately by **Semester 1 GPA**.
+- Irrelevant survey items remain pinned to the zero line across almost the entire path!
+
+---
+
+## Predictors Retained by the Optimal Lasso
+
+```r
+best_penalty <- select_best(glmnet_tuning, metric = "rmse")
+lasso_fit <- glmnet_wf |> finalize_workflow(best_penalty) |> fit(data = gpa_train)
+
+tidy(lasso_fit) |> 
+  filter(estimate != 0, term != "(Intercept)") |> 
+  arrange(desc(abs(estimate)))
+```
+
+```
+  term           estimate
+1 gpa_s2           0.248   <-- Dominant driver (+0.25 GPA pts per 1 SD)
+2 gpa_s1           0.112   <-- Secondary driver (+0.11 GPA pts per 1 SD)
+3 burnout_s2      -0.024   <-- Minor drag
+4 study_hours_s2   0.018   <-- Minor boost
+5 stress_s1       -0.012   <-- Minor drag
+```
+
+Out of 50 candidates, the Lasso retained **just 5 variables**, crafting a wonderfully parsimonious model!
+
+---
+
+# Gradient Boosting Machines: XGBoost
+
+---
+
+## The Boosting Paradigm: Sequential Error Correction
+
+While Random Forests grow hundreds of trees **independently** in parallel, **Gradient Boosting** builds trees **sequentially**:
+
+```
+      Round 1:   Fit Tree 1 to Predict GPA
+                 Prediction Error: e_1 = Actual - Tree_1
+                        │
+      Round 2:   Fit Tree 2 to Predict Residuals (e_1)
+                 New Residuals:   e_2 = e_1 - (eta * Tree_2)
+                        │
+      Round 3:   Fit Tree 3 to Predict Residuals (e_2)
+                 ...
+      Round 500: Sum all 500 trees scaled by Learning Rate (eta)
+```
+
+> Each new tree is a **weak learner** designed specifically to attack the mistakes made by the collective ensemble so far!
+
+---
+
+## Visualizing Boosting Iterations
+
+```
+     1 Tree (Shallow Step)            10 Trees (Staircase)           100 Trees (Smooth Non-linear)
+    ┌───────────────────────┐       ┌───────────────────────┐       ┌───────────────────────┐
+    │           ___________ │       │               _______ │       │                 ..---'│
+    │          │            │       │           ___/        │       │             _.-'      │
+    │ _________│            │       │       ___/            │       │        _.-'           │
+    │                       │       │ _____/                │       │  _..-'                │
+    └───────────────────────┘       └───────────────────────┘       └───────────────────────┘
+```
+
+**Key Hyperparameters in XGBoost**:
+1. `trees`: Total number of boosting rounds (e.g., 500).
+2. `learn_rate` ($\eta$): Shrinkage factor applied to each tree (e.g., 0.01 to 0.10) to prevent aggressive overfitting.
+3. `tree_depth`: Depth of each individual tree (depth 1 = additive stumps; depth 3–6 = interaction capture).
+
+---
+
+## Tuning XGBoost with `tidymodels`
+
+```r
+xgb_spec <- boost_tree(
+  trees = 500, 
+  tree_depth = tune(), 
+  learn_rate = tune()
+) |>
+set_engine("xgboost") |>
+set_mode("regression")
+
+xgb_wf <- workflow(gpa_recipe, xgb_spec)
+
+set.seed(2026)
+xgb_tuning <- tune_grid(
+  xgb_wf, 
+  resamples = gpa_folds,
+  grid = expand_grid(learn_rate = c(0.01, 0.03, 0.10), tree_depth = c(1, 2, 4)),
+  metrics = metric_set(rmse)
+)
+```
+
+**Empirical Result**:
+- The optimal architecture uses **`tree_depth = 1` (Decision Stumps)**!
+- A tree of depth 1 splits on only one feature at a time, meaning the boosted model learned purely **additive main effects** with zero high-order interactions!
+
+---
+
+# The Grand Tournament: Comparing All Predictive Models
+
+---
+
+## 10-Fold Cross-Validation Leaderboard
+
+We stack all evaluated models side-by-side on the identical 10 folds:
+
+| Predictive Architecture | Model Details | 10-Fold CV RMSE | Standard Error |
+| :--- | :--- | :---: | :---: |
+| **Lasso Regression** | **$\lambda = 0.008, \alpha = 1.0$ (5 features)** | **0.174** | 0.009 |
+| **Elastic Net** | $\lambda = 0.014, \alpha = 0.5$ | 0.174 | 0.009 |
+| **Ridge Regression** | $\lambda = 0.048, \alpha = 0.0$ | 0.175 | 0.009 |
+| **XGBoost** | 500 trees, $\text{depth} = 1, \eta = 0.03$ | 0.176 | 0.010 |
+| **Ordinary OLS** | Unpenalized (all 50 features) | 0.184 | 0.012 |
+| **Null Mean Baseline** | Predicts global $\bar{y} = 3.38$ | 0.352 | 0.016 |
+
+---
+
+## Why Lasso Wins the Tournament
+
+1. **Top Predictive Accuracy**: $\text{RMSE} = 0.174$, matching or edging XGBoost and Ridge.
+2. **Extreme Sparsity**: Retains only 5 variables out of 50, discarding 45 unhelpful noise features.
+3. **Operational Simplicity**: Advisors do not need to compute complex tree ensembles; they can compute a student's risk using a simple 5-term linear formula!
+
+Let us unlock our holdout **Test Set** and evaluate the finalized Lasso model.
+
+---
+
+# The Final Test: Holdout Evaluation & Reality Check
+
+---
+
+## Evaluating Final Lasso on the 25% Test Set
+
+```r
+final_lasso <- glmnet_wf |>
+  finalize_workflow(best_penalty) |>
+  last_fit(gpa_split, metrics = metric_set(rmse, mae, rsq))
+
+collect_metrics(final_lasso)
+```
+
+```
+.metric .estimator .estimate
+mae     standard       0.142   <-- Average error: 0.14 GPA points!
+rmse    standard       0.178   <-- Unseen holdout RMSE
+rsq     standard       0.724   <-- Explains 72.4% of final GPA variance!
+```
+
+- On totally unseen students, predicted GPA deviates from actual graduation GPA by an average of **only 0.14 points**!
+- $R^2 = 72.4\%$: Highly reliable out-of-sample forecasting.
+
+---
+
+## Visualizing Observed vs. Predicted GPA
+
+```r
+collect_predictions(final_lasso) |>
+  ggplot(aes(x = .pred, y = final_gpa)) +
+  geom_abline(linetype = "dashed", color = "grey50") +
+  geom_point(alpha = 0.6, color = "#1b365d", size = 2) +
+  coord_obs_pred() +
+  labs(
+    title = "Final Holdout Evaluation: Predicted vs. Actual GPA",
+    x = "Predicted Final GPA (Semester 4)",
+    y = "Actual Observed GPA"
+  ) +
+  theme_minimal(base_size = 12)
+```
+
+- Points hug the 45-degree dashed identity line tightly across the range from $2.5$ to $4.0$.
+- Slight shrinkage at extremes: the highest and lowest GPAs are predicted slightly toward the population mean (classic regression to the mean).
+
+---
+
+## The Substantive Reality Check: The "GPA-Only" Model
+
+What happens if we strip away all 22 survey items, all lifestyle measures, and all demographics, and predict final GPA using **only Semester 1 & 2 GPA**?
+
+```r
+gpa_only_wf <- workflow(
+  recipe(final_gpa ~ gpa_s1 + gpa_s2, data = gpa_train), 
+  linear_reg()
+)
+gpa_only_fit <- last_fit(gpa_only_wf, gpa_split, metrics = metric_set(rmse, mae, rsq))
+collect_metrics(gpa_only_fit)
+```
+
+```
+.metric .estimator .estimate
+mae     standard       0.144
+rmse    standard       0.180
+rsq     standard       0.718
+```
+
+> **A Profound Substantive Finding**:  
+> A simple regression using only past grades achieves $\text{RMSE} = 0.180$ ($R^2 = 71.8\%$)—almost identical to the 50-variable Lasso!
+
+---
+
+## Prediction vs. Causation: The Advisor's Lesson
+
+Does this mean sleep, stress, and supervisor support don't matter?
+
+> **ABSOLUTELY NOT!**
+
+- In Chapter 8, we proved with explanatory regression that sleep deprivation and poor supervision causally undermine academic grades.
+- But those psychological and behavioral strains **have already exerted their toll by the end of Year 1**, manifesting directly in Year 1 GPA!
+- For **pure prediction**, once the model knows a student's prior GPA, questionnaire items offer little additional incremental information.
+- **Never mistake Lasso feature pruning for a claim of causal irrelevance!**
+
+---
+
+# Engineering Case Study: Concrete Compressive Strength
+
+---
+
+## When XGBoost Truly Crushes Linear Models
+
+When does Gradient Boosting blow linear models out of the water?  
+When the underlying physics has **complex, non-linear ingredient interactions**!
+
+Consider the classic `concrete` engineering dataset (predicting concrete strength from cement, water, slag, fly ash, and age):
+
+```r
+data(concrete, package = "modeldata")
+set.seed(1)
+c_split <- initial_split(concrete)
+
+# 1. Linear OLS Regression:
+lm_fit  <- last_fit(workflow(compressive_strength ~ ., linear_reg()), c_split)
+
+# 2. XGBoost (Depth = 4, Learn Rate = 0.05):
+xgb_fit <- last_fit(
+  workflow(compressive_strength ~ ., 
+           boost_tree(trees = 500, tree_depth = 4, learn_rate = 0.05) |> 
+             set_engine("xgboost") |> set_mode("regression")),
+  c_split
+)
+```
+
+---
+
+## Concrete Benchmark Results
+
+| Model Architecture | Test Set RMSE | Test Set $R^2$ |
+| :--- | :---: | :---: |
+| **Linear Regression (OLS)** | 10.4 MPa | 61.2% |
+| **XGBoost (Boosted Trees)** | **4.8 MPa** | **91.8%** |
+
+- XGBoost **cuts prediction error by more than half** (from 10.4 down to 4.8 MPa)!
+- Why? Water and cement interact non-linearly (hydration chemistry), and concrete cures logarithmically over time.
+- Decision trees capture these interactive thresholds effortlessly, whereas linear models fail.
+
+---
+
+# Thesis Checkpoint: Reporting Predictive Regression
+
+---
+
+## Writing Up Regularization Results (APA Style)
+
+> *"To forecast final graduation GPA from Year-1 administrative, lifestyle, and psychometric indicators (RQ10), a regularized regression and machine learning framework was implemented using tidymodels in R. Candidate predictors (52 features) were standardized and preprocessed on a 75% training set (n = 412), with a holdout test set (n = 138) reserved for final validation.*
+>
+> *Hyperparameter tuning was conducted across 10-fold cross-validation. Regularized regression (Lasso, $\lambda = 0.008$) demonstrated superior parsimony and out-of-sample accuracy (CV RMSE = 0.174, SE = 0.009), performing comparably to an optimized gradient boosted tree ensemble (XGBoost, CV RMSE = 0.176). The Lasso pruned 47 non-informative predictors to exactly zero, isolating a sparse set of 5 dominant indicators led by Year-1 academic trajectories.*
+>
+> *When applied to the holdout test set, the final Lasso model exhibited high predictive validity ($RMSE = 0.178, MAE = 0.142, R^2 = 72.4\%$), substantially exceeding the unconditional mean baseline ($RMSE = 0.352$). Comparative analysis revealed that Year-1 GPA alone accounted for 71.8% of test variance, confirming that while psychometric strains influence student achievement, their predictive signal is largely captured by early academic performance."*
+
+---
+
+## Chapter 13 Summary: Core Principles
+
+1. **Dimensionality Causes Overfitting**: When $p$ is large relative to $N$, OLS regression fits sample noise; on new test data, predictions collapse.
+2. **Metrics with Context**: Evaluate numeric predictions using RMSE and MAE in original outcome units; always benchmark against the Null Mean Model.
+3. **Shrinkage Stabilizes**: Regularized loss functions penalize coefficient size ($\lambda$), trading trivial training bias for massive variance reduction.
+4. **Ridge ($L_2$) vs Lasso ($L_1$)**: Ridge shrinks weights smoothly and shares credit; Lasso drives redundant weights to exactly zero, performing automated feature selection.
+5. **Elastic Net Mixes Both**: Tunes the dial between Ridge and Lasso ($\alpha$), ideal for correlated feature blocks.
+6. **Sequential Boosting**: XGBoost builds trees iteratively on residual errors; learning rate ($\eta$) ensures slow, robust convergence.
+7. **Parsimony Wins on Smooth Data**: Lasso matched XGBoost while pruning 90% of features. Where non-linear physics and chemistry dominate (e.g., Concrete), boosting is king.
+
+---
+
+# Questions & Practical Workshop
+
+### Next Step: Open `content/playground/chapter13.qmd` to trace Lasso regularization paths and tune XGBoost learning rates live in R!
