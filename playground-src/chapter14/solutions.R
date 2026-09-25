@@ -1,128 +1,199 @@
 # From Data to Thesis: Research Data Analysis with R
 # Playground, Chapter 14: Solutions
 #
-# One possible solution for each exercise. Other answers can be right too.
+# One possible solution for each exercise in parts A and B, and model answers
+# for part C. Part D has no solutions: the tasks are open, and there are many
+# good ways to answer them.
 
-library(tidymodels)
-tidymodels_prefer()
+library(dplyr)
+library(mclust)
+library(dbscan)
 
 students      <- read.csv("students.csv")
 semesters     <- read.csv("semesters.csv")
 questionnaire <- read.csv("questionnaire.csv")
 
-scores <- questionnaire |>
+q <- questionnaire
+q$stress_4 <- 6 - q$stress_4
+scores <- q |>
   mutate(
-    stress_4     = 6 - stress_4,
     stress       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
-    burnout      = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
     support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
     satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
   ) |>
-  select(student_id, stress, burnout, support, satisfaction)
-
-dropout_data <- students |>
+  select(student_id, stress, support, satisfaction)
+profiles <- semesters |>
+  summarise(across(c(sleep_hours, study_hours, caffeine_mg, exercise_days),
+                   ~ mean(.x, na.rm = TRUE)), .by = student_id) |>
   left_join(scores, join_by(student_id)) |>
-  left_join(semesters |> filter(semester == 1) |> select(-semester), join_by(student_id)) |>
-  mutate(considering_dropout = factor(considering_dropout, levels = c("Yes", "No"))) |>
-  select(-student_id, -supervisor_id, -workshop, -workshop_sessions)
+  na.omit()
+profile_data <- scale(profiles |> select(-student_id))
 
-set.seed(2026)
-dropout_split <- initial_split(dropout_data, prop = 0.75, strata = considering_dropout)
-dropout_train <- training(dropout_split)
-dropout_test  <- testing(dropout_split)
-
-dropout_recipe <- recipe(considering_dropout ~ ., data = dropout_train) |>
-  step_impute_median(all_numeric_predictors()) |>
-  step_dummy(all_nominal_predictors()) |>
-  step_normalize(all_numeric_predictors())
-
-set.seed(2026)
-dropout_folds <- vfold_cv(dropout_train, v = 10, strata = considering_dropout)
+set.seed(123)
+profile_gmm <- Mclust(profile_data, G = 1:8, verbose = FALSE)
+set.seed(123)
+kmeans_clusters <- kmeans(profile_data, centers = 4, nstart = 25)
 
 
-# Exercise 1: A neuron by hand
-sigmoid <- function(z) 1 / (1 + exp(-z))
-neuron <- function(stress, support) {
-  sigmoid(-4 + 1.2 * stress - 1.6 * support)
+# ==============================================================================
+# A. PRACTISE THE CHAPTER
+# ==============================================================================
+
+# Exercise 1: disengaged (201), balanced (200), overloaded (166), and a small
+# extreme group (32: 43 study hours, 4.9 hours of sleep, over 560 mg caffeine)
+# split off the overloaded profile; agreement with k-means 0.73
+set.seed(123)
+gmm4 <- Mclust(profile_data, G = 4, verbose = FALSE)
+profiles |>
+  mutate(cluster = gmm4$classification) |>
+  summarise(students = n(), across(sleep_hours:satisfaction, ~ round(mean(.x), 1)),
+            .by = cluster)
+table(three = profile_gmm$classification, four = gmm4$classification)
+adjustedRandIndex(gmm4$classification, kmeans_clusters$cluster)
+
+
+# Exercise 2: 432 of 599 students (72%) are clear members
+certainty <- apply(profile_gmm$z, 1, max)
+sum(certainty > 0.95)
+mean(certainty > 0.95)
+
+
+# Exercise 3: eps 1.2: 4 clusters, 290 noise; 1.6: 1 cluster, 49 noise;
+# 2: 1 and 13; 2.4: 1 and 9
+for (eps in c(1.2, 1.6, 2, 2.4)) {
+  clusters <- dbscan(profile_data, eps = eps, minPts = 8)$cluster
+  print(c(eps = eps, clusters = max(clusters), noise = sum(clusters == 0)))
 }
-neuron(stress = 4, support = 2)
-neuron(stress = 2, support = 4)
-# The outputs fall (to about 0.08 and 0.0003): a larger negative weight means
-# that support lowers the predicted risk more strongly.
 
 
-# Exercise 2: One hidden neuron
-one_neuron <- mlp(hidden_units = 1, penalty = tune(), epochs = 500) |>
-  set_engine("nnet") |>
-  set_mode("classification")
-set.seed(2026)
-one_tuning <- tune_grid(workflow(dropout_recipe, one_neuron), resamples = dropout_folds,
-                        grid = tibble(penalty = 10^seq(-2, 1.5, by = 0.5)),
-                        metrics = metric_set(roc_auc))
-show_best(one_tuning, metric = "roc_auc", n = 1)
-set.seed(2026)
-fit_resamples(workflow(dropout_recipe, logistic_reg()), resamples = dropout_folds,
-              metrics = metric_set(roc_auc)) |>
-  collect_metrics()
-# With enough weight decay, one hidden neuron reaches a cross-validated AUC of
-# about 0.80, practically the same as logistic regression (0.80). A network with
-# one hidden neuron is little more than a logistic regression with an extra step.
+# Exercise 4: without the 13 noise students, the profiles hardly change
+# (agreement 0.85); the overloaded profile's caffeine falls from 284 to 268 mg
+keep <- dbscan(profile_data, eps = 2, minPts = 8)$cluster != 0
+gmm_kept <- Mclust(profile_data[keep, ], G = 3, verbose = FALSE)
+profiles[keep, ] |>
+  mutate(cluster = gmm_kept$classification) |>
+  summarise(students = n(), across(sleep_hours:satisfaction, ~ round(mean(.x), 1)),
+            .by = cluster)
+adjustedRandIndex(profile_gmm$classification[keep], gmm_kept$classification)
 
 
-# Exercise 3: Seeds
-best_net <- mlp(hidden_units = 10, penalty = 3.16, epochs = 500) |>
-  set_engine("nnet", MaxNWts = 5000) |>
-  set_mode("classification")
-for (s in 1:3) {
-  set.seed(s)
-  result <- last_fit(workflow(dropout_recipe, best_net), dropout_split,
-                     metrics = metric_set(roc_auc))
-  cat("seed", s, ": test AUC", round(collect_metrics(result)$.estimate, 3), "\n")
+# Exercise 5: adjusted Rand index 0.63; most disagreements are students the
+# mixture model calls disengaged and Ward's method places with the balanced
+hierarchical <- cutree(hclust(dist(profile_data), method = "ward.D2"), k = 3)
+adjustedRandIndex(profile_gmm$classification, hierarchical)
+table(profile_gmm$classification, hierarchical)
+
+
+# Exercise 6: final GPA 3.27 (balanced), 3.07 (overloaded), 2.99 (disengaged):
+# the overloaded study most but finish below the balanced
+final_gpa <- semesters |>
+  filter(semester == 4) |>
+  select(student_id, final_gpa = gpa)
+profiles |>
+  mutate(profile = profile_gmm$classification) |>
+  left_join(final_gpa, join_by(student_id)) |>
+  summarise(students  = n(),
+            final_gpa = round(mean(final_gpa, na.rm = TRUE), 2),
+            study     = round(mean(study_hours), 1),
+            stress    = round(mean(stress), 1),
+            .by = profile)
+
+
+# Exercise 7: without a gap: k-means 0.53, mixture 0.98, DBSCAN 0.00 (one
+# region); with a gap: k-means 0.79, mixture 1.00, DBSCAN 0.98 (two clusters)
+for (long_y in c(1.4, 3)) {
+  set.seed(8)
+  shapes <- data.frame(
+    x = c(rnorm(100, 0, 0.4), rnorm(100, 3, 2), runif(15, -2, 7)),
+    y = c(rnorm(100, 0, 0.4), rnorm(100, long_y, 0.2), runif(15, -2, 4)),
+    truth = rep(c("Round group", "Long group", "Scattered"), c(100, 100, 15))
+  )
+  xy   <- shapes[, c("x", "y")]
+  real <- shapes$truth != "Scattered"
+  km <- kmeans(xy, 2, nstart = 25)$cluster
+  gm <- Mclust(xy, G = 2, verbose = FALSE)$classification
+  db <- dbscan(xy, eps = 0.5, minPts = 5)$cluster
+  print(round(c(long_group_y = long_y,
+                kmeans  = adjustedRandIndex(shapes$truth[real], km[real]),
+                mixture = adjustedRandIndex(shapes$truth[real], gm[real]),
+                dbscan  = adjustedRandIndex(shapes$truth[real], db[real]),
+                dbscan_clusters = max(db)), 2))
 }
-# The test AUC is the same (about 0.85) for every seed: with strong weight decay,
-# training ends at the same solution from any random start. Try penalty = 0.01:
-# the test AUC then varies from seed to seed (about 0.75 to 0.79), because a
-# lightly penalised network can end up in different places.
 
 
-# Exercise 4: Epochs
-for (n_epochs in c(10, 100, 1000)) {
-  spec <- mlp(hidden_units = 20, penalty = 0, epochs = n_epochs) |>
-    set_engine("nnet", MaxNWts = 5000) |>
-    set_mode("classification")
-  set.seed(2026)
-  fitted <- fit(workflow(dropout_recipe, spec), data = dropout_train)
-  train_auc <- augment(fitted, new_data = dropout_train) |> roc_auc(considering_dropout, .pred_Yes)
-  test_auc  <- augment(fitted, new_data = dropout_test) |> roc_auc(considering_dropout, .pred_Yes)
-  cat(n_epochs, "epochs: training AUC", round(train_auc$.estimate, 3),
-      ", test AUC", round(test_auc$.estimate, 3), "\n")
+# ==============================================================================
+# B. GO FURTHER
+# ==============================================================================
+
+# Exercise 8: 1.000, 0.423, 0.000: a 67-minute wait is slightly more likely to
+# be long, because long waits are nearly twice as common
+wait  <- c(50, 67, 85)
+short <- 0.36 * dnorm(wait, mean = 54.6, sd = 5.9)
+long  <- 0.64 * dnorm(wait, mean = 80.1, sd = 5.9)
+round(short / (short + long), 3)
+
+
+# Exercise 9: k-means 0.38 (splits the large group); DBSCAN at best 0.66 (one
+# density threshold cannot suit groups of different densities); mixture 0.94
+set.seed(4)
+groups <- data.frame(
+  x = c(rnorm(300, 0, 1.2), rnorm(30, 3, 0.3), rnorm(60, 0, 0.5)),
+  y = c(rnorm(300, 0, 1.2), rnorm(30, 0, 0.3), rnorm(60, 4.5, 0.5)),
+  truth = rep(c("large", "small", "medium"), c(300, 30, 60))
+)
+km <- kmeans(groups[, c("x", "y")], centers = 3, nstart = 25)$cluster
+table(truth = groups$truth, kmeans = km)
+adjustedRandIndex(groups$truth, km)
+for (eps in c(0.3, 0.4, 0.5, 0.6)) {
+  db <- dbscan(groups[, c("x", "y")], eps = eps, minPts = 5)$cluster
+  print(round(c(eps = eps, clusters = max(db), noise = sum(db == 0),
+                ari = adjustedRandIndex(groups$truth, db)), 2))
 }
-# After 10 epochs the network has not yet memorised the data (training AUC about
-# 0.95, test about 0.72). By 100 epochs it has (training AUC 1), and the test AUC
-# has fallen to about 0.64. Without weight decay, longer training means more
-# overfitting.
+adjustedRandIndex(groups$truth,
+                  Mclust(groups[, c("x", "y")], G = 3, verbose = FALSE)$classification)
 
 
-# Exercise 5: A regression network
-data(concrete, package = "modeldata")
+# Exercise 10: eps 0.2 and 0.3 find the two kinds of eruption (waits of about
+# 54 and 80 minutes); 0.1 fragments the data, 0.5 merges it
+geyser <- scale(faithful)
+for (eps in c(0.1, 0.2, 0.3, 0.5)) {
+  db <- dbscan(geyser, eps = eps, minPts = 5)$cluster
+  print(c(eps = eps, clusters = max(db), noise = sum(db == 0)))
+}
+db <- dbscan(geyser, eps = 0.3, minPts = 5)$cluster
+tapply(faithful$waiting, db, mean)
+
+
+# Exercise 11: agreement 0.94; DBSCAN also finds 15 isolated earthquakes and a
+# tiny third cluster of 12
+positions <- scale(quakes[, c("long", "lat")])
 set.seed(1)
-concrete_split <- initial_split(concrete)
-concrete_recipe <- recipe(compressive_strength ~ ., data = training(concrete_split)) |>
-  step_log(age) |>
-  step_normalize(all_numeric_predictors())
-concrete_net <- mlp(hidden_units = 10, penalty = 0.1, epochs = 1000) |>
-  set_engine("nnet", MaxNWts = 5000) |>
-  set_mode("regression")
-set.seed(1)
-last_fit(workflow(concrete_recipe, linear_reg()), concrete_split) |> collect_metrics()
-set.seed(1)
-last_fit(workflow(concrete_recipe, concrete_net), concrete_split) |> collect_metrics()
-# The network's RMSE is about 5 megapascals, against about 7 for linear regression:
-# concrete strength has curves and interactions for the network to capture.
+km <- kmeans(positions, centers = 2, nstart = 25)$cluster
+db <- dbscan(positions, eps = 0.3, minPts = 10)$cluster
+table(kmeans = km, dbscan = db)
+adjustedRandIndex(km, db)
+plot(quakes$long, quakes$lat, col = db + 1, pch = 19, cex = 0.6,
+     xlab = "Longitude", ylab = "Latitude")
 
 
-# Exercise 6: Explain the choice
-# For example: "A carefully tuned neural network predicted dropout no better
-# than logistic regression (both had a cross-validated AUC of about 0.80), and
-# its hundreds of weights cannot be interpreted. Logistic regression is just as
-# accurate, and its odds ratios show how each factor is related to the risk."
+# ==============================================================================
+# C. CHECK YOUR UNDERSTANDING: model answers
+# ==============================================================================
+
+# 1. k-means: cases nearest a centre (round, similar groups, every case in
+#    one). Mixture: a distribution with its own centre, spread, shape, and size
+#    (probabilities). DBSCAN: dense regions of any shape, with noise allowed.
+# 2. Hard: one cluster per case, with certainty. Soft: a probability for each
+#    cluster, so uncertain cases are shown as uncertain.
+# 3. Fit against the number of parameters; higher BIC is better in mclust.
+# 4. The students form one continuous cloud with no sparse gaps between the
+#    profiles.
+# 5. Several kinds of evidence: separation, stability across samples and
+#    methods, interpretability, and differences on outcomes not used.
+
+
+# ==============================================================================
+# D. DO IT YOURSELF
+# No solutions: these tasks are open. Compare your approach with the methods of
+# Chapter 14, and discuss your choices with a fellow student or your supervisor.
+# ==============================================================================

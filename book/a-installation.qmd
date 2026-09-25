@@ -17,7 +17,7 @@ Installers and websites change their appearance from year to year, so this appen
 | **R** | The programming language and the engine that runs your code | Yes |
 | **RStudio Desktop** | The program you work in: editor, console, plots, and help in one window | Yes (or Positron) |
 | **Positron** | A newer editor from the makers of RStudio, an alternative to it | Optional |
-| **Quarto** | Turns documents with code into reports and books (Chapter 16) | Comes with RStudio |
+| **Quarto** | Turns documents with code into reports and books (Chapter 17) | Comes with RStudio |
 | **R packages** | Add-ons for specific tasks, installed from within R | Yes, as needed |
 | **Rtools** (Windows) or **Xcode command line tools** (macOS) | Compilers for building packages from source | Only if asked |
 
@@ -61,7 +61,7 @@ If it prints a version number, R is working. You will rarely open R on its own a
 2. Download **RStudio Desktop** (the free version) and install it like any other program, accepting the defaults. On macOS, drag RStudio into the Applications folder.
 3. Open RStudio. It finds R automatically and shows the R version in the Console pane, in the lower left (Chapter 1 takes you on a tour of the panes).
 
-RStudio includes **Quarto**, so the reports of Chapter 16 work without installing anything else. For PDF output, Quarto also needs LaTeX; install a small version once by typing `quarto install tinytex` in RStudio's **Terminal** tab.
+RStudio includes **Quarto**, so the reports of Chapter 17 work without installing anything else. For PDF output, Quarto also needs LaTeX; install a small version once by typing `quarto install tinytex` in RStudio's **Terminal** tab.
 
 ### Positron, an alternative
 
@@ -78,7 +78,7 @@ If you cannot install software, for example on a locked-down computer, two optio
 
 A few settings make RStudio work the way this book recommends. Open *Tools > Global Options*:
 
-- **General > Basic**: untick *Restore .RData into workspace at startup*, and set *Save workspace to .RData on exit* to **Never**. Every session then starts clean, and your scripts, not a hidden saved workspace, hold your work. This is the single most important setting for reproducible work (Chapter 16).
+- **General > Basic**: untick *Restore .RData into workspace at startup*, and set *Save workspace to .RData on exit* to **Never**. Every session then starts clean, and your scripts, not a hidden saved workspace, hold your work. This is the single most important setting for reproducible work (Chapter 17).
 - **Code > Editing**: tick *Use native pipe operator, \|>*, so that the pipe shortcut (Ctrl+Shift+M, or Cmd+Shift+M on a Mac) inserts the pipe used in this book (Chapter 3).
 - **Code > Display**: tick *Show margin* and *Highlight R function calls*, which make code easier to read.
 - **Appearance**: choose a font size and theme that are comfortable for you; dark themes are popular for long sessions.
@@ -89,18 +89,18 @@ Packages are installed once, with `install.packages()`, and loaded in every sess
 
 | Chapters | Packages |
 |---|---|
-| 1–3 | here, readxl, haven, writexl, dplyr, tidyr, stringr, readr (or the whole tidyverse) |
-| 4–6 | ggplot2, psych |
-| 7 | broom, car |
-| 8 | psych, GPArotation, corrplot, factoextra |
-| 9 | lme4, lmerTest |
-| 10–12 | tidymodels, kknn, ranger, kernlab, themis, glmnet, xgboost |
-| 13 | mclust, dbscan, factoextra, cluster |
-| 14 | tidymodels (nnet comes with R) |
-| 15 | tsibble, fable, feasts, urca |
-| 16 | rmarkdown, knitr, shiny, bslib, renv, usethis |
-| 17 | ellmer, stringr, yardstick |
-| 18 | patchwork, broom, lme4 |
+| 1-3 | here, readxl, haven, writexl, dplyr, tidyr, stringr, readr (or the whole tidyverse) |
+| 4, 6-7 | ggplot2, psych |
+| 8 | broom, car |
+| 9 | psych, GPArotation, corrplot, factoextra |
+| 10 | lme4, lmerTest |
+| 11-13 | tidymodels, kknn, ranger, kernlab, themis, glmnet, xgboost |
+| 14 | mclust, dbscan, factoextra, cluster |
+| 15 | tidymodels (nnet comes with R) |
+| 16 | tsibble, fable, feasts, urca |
+| 17 | rmarkdown, knitr, shiny, bslib, renv, usethis |
+| 18 | ellmer, stringr, yardstick |
+| 19 | patchwork, broom, lme4 |
 
 : Packages used in each chapter {#tbl-packages}
 
@@ -121,7 +121,7 @@ install.packages(c(
 
 The **tidyverse** package installs dplyr, tidyr, stringr, readr, ggplot2, and several others in one go. The first time you install packages, R may ask you to choose a **CRAN mirror** (choose *0-Cloud*, which is fast everywhere) and whether to use a personal library (answer *Yes*).
 
-### Elaf's data: the data2thesis package
+### The student wellbeing data: the data2thesis package
 
 Elaf's data is in the **data2thesis** package, which is installed from this book's website rather than from CRAN:
 
@@ -182,6 +182,6 @@ tibble::tibble(
 
 ## Keeping R up to date
 
-Update your packages every few months with `update.packages()`, or the *Update* button in RStudio's Packages pane. Update R itself once or twice a year by installing the new version exactly as the first time; your scripts keep working, but packages must be reinstalled for the new version, which the command in @sec-install-packages does in one go. Tools such as **rig** ([github.com/r-lib/rig](https://github.com/r-lib/rig)) can install and switch between several R versions, useful if an old project needs an old version. For projects that must keep exactly the same package versions, use **renv** (Chapter 16).
+Update your packages every few months with `update.packages()`, or the *Update* button in RStudio's Packages pane. Update R itself once or twice a year by installing the new version exactly as the first time; your scripts keep working, but packages must be reinstalled for the new version, which the command in @sec-install-packages does in one go. Tools such as **rig** ([github.com/r-lib/rig](https://github.com/r-lib/rig)) can install and switch between several R versions, useful if an old project needs an old version. For projects that must keep exactly the same package versions, use **renv** (Chapter 17).
 
-Two things do not belong in any script. API keys for AI services (Chapter 17) go in your personal `.Renviron` file, opened with `usethis::edit_r_environ()`; and passwords never go into code at all.
+Two things do not belong in any script. API keys for AI services (Chapter 18) go in your personal `.Renviron` file, opened with `usethis::edit_r_environ()`; and passwords never go into code at all.

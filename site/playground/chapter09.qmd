@@ -1,138 +1,218 @@
 ---
 title: "Playground: Chapter 9"
-subtitle: Mixed-Effects Models
+subtitle: Multivariate Statistical Methods
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
-  - students.csv
   - semesters.csv
+  - questionnaire.csv
   - chapter09.zip
 webr:
   packages:
     - dplyr
-    - lme4
   resources:
-    - students.csv
     - semesters.csv
+    - questionnaire.csv
 ---
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-These exercises practise mixed-effects models with the lme4 package. lme4 is a large package, so **the first run on this page can take a minute** while your browser downloads it. Where you see `______`, replace it with your own code.
+This page practises the ideas of Chapter 9 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with simulations and some of R's built-in datasets. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with an empty code space and no answers: you decide how to check and summarise the data, as you will in your own thesis.
+
+To keep the page fast, it uses functions that come with R: `prcomp()` for PCA, `factanal()` for factor analysis, `kmeans()` and `hclust()` for clustering, and a few lines of code for Cronbach's alpha, which you build yourself in Exercise 3. The chapter's psych and factoextra packages give the same results with more detail on your own computer. In the exercises, replace each `______` with your own code and press **Run Code**.
 
 ```{webr}
 #| setup: true
-#| exercise: [ex1, ex2, ex3, ex4, ex5]
+#| exercise: [ex1, ex2, ex3, ex4, gf2, gf3]
 library(dplyr)
-library(lme4)
-students  <- read.csv("students.csv")
-semesters <- read.csv("semesters.csv")
-panel <- semesters |>
-  left_join(students, join_by(student_id)) |>
-  mutate(time = semester - 1)
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+items <- questionnaire |> select(-student_id)
+
+scores <- questionnaire |>
+  mutate(
+    stress_4     = 6 - stress_4,
+    stress       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    burnout      = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, burnout, support, satisfaction)
+profiles <- semesters |>
+  summarise(across(c(sleep_hours, study_hours, caffeine_mg, exercise_days),
+                   ~ mean(.x, na.rm = TRUE)), .by = student_id) |>
+  left_join(scores |> select(-burnout), join_by(student_id)) |>
+  na.omit()
+profile_data <- scale(profiles |> select(-student_id))
 ```
 
-## Random intercepts and slopes
+```{webr}
+#| include: false
+library(dplyr)
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+items <- questionnaire |> select(-student_id)
 
-### Exercise 1: A first mixed model
+scores <- questionnaire |>
+  mutate(
+    stress_4     = 6 - stress_4,
+    stress       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    burnout      = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, burnout, support, satisfaction)
+profiles <- semesters |>
+  summarise(across(c(sleep_hours, study_hours, caffeine_mg, exercise_days),
+                   ~ mean(.x, na.rm = TRUE)), .by = student_id) |>
+  left_join(scores |> select(-burnout), join_by(student_id)) |>
+  na.omit()
+profile_data <- scale(profiles |> select(-student_id))
+```
 
-Using `sleepstudy` (it comes with lme4), fit a random intercept model of reaction time on days, and calculate the ICC.
+## Practise the chapter
+
+These are the exercises at the end of Chapter 9, with the same numbers.
+
+### Exercise 1: PCA of the support items
+
+Run a PCA on the six support items only. Report how much variation the first component captures, and what that suggests about the scale.
 
 ```{webr}
 #| exercise: ex1
-model <- lmer(Reaction ~ Days + (1 | ______), data = sleepstudy)
-vc <- as.data.frame(VarCorr(model))
-vc$vcov[1] / sum(vc$vcov)
+support_items <- na.omit(items[, paste0("support_", 1:6)])
+support_pca <- ______(support_items, scale. = TRUE)
+summary(support_pca)
 ```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Base R's function for principal component analysis is named after it, with "r" in front for R.
+:::
+:::
 
 ::: { .solution exercise="ex1" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-model <- lmer(Reaction ~ Days + (1 | Subject), data = sleepstudy)
-vc <- as.data.frame(VarCorr(model))
-vc$vcov[1] / sum(vc$vcov)
+support_pca <- prcomp(support_items, scale. = TRUE)
+summary(support_pca)
 ```
 
-The ICC is about 0.59: most of the variation in reaction times is due to stable differences between people.
+The first component captures 57% of the variation in the six items, and each of the other five between 7% and 10%. One strong component and five weak ones mean that the items mostly measure one thing, which is what a scale should do: averaging them into one support score loses little. (`na.omit()` kept the 537 students who answered all six items.)
 :::
 :::
 
-### Exercise 2: Does sleep change over the semesters?
+### Exercise 2: Three factors instead of four
 
-Fit a random intercept model for `sleep_hours` over `time`. What is the ICC? Does sleep change? Use a confidence interval to decide.
+Run a factor analysis with three factors instead of four. Identify the scales that end up sharing a factor, and suggest why.
 
 ```{webr}
 #| exercise: ex2
-sleep_ri <- lmer(______ ~ time + (1 | student_id), data = panel)
-vc <- as.data.frame(VarCorr(sleep_ri))
-vc$vcov[1] / sum(vc$vcov)
-confint(sleep_ri, parm = "beta_", method = "Wald")
+fa3 <- factanal(na.omit(items), factors = ______, rotation = "promax")
+print(fa3$loadings, cutoff = 0.3, sort = TRUE)
 ```
+
+::: { .hint exercise="ex2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`factors` is the number of factors to extract. `rotation = "promax"` lets the factors correlate, like the chapter's oblimin rotation.
+:::
+:::
 
 ::: { .solution exercise="ex2" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-sleep_ri <- lmer(sleep_hours ~ time + (1 | student_id), data = panel)
-vc <- as.data.frame(VarCorr(sleep_ri))
-vc$vcov[1] / sum(vc$vcov)
-confint(sleep_ri, parm = "beta_", method = "Wald")
+fa3 <- factanal(na.omit(items), factors = 3, rotation = "promax")
+print(fa3$loadings, cutoff = 0.3, sort = TRUE)
 ```
 
-The ICC is about 0.83: students differ a lot in how much they sleep, but each student sleeps about the same from semester to semester. The confidence interval for `time` includes zero: sleep does not change over the two years.
+All six stress items and all six burnout items load on the first factor (`stress_4` negatively, since it is not reversed here); support and satisfaction keep a factor each. Stress and burnout are closely related, since students who feel overwhelmed also feel worn out, and their factors correlated strongly in the chapter, so when only three factors are allowed, they are the pair that merges. Parallel analysis in the chapter supported four factors, and the four-factor solution keeps them apart. Note that `factanal()` uses only the 396 students who answered every item, while the chapter's `fa()` used everyone.
 :::
 :::
 
-### Exercise 3: Is a random slope worth it?
+### Exercise 3: Cronbach's alpha without reversing
 
-Add a random slope of `time` to the model from Exercise 2, and compare the two models with `anova()`.
+Calculate Cronbach's alpha for the stress scale *without* reversing `stress_4` first, and explain what happens. The function below calculates alpha from its formula: the number of items, $k$, the variance of each item, and the variance of the total score.
+
+$$
+\alpha = \frac{k}{k - 1}\left(1 - \frac{\sum \text{item variances}}{\text{variance of the total}}\right)
+$$
 
 ```{webr}
 #| exercise: ex3
-sleep_ri <- lmer(sleep_hours ~ time + (1 | student_id), data = panel)
-sleep_rs <- lmer(sleep_hours ~ time + (______ | student_id), data = panel)
-anova(sleep_ri, sleep_rs)
+cronbach <- function(x) {
+  x <- na.omit(x)
+  k <- ncol(x)
+  k / (k - 1) * (1 - sum(apply(x, 2, ______)) / var(rowSums(x)))
+}
+
+stress_items <- questionnaire[, paste0("stress_", 1:6)]
+cronbach(stress_items)
+
+stress_reversed <- stress_items |> mutate(stress_4 = ______ - stress_4)
+cronbach(stress_reversed)
 ```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`apply(x, 2, f)` applies the function `f` to every column (the `2`) of `x`; here `f` is the function for the variance. On a 1-to-5 scale, subtracting an answer from 6 reverses it.
+:::
+:::
 
 ::: { .solution exercise="ex3" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-sleep_rs <- lmer(sleep_hours ~ time + (time | student_id), data = panel)
-anova(sleep_ri, sleep_rs)
+cronbach <- function(x) {
+  x <- na.omit(x)
+  k <- ncol(x)
+  k / (k - 1) * (1 - sum(apply(x, 2, var)) / var(rowSums(x)))
+}
+stress_reversed <- stress_items |> mutate(stress_4 = 6 - stress_4)
 ```
 
-The random slope improves the model a little (p ≈ 0.02, and a slightly lower AIC), but the spread of the slopes is tiny (an SD of about 0.05 hours per semester; see `VarCorr(sleep_rs)`). Statistically worth keeping, practically unimportant: students' sleep is very stable.
+Without reversing, alpha is 0.57, below the usual threshold of 0.7; with `stress_4` reversed, it is 0.83, good. The formula shows why: alpha is high when the total varies much more than the items separately, which happens when the items rise and fall together. An unreversed item moves against the others, cancels part of their shared variation, and makes the total less variable. (psych's `alpha()` gives the same values, and warns that `stress_4` probably should be reversed.)
 :::
 :::
 
-## Interactions and levels
+### Exercise 4: Three clusters
 
-### Exercise 4: Do part-time students change differently?
-
-Fit `wellbeing ~ time * study_mode + (time | student_id)`. Do part-time students start at a different level? Do they change at a different rate?
+Run k-means with 3 clusters on the profile data, describe the clusters, and identify which profiles from the 4-cluster solution were merged.
 
 ```{webr}
 #| exercise: ex4
-wb_mode <- lmer(wellbeing ~ time * ______ + (time | student_id), data = panel)
-round(summary(wb_mode)$coefficients, 2)
-confint(wb_mode, parm = "beta_", method = "Wald")
+set.seed(123)
+k3 <- kmeans(profile_data, centers = ______, nstart = 25)
+profiles |>
+  mutate(cluster = k3$cluster) |>
+  summarise(students = n(), across(sleep_hours:satisfaction, ~ round(mean(.x), 1)),
+            .by = cluster)
+
+set.seed(123)
+k4 <- kmeans(profile_data, centers = 4, nstart = 25)
+table(three = k3$cluster, four = k4$cluster)
 ```
 
 ::: { .hint exercise="ex4" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-`study_modePart-time` is the difference in level at time 0 (semester 1). `time:study_modePart-time` is the difference in slope. Check which confidence intervals include zero.
+`centers` is the number of clusters. In the final table, a column of the four-cluster solution whose students all fall into one row has been absorbed into that three-cluster group.
 :::
 :::
 
@@ -141,46 +221,291 @@ confint(wb_mode, parm = "beta_", method = "Wald")
 ## Solution
 
 ```r
-wb_mode <- lmer(wellbeing ~ time * study_mode + (time | student_id), data = panel)
-round(summary(wb_mode)$coefficients, 2)
-confint(wb_mode, parm = "beta_", method = "Wald")
+set.seed(123)
+k3 <- kmeans(profile_data, centers = 3, nstart = 25)
 ```
 
-Part-time students start almost 4 points lower (the interval excludes zero), but their wellbeing declines at the same rate as full-time students' (the interaction's interval includes zero). The gap is present from the start and stays about the same.
+The three clusters are the **balanced** students (about 208: 7.2 hours of sleep, low stress, high support and satisfaction), the **disengaged** (about 206: only 19 hours of study a week, low support and satisfaction), and the **overloaded** (about 185: 42 hours of study, 5.5 hours of sleep, and a high average caffeine intake). The table shows that the overloaded cluster absorbed two clusters of the four-cluster solution: overloaded students with very high caffeine (over 400 mg a day) and those with moderate caffeine. With three clusters, caffeine no longer divides the overloaded students. (Cluster numbers are arbitrary and can differ from run to run; read the averages, not the numbers.)
 :::
 :::
 
-### Exercise 5: Do supervisors matter for study hours?
+### Exercise 5: Justifying the number of clusters
 
-Fit a model for `study_hours` with random intercepts for supervisors and students, and calculate the share of variation at each level.
+Explain, in two or three sentences for a thesis methods section, why you chose the number of clusters you did. Write your answer first, then open the model answer.
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
+
+*"The elbow and silhouette criteria did not identify a clear number of clusters: the average silhouette was highest for two clusters but only slightly lower for three and four. We therefore chose four clusters, the number of student profiles expected from previous research [reference], and because the four clusters were interpretable and each contained a substantial share of the sample; a three-cluster solution merged two overloaded profiles that differed mainly in caffeine intake. The clusters are reported as descriptive summaries, not as natural groups."* The paragraph names the criteria, admits that they were not decisive, gives the substantive reason for the choice, and says how the clusters should be read.
+:::
+
+### Exercise 6: Noisier items
+
+Change the simulation at the start of the chapter so that each item has more noise (`sd = 2`), and use up to 20 items. Find how many items are now needed for the average to correlate at least 0.8 with the true stress level.
 
 ```{webr}
-#| exercise: ex5
-study_levels <- lmer(study_hours ~ time + (1 | ______) + (1 | student_id), data = panel)
-vc <- as.data.frame(VarCorr(study_levels))
-data.frame(level = vc$grp, share = round(vc$vcov / sum(vc$vcov), 3))
+#| exercise: ex6
+set.seed(42)
+true_stress <- rnorm(600)
+simulated_items <- sapply(1:20, function(i) true_stress + rnorm(600, sd = ______))
+
+sapply(1:20, function(k) cor(rowMeans(simulated_items[, 1:k, drop = FALSE]), true_stress)) |>
+  setNames(paste(1:20, "items")) |>
+  round(2)
 ```
 
-::: { .solution exercise="ex5" }
+::: { .hint exercise="ex6" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The noise of each item is set by the standard deviation of `rnorm()`; the chapter used 1.
+:::
+:::
+
+::: { .solution exercise="ex6" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-study_levels <- lmer(study_hours ~ time + (1 | supervisor_id) + (1 | student_id), data = panel)
-vc <- as.data.frame(VarCorr(study_levels))
-data.frame(level = vc$grp, share = round(vc$vcov / sum(vc$vcov), 3))
+simulated_items <- sapply(1:20, function(i) true_stress + rnorm(600, sd = 2))
 ```
 
-The supervisor share is zero, and R reports a singular fit: supervisors make no difference to how much students study. (They did matter for wellbeing.) Almost all the variation, about 91%, is between students.
+With twice the noise, one item correlates only 0.41 with the true stress level, and the average needs 8 items to reach 0.80; six items, enough in the chapter, now reach only 0.76. Theory agrees: with noise twice as large as the signal, the correlation of the average of $k$ items is $1/\sqrt{1 + 4/k}$, which passes 0.8 at $k = 8$. Noisy items can be rescued by using more of them, but each extra item helps less than the one before.
 :::
 :::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 7: When alpha misleads
+
+Alpha measures how much items share, not whether what they share is the construct. Simulate six stress items as in the chapter, then add the *same* extra noise to every item, a "mood" that colours every answer on the day of the survey. Compare alpha, and the correlation of the average with the true stress level, with and without the mood.
+
+```{webr}
+#| exercise: gf1
+cronbach <- function(x) {
+  x <- na.omit(x)
+  k <- ncol(x)
+  k / (k - 1) * (1 - sum(apply(x, 2, var)) / var(rowSums(x)))
+}
+
+set.seed(42)
+true_stress <- rnorm(600)
+items_clean <- sapply(1:6, function(i) true_stress + rnorm(600))
+mood <- rnorm(600)
+items_mood <- items_clean + ______
+
+round(c(alpha_clean = cronbach(as.data.frame(items_clean)),
+        alpha_mood  = cronbach(as.data.frame(items_mood)),
+        r_clean     = cor(rowMeans(items_clean), true_stress),
+        r_mood      = cor(rowMeans(items_mood), true_stress)), 2)
+```
+
+::: { .hint exercise="gf1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Adding a vector of 600 values to the 600 × 6 matrix adds each student's mood to all six of their items.
+:::
+:::
+
+::: { .solution exercise="gf1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+items_mood <- items_clean + mood
+```
+
+With the mood, alpha *rises*, from 0.86 to 0.92, while the average's correlation with the true stress level *falls*, from 0.92 to 0.67. The mood is shared by all items, so alpha counts it as consistency; but it is not stress. Alpha is evidence of reliability, not of validity: a scale can be highly consistent about the wrong thing. In real questionnaires, shared noise comes from response styles, such as a tendency to agree with every statement, and from items worded so similarly that they measure the wording.
+:::
+:::
+
+### Exercise 8: PCA of the four scale scores
+
+Run a PCA of the four scale scores (stress, burnout, support, and satisfaction), and interpret the first component from its loadings.
+
+```{webr}
+#| exercise: gf2
+scale_scores <- na.omit(scores |> select(-student_id))
+scores_pca <- prcomp(scale_scores, scale. = ______)
+summary(scores_pca)
+round(scores_pca$rotation, 2)
+```
+
+::: { .hint exercise="gf2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`scale. = TRUE` standardises each variable before the PCA, so that each counts equally. The loadings are in the `rotation` part of the result: look at their signs in the first column.
+:::
+:::
+
+::: { .solution exercise="gf2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+scores_pca <- prcomp(scale_scores, scale. = TRUE)
+round(scores_pca$rotation, 2)
+```
+
+The first component captures 56% of the variation in the four scores. Its loadings are positive for stress (0.55) and burnout (0.53) and negative for support (−0.42) and satisfaction (−0.49): it is a general dimension of how a student is doing, with distress at one end and support and satisfaction at the other. (The overall sign of a component is arbitrary; only the contrast between the two pairs matters.) The four scales are distinct, as the factor analysis showed, but they share a large common core.
+:::
+:::
+
+### Exercise 9: Clusters in random data
+
+k-means always returns the number of clusters it is asked for, even when there are none. Run it with four clusters on random data of the same size as the profile data, and compare the share of variation between clusters with the share in the real profiles.
+
+```{webr}
+#| exercise: gf3
+set.seed(1)
+random_data <- scale(matrix(runif(nrow(profile_data) * ncol(profile_data)),
+                            ncol = ncol(profile_data)))
+k_random <- kmeans(random_data, centers = 4, nstart = 25)
+set.seed(123)
+k_real <- kmeans(profile_data, centers = 4, nstart = 25)
+
+table(k_random$cluster)
+c(random = k_random$betweenss / k_random$______,
+  real   = k_real$betweenss / k_real$totss)
+```
+
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`betweenss` is the variation between the cluster centres; divided by the *total* sum of squares, it gives the share of all variation that the clusters capture. The name of the total follows the same pattern as the real line below it.
+:::
+:::
+
+::: { .solution exercise="gf3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+c(random = k_random$betweenss / k_random$totss,
+  real   = k_real$betweenss / k_real$totss)
+```
+
+On purely random data, k-means still produced four tidy clusters of 146 to 157 points each, and they capture 26% of the variation: clustering found "groups" where none exist. The real profiles give 47%, clearly more, so the student data has more structure than random noise. But the comparison also shows why clusters must be described as summaries, not discovered types: a large part of what any clustering captures would appear even in data without groups.
+:::
+:::
+
+### Exercise 10: Why PCA scales the variables
+
+R's built-in `USArrests` data gives four crime-related rates for the 50 US states in 1973. Run a PCA without scaling and then with scaling, and compare the loadings of the first two components.
+
+```{webr}
+#| exercise: gf4
+sapply(USArrests, var)
+unscaled <- prcomp(USArrests)
+round(unscaled$rotation[, 1:2], 2)
+scaled <- prcomp(USArrests, scale. = ______)
+round(scaled$rotation[, 1:2], 2)
+summary(scaled)
+```
+
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Look at the variances first: one variable varies thousands of times more than another, only because of its units.
+:::
+:::
+
+::: { .solution exercise="gf4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+scaled <- prcomp(USArrests, scale. = TRUE)
+```
+
+Without scaling, the first component is simply `Assault` (a loading of 1.00) and "explains" 97% of the variation, because assault rates are counted per 100,000 people and vary more than 300 times as much as murder rates. After scaling, every variable counts equally. The first component (62%) loads on murder, assault, and rape together: an overall level of violent crime. The second (25%) is mainly the urban population. Variables measured in different units should almost always be scaled before a PCA; items on the same answer scale, as in a questionnaire, need it less.
+:::
+:::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** Why does a questionnaire use several items for each construct?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because every item carries the construct plus noise of its own: how the student read the question, their mood, how they use the answer scale. Averaging several items keeps the shared signal and lets the separate noise partly cancel, so the average follows the construct far more closely than any single item.
+:::
+
+**2.** What is the difference between PCA and factor analysis?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+PCA summarises the total variation of the variables in a few components, without any theory of where it comes from; it is a data-reduction tool. Factor analysis assumes that latent variables cause the items' shared variation, and models only that shared part, separating it from each item's own noise. For checking whether questionnaire items measure the intended constructs, factor analysis is the method that matches the question.
+:::
+
+**3.** An item loads 0.45 on one factor and 0.40 on another. What does this cross-loading mean?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+That the item reflects two constructs at once, rather than the one it was written for. Averaged into either scale, it would carry some of the other construct with it. Its wording deserves a look, and it may be better to drop it or to report the results with and without it.
+:::
+
+**4.** A scale has a Cronbach's alpha of 0.93. Does that show that it is valid?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+No. Alpha shows that the items agree with each other, which is reliability. They might all agree about the wrong thing, for example because of a shared response style or very similar wording. A very high alpha can even be a warning sign that the items are near-duplicates. Validity needs other evidence: the factor structure, and correlations with related and unrelated measures.
+:::
+
+**5.** Why should clusters not be described as natural groups of people?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because clustering always produces the number of groups it is asked for, even in random data, and the result depends on the variables chosen, their scaling, the method, and the number of clusters. Real people differ gradually and overlap. Clusters are useful summaries of typical combinations, and should be reported as such, with the choices that produced them.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. Each code space below is empty and ready to run: write your own code, as you would for a thesis. The data (`questionnaire`, `items`, `scores`, `semesters`, `profiles`, and `profile_data`) and the dplyr package are already loaded, and R's built-in datasets are always available.
+
+**1.** Check the burnout scale fully: the correlations between its items, Cronbach's alpha, and alpha with each item dropped in turn. Decide whether any item weakens the scale, and write the one-sentence report of its reliability.
+
+```{webr}
+# Your code here
+```
+
+**2.** Cluster the students on a different set of variables of your choice (for example, first-semester sleep, caffeine, and wellbeing). Choose the number of clusters, describe each cluster by its averages, and argue whether the clusters would be useful to a university.
+
+```{webr}
+# Your code here
+```
+
+**3.** Write the paragraph of a methods section that describes one scale of the questionnaire: the number of items, an example item, the answer scale, how the score was calculated (including any reversed items), and its reliability, with the numbers calculated by code.
+
+```{webr}
+# Your code here
+```
+
+**4.** R's built-in `attitude` data records seven ratings of their supervisors by the employees of 30 departments of a large company. Run a PCA, decide how many components are worth keeping, and interpret them.
+
+```{webr}
+# Your code here
+```
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 9 project
 
-The project contains the data, these exercises, an extra exercise with a Poisson mixed model for supervisor meetings, and the solutions.
+The project contains the data and all four parts of this page as an R script: the exercises with blanks, the questions to check your understanding (answers in `solutions.R`), and the open tasks, each with space to write your code. Its solutions also show the chapter's psych functions, `fa()` and `alpha()`, side by side with the base R versions.
 
 - [Download chapter09.zip](chapter09.zip), unzip it, and double-click `chapter09.Rproj`.
 - Or type this one line in RStudio's Console:

@@ -1,16 +1,17 @@
 ---
 title: "Playground: Chapter 6"
-subtitle: Hypothesis Testing and Statistical Inference
+subtitle: Descriptive Statistics and Exploratory Data Analysis
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
   - students.csv
   - semesters.csv
+  - questionnaire.csv
   - chapter06.zip
 webr:
   packages:
@@ -18,95 +19,135 @@ webr:
   resources:
     - students.csv
     - semesters.csv
+    - questionnaire.csv
 ---
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-These exercises practise the ideas from Chapter 6: sampling distributions, confidence intervals, t-tests, effect sizes, and chi-square tests. Several of the answers are *not* significant. That is part of the lesson: a non-significant result is still a result. Where you see `______`, replace it with your own code.
+This page practises the ideas of Chapter 6 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with new questions and some of R's built-in datasets. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with an empty code space and no answers: you decide how to describe the data, as you will in your own thesis.
+
+In the exercises, replace each `______` with your own code and press **Run Code**. Graphs on this page use base R's quick plotting functions, such as `hist()` and `qqnorm()`, which are ideal for exploring.
 
 ```{webr}
 #| setup: true
-#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+#| exercise: [ex1, ex2, ex3, ex4, ex5, gf2, gf3]
 library(dplyr)
-students  <- read.csv("students.csv")
-semesters <- read.csv("semesters.csv")
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
 first_sem <- semesters |>
   filter(semester == 1) |>
   left_join(students, join_by(student_id))
 ```
 
-## Sampling and confidence
+```{webr}
+#| include: false
+library(dplyr)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
+```
 
-### Exercise 1: Two sampling distributions
+## Practise the chapter
 
-Draw 1,000 samples of 10 students' first-semester study hours, and 1,000 samples of 50. Compare the spread (SD) of the two sets of averages. Which is smaller, and why?
+These are the exercises at the end of Chapter 6, with the same numbers.
+
+### Exercise 1: Four summaries of study hours
+
+Calculate the mean, median, SD, and IQR of first-semester `study_hours`. Decide whether the variable is closer to symmetrical or skewed, and which pair of summaries you would report.
 
 ```{webr}
 #| exercise: ex1
-study <- first_sem$study_hours[!is.na(first_sem$study_hours)]
-set.seed(1)
-means_10 <- replicate(1000, mean(sample(study, 10)))
-means_50 <- replicate(1000, mean(sample(study, ______)))
-sd(means_10)
-sd(______)
-hist(means_50)
+first_sem |>
+  summarise(
+    mean   = mean(study_hours, na.rm = TRUE),
+    median = ______(study_hours, na.rm = TRUE),
+    sd     = ______(study_hours, na.rm = TRUE),
+    iqr    = ______(study_hours, na.rm = TRUE)
+  )
 ```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Each summary has a function of its own, named after it; the IQR's name is written in capital letters.
+:::
+:::
 
 ::: { .solution exercise="ex1" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-study <- first_sem$study_hours[!is.na(first_sem$study_hours)]
-set.seed(1)
-means_10 <- replicate(1000, mean(sample(study, 10)))
-means_50 <- replicate(1000, mean(sample(study, 50)))
-sd(means_10)
-sd(means_50)
-hist(means_50)
+first_sem |>
+  summarise(
+    mean   = mean(study_hours, na.rm = TRUE),
+    median = median(study_hours, na.rm = TRUE),
+    sd     = sd(study_hours, na.rm = TRUE),
+    iqr    = IQR(study_hours, na.rm = TRUE)
+  )
 ```
 
-The averages of 50 students vary much less (an SD of about 1.8 hours, against about 4.2 for samples of 10). Larger samples give more precise estimates: the standard error shrinks with $\sqrt{n}$.
+The mean (27.6 hours) is a little above the median (26): study hours are mildly skewed to the right, with a tail of students who study a great deal. The skew is small, so the mean and SD (27.6 and 13.1) are acceptable; the median and IQR (26 and 19) would be the safer pair if the tail were longer. Whichever pair you choose, report the pair: a centre without a spread says little.
 :::
 :::
 
-### Exercise 2: A confidence interval
+### Exercise 2: Is wellbeing normal?
 
-Calculate a 95% confidence interval for the average first-semester GPA.
+Draw a Q-Q plot of first-semester `wellbeing`, and judge whether it looks normal.
 
 ```{webr}
 #| exercise: ex2
-t.test(first_sem$______)$conf.int
+______(first_sem$wellbeing)
+qqline(first_sem$wellbeing)
 ```
+
+::: { .hint exercise="ex2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Base R's Q-Q plot against the normal distribution has a short name: "Q-Q" and "normal" run together. `qqline()` adds the line the points would follow if the data were exactly normal.
+:::
+:::
 
 ::: { .solution exercise="ex2" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-t.test(first_sem$gpa)$conf.int
+qqnorm(first_sem$wellbeing)
+qqline(first_sem$wellbeing)
 ```
 
-The average GPA of graduate students is plausibly between about 3.08 and 3.13. The interval is narrow because 600 students give a precise estimate.
+The points follow the line closely, with only small wiggles at the two ends: wellbeing is close to normal. Real data is never exactly normal; the question is whether it is close enough for methods that assume normality, and here it clearly is. A skewed variable, such as caffeine, would bend away from the line at one end.
 :::
 :::
 
-## t-tests
+### Exercise 3: Unusually high study hours
 
-### Exercise 3: Is wellbeing different from 60?
-
-Test whether the average first-semester wellbeing is different from 60. What do you conclude?
+Using the box plot rule, count the students with unusually high `study_hours` in the first semester, and look at their other values.
 
 ```{webr}
 #| exercise: ex3
-t.test(first_sem$wellbeing, mu = ______)
+x  <- first_sem$study_hours
+q3 <- quantile(x, 0.75, na.rm = TRUE)
+fence <- q3 + ______ * IQR(x, na.rm = TRUE)
+fence
+sum(x > fence, na.rm = TRUE)
+first_sem |>
+  filter(study_hours > fence) |>
+  select(student_id, study_hours, sleep_hours, gpa, wellbeing, employment, study_mode)
 ```
 
 ::: { .hint exercise="ex3" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-$H_0$: the average is 60. Look at the p-value and at whether the confidence interval includes 60.
+The box plot rule flags values more than one and a half IQRs above the third quartile.
 :::
 :::
 
@@ -115,100 +156,323 @@ $H_0$: the average is 60. Look at the p-value and at whether the confidence inte
 ## Solution
 
 ```r
-t.test(first_sem$wellbeing, mu = 60)
+fence <- q3 + 1.5 * IQR(x, na.rm = TRUE)
 ```
 
-The average is 60.5, the confidence interval (about 59.5 to 61.4) includes 60, and the p-value is about 0.35. There is no evidence that average wellbeing differs from 60. That does not prove it is exactly 60: only that the data is consistent with it.
+The upper fence is 65.5 hours, and one student is above it: S0312, a part-time student with no job, studies 67 hours a week and sleeps 3.9 hours a night. The values are extreme but consistent with each other (little sleep fits very long study hours), and none is impossible, so this is a real, unusual student rather than an error. The right decision is to keep the case, and perhaps check whether the results change without it.
 :::
 :::
 
-### Exercise 4: Full-time against part-time
+### Exercise 4: Sleep of students who left
 
-Do full-time and part-time students differ in first-semester GPA? Run a two-sample t-test, then calculate Cohen's *d*.
+Compare the first-semester `sleep_hours` of students who later left the study with those who stayed, and say whether they differ in sleep as they did in wellbeing.
 
 ```{webr}
 #| exercise: ex4
-t.test(gpa ~ ______, data = first_sem)
-
-full <- first_sem$gpa[first_sem$study_mode == "Full-time"]
-part <- first_sem$gpa[first_sem$study_mode == "Part-time"]
-(mean(full) - mean(part)) / sqrt((var(full) + var(______)) / 2)
+left_ids <- ______(students$student_id,
+                   semesters$student_id[semesters$semester == 3])
+first_sem |>
+  mutate(left_study = student_id %in% left_ids) |>
+  summarise(mean_sleep = mean(sleep_hours, na.rm = TRUE),
+            mean_wellbeing = mean(wellbeing),
+            students = n(),
+            .by = left_study)
 ```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The students who left are those in the first list but not in the second: the *set difference* of the two lists.
+:::
+:::
 
 ::: { .solution exercise="ex4" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-t.test(gpa ~ study_mode, data = first_sem)
-
-full <- first_sem$gpa[first_sem$study_mode == "Full-time"]
-part <- first_sem$gpa[first_sem$study_mode == "Part-time"]
-(mean(full) - mean(part)) / sqrt((var(full) + var(part)) / 2)
+left_ids <- setdiff(students$student_id,
+                    semesters$student_id[semesters$semester == 3])
 ```
 
-Both groups average about 3.10, the p-value is about 0.9, and Cohen's *d* is almost exactly 0. Part-time students have lower *wellbeing* (Chapter 4), but not lower grades.
+The 37 students who left slept almost exactly as long in their first semester as the 563 who stayed (6.4 and 6.5 hours), but their wellbeing was more than 3 points lower (57.4 against 60.7). The missing data is related to wellbeing but not to sleep. Attrition must therefore be checked variable by variable: analyses of wellbeing in later semesters describe a group that has lost some of its least happy members, while analyses of sleep are much less affected.
 :::
 :::
 
-## Categorical data
+### Exercise 5: Support and satisfaction
 
-### Exercise 5: Living away and dropout
-
-Is living away from family related to considering dropout? Make the table, look at the proportions, and run a chi-square test.
+Find the correlation between `support` and `satisfaction`, classify it with Cohen's guidelines (0.1 small, 0.3 medium, 0.5 large), and explain why it does not show that support causes satisfaction.
 
 ```{webr}
 #| exercise: ex5
-away <- table(students$lives_away, students$______)
-away
-prop.table(away, margin = 1)
-chisq.test(away)
+scores <- questionnaire |>
+  mutate(
+    support      = ______(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = ______(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  )
+______(scores$support, scores$satisfaction, use = "complete.obs")
 ```
+
+::: { .hint exercise="ex5" }
+::: { .callout-note collapse="false"}
+## Hint
+
+A scale score is the average of its items for each student, that is, the mean of each *row*. The correlation function has a short name.
+:::
+:::
 
 ::: { .solution exercise="ex5" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-away <- table(students$lives_away, students$considering_dropout)
-away
-prop.table(away, margin = 1)
-chisq.test(away)
+scores <- questionnaire |>
+  mutate(
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  )
+cor(scores$support, scores$satisfaction, use = "complete.obs")
 ```
 
-17% of students who live away from family have considered dropping out, against 14% of those who do not, but the p-value is about 0.31: a difference this size could easily be chance. (For a 2 × 2 table, R applies a small correction, named in the output as Yates' continuity correction.)
+The correlation is 0.41, a medium correlation by Cohen's guidelines (above 0.3, but below the 0.5 of a large one): students who feel better supported by their supervisor are more satisfied with their programme. It does not show that support causes satisfaction. Satisfied students may view their supervisors more kindly (the causation may run the other way), and a third variable, such as how well the research is going, may raise both.
 :::
 :::
 
-### Exercise 6: Check the expected counts
+### Exercise 6: A summary for every variable
 
-Is the chi-square test from Exercise 5 reliable? Check that every expected count is at least 5.
+For each variable in `students`, choose the summary you would report in a thesis, using the chapter's table of summaries by level of measurement and shape, and justify each choice in one sentence. Write your answer first, then open the model answer.
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
+
+`age` is ratio but skewed to the right (a few much older students), so the **median and IQR**, or the mean and SD with a note on the skew. `gender`, `faculty`, `programme`, `study_mode`, `has_children`, `lives_away`, `workshop`, and `considering_dropout` are nominal, so **counts and percentages**; there is no average faculty. `employment` and `financial_worry` are ordinal, so **percentages in each category** and, for financial worry, the **median**; their steps are not equal, so a mean would suggest a precision the data does not have. `workshop_sessions` is a count with only seven values, so the **median and IQR**, or the percentage attending each number of sessions. `student_id` and `supervisor_id` are identifiers and are not summarised, although the **number of students per supervisor** is worth reporting. Each choice follows from the level of measurement first, and then from the shape.
+:::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 7: The standard deviation by hand
+
+Five students sleep 4, 6, 7, 8, and 10 hours. Build their standard deviation step by step: the deviations from the mean, their squares, the variance, and its square root. Then compare with `sd()`.
 
 ```{webr}
-#| exercise: ex6
-away <- table(students$lives_away, students$considering_dropout)
-chisq.test(away)$______
+#| exercise: gf1
+sleep_five <- c(4, 6, 7, 8, 10)
+deviations <- sleep_five - mean(sleep_five)
+deviations
+deviations^2
+variance <- sum(deviations^2) / (______)
+______(variance)
+sd(sleep_five)
 ```
 
-::: { .solution exercise="ex6" }
+::: { .hint exercise="gf1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The sum of squared deviations is divided by one less than the number of values, `length(sleep_five) - 1`. The standard deviation is the square root of the variance.
+:::
+:::
+
+::: { .solution exercise="gf1" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-away <- table(students$lives_away, students$considering_dropout)
-chisq.test(away)$expected
+variance <- sum(deviations^2) / (length(sleep_five) - 1)
+sqrt(variance)
+sd(sleep_five)
 ```
 
-The smallest expected count is about 38, far above 5, so the test is reliable.
+The deviations are −3, −1, 0, 1, and 3; they always add up to zero, which is why they are squared before averaging. The squares add up to 20, the variance is 20 / 4 = 5, and the standard deviation is √5 = 2.24 hours, exactly what `sd()` gives. In words: a typical student's sleep is about 2.2 hours away from the average of 7. Dividing by n − 1 rather than n corrects for the fact that deviations from the *sample* mean are slightly smaller than deviations from the unknown population mean.
 :::
 :::
+
+### Exercise 8: Mean and median of age
+
+Compare the mean and the median age of the students, and use a histogram to explain the difference.
+
+```{webr}
+#| exercise: gf2
+mean(students$age, na.rm = TRUE)
+______(students$age, na.rm = TRUE)
+hist(students$age, breaks = 20, main = "", xlab = "Age (years)")
+```
+
+::: { .hint exercise="gf2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The median is the middle value, and its function is named after it. In the histogram, look at which side has the longer tail.
+:::
+:::
+
+::: { .solution exercise="gf2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+mean(students$age, na.rm = TRUE)
+median(students$age, na.rm = TRUE)
+hist(students$age, breaks = 20, main = "", xlab = "Age (years)")
+```
+
+The mean age is 29.7 and the median 29. The histogram shows why: most students are in their mid-to-late twenties, but a tail of older students stretches to 52, and those few large values pull the mean up while the median, the middle student, stays put. The difference is small here, but it is the typical pattern of a right-skewed variable, and the direction of the gap between mean and median tells you the direction of the skew.
+:::
+:::
+
+### Exercise 9: Where are the gaps?
+
+Count the missing values in every column of `semesters`, separately for each semester, and describe the pattern.
+
+```{webr}
+#| exercise: gf3
+semesters |>
+  group_by(semester) |>
+  summarise(across(everything(), ~ sum(______(.x)))) |>
+  as.data.frame()
+```
+
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`across(everything(), ...)` applies the same calculation to every column; the function that answers "is this value missing?" with `TRUE` or `FALSE` goes inside `sum()`, which counts the `TRUE` values.
+:::
+:::
+
+::: { .solution exercise="gf3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+semesters |>
+  group_by(semester) |>
+  summarise(across(everything(), ~ sum(is.na(.x)))) |>
+  as.data.frame()
+```
+
+The gaps are few and scattered: at most 8 missing values in any column in any semester, in the self-reported variables (sleep, study hours, exercise, caffeine). GPA (with a single exception), supervisor meetings, and wellbeing are complete. The pattern looks like occasional skipped questions, which is consistent with data missing completely at random. The larger gap in this data is invisible in this table: the 37 students with no rows at all in semesters 3 and 4. Counting `NA`s never shows missing rows.
+:::
+:::
+
+### Exercise 10: When one mean misleads
+
+R's built-in `faithful` data records 272 waiting times, in minutes, between eruptions of the Old Faithful geyser. Calculate the mean waiting time, draw a histogram, and then split the waits into short and long at a cut-off you read from the histogram.
+
+```{webr}
+#| exercise: gf4
+mean(faithful$waiting)
+hist(faithful$waiting, breaks = 20, main = "", xlab = "Waiting time (minutes)")
+faithful |>
+  mutate(type = if_else(waiting < ______, "short", "long")) |>
+  group_by(type) |>
+  summarise(eruptions = n(), mean_wait = mean(waiting))
+```
+
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The histogram has two peaks; the cut-off belongs in the valley between them.
+:::
+:::
+
+::: { .solution exercise="gf4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+faithful |>
+  mutate(type = if_else(waiting < 67, "short", "long")) |>
+  group_by(type) |>
+  summarise(eruptions = n(), mean_wait = mean(waiting))
+```
+
+The mean wait is 70.9 minutes, but the histogram has two peaks, around 55 and 80 minutes, with a valley in between exactly where the mean falls: only 20 of the 272 waits are within 3 minutes of it. The mean describes almost no actual wait. Split at the valley (any cut-off between about 65 and 70 works), there are 99 short waits averaging 54.6 minutes and 173 long waits averaging 80.2. A bimodal distribution usually means two kinds of case mixed together, here two kinds of eruption, and it should be described as two groups, not by one centre.
+:::
+:::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** Which summary suits an ordinal variable, such as the five answers to a question about money worries?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+The percentage in each category, and the median as the centre. An ordinal variable has a meaningful order, so the middle answer makes sense, but its steps are not necessarily equal, so the mean, which treats "not at all" to "a little" as the same distance as "very" to "extremely", suggests a precision the data does not have.
+:::
+
+**2.** A report says that sleep has a mean of 6.5 hours and an SD of 1.1 hours. What does the SD mean in words?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+That a typical student's sleep is about 1.1 hours away from the average of 6.5 hours. If sleep is roughly normal, about two-thirds of students sleep between 5.4 and 7.6 hours, and about 95% between 4.3 and 8.7 hours.
+:::
+
+**3.** Why is an outlier not simply deleted?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because an unusual value is usually a real case, and deleting real cases makes the data look tidier and less varied than the world it describes. An outlier should be checked: an impossible value is an error and is set to missing, but a possible one stays. If it strongly affects a result, the honest approach is to report the analysis with and without it.
+:::
+
+**4.** What is the difference between data missing at random and data missing not at random?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Missing at random means the gaps depend on something that was measured, such as study mode, so an analysis that includes that variable can allow for them. Missing not at random means the gaps depend on the missing value itself, for example when the students most worried about money are the least willing to answer the question about money. That is the hardest case, because the students who answered are no longer typical, and nothing in the data shows it.
+:::
+
+**5.** Two variables have a correlation of 0. Does that mean they are unrelated?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+No. The correlation coefficient measures only *straight-line* relationships. A curved relationship, such as wellbeing rising with sleep up to 8 hours and falling after, can give a correlation near zero although the two variables are strongly related. This is one more reason to plot the data before summarising it.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. Each code space below is empty and ready to run: write your own code, as you would for a thesis. The data (`students`, `semesters`, `questionnaire`, and `first_sem`) and the dplyr package are already loaded, and R's built-in datasets are always available.
+
+**1.** Produce a complete "Table 1" describing the sample: the number of students, and for each baseline variable the percentages, or the mean and SD, or the median and IQR, as its level and shape require, with the number of missing values. Then write the paragraph that describes the sample, with every number calculated by code.
+
+```{webr}
+# Your code here
+```
+
+**2.** Describe a variable the chapter did not describe, `supervisor_meetings` in the first semester: its centre, spread, and shape, and any unusual values. Decide which summaries to report, and write two sentences about it.
+
+```{webr}
+# Your code here
+```
+
+**3.** Describe R's built-in `airquality` data for a report: the centre, spread, and shape of ozone and temperature, the missing data in each variable, and the relationship between the two.
+
+```{webr}
+# Your code here
+```
+
+**4.** R's built-in `precip` data gives the average yearly rainfall, in inches, of 70 US cities. Describe its distribution, name the cities with unusual values, and decide whether the mean or the median better describes a typical city.
+
+```{webr}
+# Your code here
+```
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 6 project
 
-The project contains the data, these exercises, an extra exercise on bootstrap confidence intervals and non-parametric tests, and the solutions.
+The project contains the data and all four parts of this page as an R script: the exercises with blanks, the questions to check your understanding (answers in `solutions.R`), and the open tasks, each with space to write your code.
 
 - [Download chapter06.zip](chapter06.zip), unzip it, and double-click `chapter06.Rproj`.
 - Or type this one line in RStudio's Console:

@@ -21,7 +21,7 @@ Visualisation | scales | Formatting axis labels, such as percentages |
 Visualisation | patchwork | Combining several plots into one figure |
 Visualisation | corrplot | Plotting correlation matrices |
 Statistics | psych | Descriptive statistics, factor analysis, and Cronbach's alpha |
-Statistics | GPArotation | Factor rotations, such as oblimin, used by psych | 8
+Statistics | GPArotation | Factor rotations, such as oblimin, used by psych | 9
 Statistics | car | Regression tools, including Levene's test |
 Statistics | broom | Model results as tidy data frames |
 Statistics | lme4 | Linear and generalised linear mixed-effects models |
@@ -31,10 +31,10 @@ Multivariate and clustering | cluster | Clustering tools, including the silhouet
 Multivariate and clustering | mclust | Gaussian mixture models |
 Multivariate and clustering | dbscan | Density-based clustering (DBSCAN) and related methods |
 Machine learning | tidymodels | Installs and loads the tidymodels packages: rsample, recipes, parsnip, workflows, tune, yardstick, and others |
-Machine learning | yardstick | Measures of model performance, such as accuracy, ROC AUC, and kappa (part of tidymodels) | 10, 11, 12, 14
+Machine learning | yardstick | Measures of model performance, such as accuracy, ROC AUC, and kappa (part of tidymodels) | 11, 12, 13, 15
 Machine learning | rpart | Decision trees |
 Machine learning | ranger | Fast random forests |
-Machine learning | kknn | k-nearest neighbours, the default engine for `nearest_neighbor()` | 10, 11
+Machine learning | kknn | k-nearest neighbours, the default engine for `nearest_neighbor()` | 11, 12
 Machine learning | kernlab | Support vector machines |
 Machine learning | themis | Resampling steps for imbalanced outcomes, such as upsampling and SMOTE |
 Machine learning | glmnet | Ridge, lasso, and elastic net regression |
@@ -43,7 +43,7 @@ Machine learning | nnet | Neural networks with one hidden layer |
 Time series | tsibble | Data frames for time series |
 Time series | fable | Forecasting models: benchmarks, ETS, and ARIMA |
 Time series | feasts | Time series features, decomposition (STL), and autocorrelation |
-Time series | urca | Unit-root tests, needed by `ARIMA()` | 15
+Time series | urca | Unit-root tests, needed by `ARIMA()` | 16
 Reporting and sharing | knitr | Running the code in Quarto documents, and `kable()` tables |
 Reporting and sharing | rmarkdown | R Markdown documents, the predecessor of Quarto |
 Reporting and sharing | shiny | Interactive web applications and dashboards |

@@ -1,54 +1,137 @@
 ---
 title: "Playground: Chapter 15"
-subtitle: Time Series Forecasting
+subtitle: Neural Networks
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
-  - counselling_visits.csv
+  - students.csv
+  - semesters.csv
+  - questionnaire.csv
   - chapter15.zip
 webr:
+  packages:
+    - dplyr
+    - nnet
   resources:
-    - counselling_visits.csv
+    - students.csv
+    - semesters.csv
+    - questionnaire.csv
 ---
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-The fable packages are large for a browser, so these exercises practise the ideas of Chapter 15 with functions that come with R: `ts()` for time series, `acf()` for autocorrelation, `stl()` for decomposition, and benchmark forecasts built by hand. The downloadable project at the bottom uses tsibble, fable, and feasts, exactly as in the chapter. Where you see `______`, replace it with your own code.
+This page practises the ideas of Chapter 15 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with new questions and some of R's built-in datasets. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with an empty code space and no answers: you decide whether a network is worth it, as you will in your own thesis.
+
+tidymodels is too large to run in a browser, but the **nnet** package, which is the engine behind the chapter's `mlp()` models, runs here, so almost everything on this page is real network training. The download project uses tidymodels exactly as the chapter does. The setup below splits the data 75/25 and normalises the predictors with the training means and standard deviations; because it keeps only students with every value (548 of 600), the numbers differ a little from the chapter's.
 
 ```{webr}
 #| setup: true
-#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
-counselling <- read.csv("counselling_visits.csv")
-visits <- ts(counselling$visits, frequency = 52, start = c(2020, 1))
-clinic <- c(12, 10, 9, 11, 7, 3, 2,   14, 11, 10, 12, 8, 4, 2)
-mae <- function(actual, forecast) mean(abs(actual - forecast))
-year_of <- function(k) counselling$visits[(k - 1) * 52 + 1:52]   # academic year k
+#| exercise: [ex1, ex2, ex3, ex4, ex6, gf1, gf2, gf3]
+library(dplyr)
+library(nnet)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+scores <- questionnaire |>
+  mutate(
+    stress_4 = 6 - stress_4,
+    stress   = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    burnout  = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+    support  = rowMeans(pick(support_1:support_6), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, burnout, support)
+dropout_data <- students |>
+  left_join(scores, join_by(student_id)) |>
+  left_join(semesters |> filter(semester == 1), join_by(student_id)) |>
+  mutate(dropout = as.integer(considering_dropout == "Yes")) |>
+  select(dropout, stress, burnout, support, financial_worry, sleep_hours,
+         study_hours, caffeine_mg, wellbeing, gpa) |>
+  na.omit()
+
+set.seed(10)
+train_rows <- sample(nrow(dropout_data), round(0.75 * nrow(dropout_data)))
+train <- dropout_data[train_rows, ]
+test  <- dropout_data[-train_rows, ]
+
+# Normalise the predictors with the training means and SDs
+predictors <- setdiff(names(train), "dropout")
+centres <- sapply(train[predictors], mean)
+spreads <- sapply(train[predictors], sd)
+train[predictors] <- scale(train[predictors], centres, spreads)
+test[predictors]  <- scale(test[predictors], centres, spreads)
+
+auc <- function(prob, truth) {
+  r <- rank(prob); n1 <- sum(truth == 1); n0 <- sum(truth == 0)
+  (sum(r[truth == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
+}
+sigmoid <- function(z) 1 / (1 + exp(-z))
 ```
 
-## Benchmarks by hand
+```{webr}
+#| include: false
+library(dplyr)
+library(nnet)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+scores <- questionnaire |>
+  mutate(
+    stress_4 = 6 - stress_4,
+    stress   = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    burnout  = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+    support  = rowMeans(pick(support_1:support_6), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, burnout, support)
+dropout_data <- students |>
+  left_join(scores, join_by(student_id)) |>
+  left_join(semesters |> filter(semester == 1), join_by(student_id)) |>
+  mutate(dropout = as.integer(considering_dropout == "Yes")) |>
+  select(dropout, stress, burnout, support, financial_worry, sleep_hours,
+         study_hours, caffeine_mg, wellbeing, gpa) |>
+  na.omit()
+set.seed(10)
+train_rows <- sample(nrow(dropout_data), round(0.75 * nrow(dropout_data)))
+train <- dropout_data[train_rows, ]
+test  <- dropout_data[-train_rows, ]
+predictors <- setdiff(names(train), "dropout")
+centres <- sapply(train[predictors], mean)
+spreads <- sapply(train[predictors], sd)
+train[predictors] <- scale(train[predictors], centres, spreads)
+test[predictors]  <- scale(test[predictors], centres, spreads)
+auc <- function(prob, truth) {
+  r <- rank(prob); n1 <- sum(truth == 1); n0 <- sum(truth == 0)
+  (sum(r[truth == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
+}
+sigmoid <- function(z) 1 / (1 + exp(-z))
+```
 
-### Exercise 1: Three benchmark forecasts
+## Practise the chapter
 
-The setup code has created the chapter's clinic series: two weeks of daily visits, starting on a Monday. Calculate the forecasts for the next seven days with the mean, naive, and seasonal naive methods.
+These are the exercises at the end of Chapter 15, with the same numbers. In the setup, `train` and `test` hold the students, with `dropout` (1 for "Yes") and nine normalised predictors; `auc()` and `sigmoid()` are defined as in the earlier chapters.
+
+### Exercise 1: A neuron with new weights
+
+Change the neuron's weights so that support matters twice as much as in the chapter, recalculate the outputs for the two students (stress 4 and support 2; stress 2 and support 4), and explain what a negative weight means.
 
 ```{webr}
 #| exercise: ex1
-mean_fc   <- rep(mean(clinic), 7)
-naive_fc  <- rep(clinic[length(clinic)], 7)
-snaive_fc <- clinic[______:14]        # the last full week
-rbind(mean_fc, naive_fc, snaive_fc)
+neuron <- function(stress, support) {
+  sigmoid(-4 + 1.2 * stress + ______ * support)
+}
+neuron(stress = 4, support = 2)
+neuron(stress = 2, support = 4)
 ```
 
 ::: { .hint exercise="ex1" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-The last full week is the last seven days: days 8 to 14.
+The chapter's weight for support was −0.8; twice as much, in the same direction, is twice that number.
 :::
 :::
 
@@ -57,140 +140,428 @@ The last full week is the last seven days: days 8 to 14.
 ## Solution
 
 ```r
-snaive_fc <- clinic[8:14]
+neuron <- function(stress, support) {
+  sigmoid(-4 + 1.2 * stress - 1.6 * support)
+}
 ```
 
-The same numbers as fable produced in the chapter: 8.2 every day for the mean, 2 every day for the naive method (the last Sunday), and last week's pattern for the seasonal naive method.
+The high-stress, low-support student's output falls from 0.31 to 0.08, and the low-stress, high-support student's from 0.008 to 0.0003. A negative weight means that the input *lowers* the output: every extra point of support pushes the total, and so the predicted risk, down. Doubling the weight doubles how strongly support pulls the total down, but because the sigmoid is curved, the effect on the probability depends on where the total starts.
 :::
 :::
 
-## Patterns
+### Exercise 2: One hidden neuron
 
-### Exercise 2: A time plot
-
-`visits` is a `ts` object, R's built-in time series format, with 52 observations per year (`frequency = 52`). Plot it, and add a horizontal line at the average.
+Fit a network with one hidden neuron and a weight decay of 1, compare its cross-validated AUC with logistic regression, and explain why they might be so similar.
 
 ```{webr}
 #| exercise: ex2
-plot(visits, ylab = "Visits per week", xlab = "Year of the series")
-abline(h = mean(______), lty = "dashed")
+set.seed(2026)
+folds <- sample(rep(1:10, length.out = nrow(train)))
+
+cv_auc_of <- function(fit_and_predict) {
+  mean(sapply(1:10, function(f) {
+    prob <- fit_and_predict(train[folds != f, ], train[folds == f, ])
+    auc(prob, train$dropout[folds == f])
+  }))
+}
+network <- cv_auc_of(function(fit_data, new_data) {
+  set.seed(1)
+  net <- nnet(dropout ~ ., data = fit_data, size = ______, decay = 1,
+              maxit = 500, entropy = TRUE, trace = FALSE)
+  predict(net, new_data)
+})
+logistic <- cv_auc_of(function(fit_data, new_data) {
+  predict(glm(dropout ~ ., data = fit_data, family = binomial), new_data, type = "response")
+})
+c(network = network, logistic = logistic)
 ```
+
+::: { .hint exercise="ex2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+In nnet, `size` is the number of neurons in the hidden layer.
+:::
+:::
 
 ::: { .solution exercise="ex2" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-abline(h = mean(visits), lty = "dashed")
+net <- nnet(dropout ~ ., data = fit_data, size = 1, decay = 1,
+            maxit = 500, entropy = TRUE, trace = FALSE)
 ```
 
-The series swings far above and below its average every year: a forecast of the average would be badly wrong most of the time. The time axis counts years from the start of the series, 2020.
+The two cross-validated AUCs are 0.792 for the network and 0.793 for logistic regression, practically identical (0.789 and 0.804 with tidymodels in the download project). A network with one hidden neuron combines the predictors into one weighted sum, squeezes it through a sigmoid, and then turns that single number into a probability: it can only rank students by one combination of the predictors, which is what logistic regression does too. Its predictions correlate 0.94 with the logistic regression's. The hidden neuron adds almost no flexibility, and the weight decay keeps its weights small.
 :::
 :::
 
-### Exercise 3: Autocorrelation
+### Exercise 3: When the seed matters
 
-Calculate the autocorrelation of the series at lags 1 and 52. (`acf()` also returns lag 0, which is always 1, so lag $k$ is element $k + 1$.)
+Fit a network with 5 hidden neurons three times with different seeds, with a weight decay of 1, then do the same with a weight decay of 0.01 and with none. Explain when the seed matters, and why.
 
 ```{webr}
 #| exercise: ex3
-autocorrelations <- acf(visits, lag.max = 60, plot = FALSE)$acf
-autocorrelations[c(2, ______)]
+for (decay in c(1, 0.01, 0)) {
+  test_auc <- sapply(1:3, function(seed) {
+    set.seed(______)
+    net <- nnet(dropout ~ ., data = train, size = 5, decay = decay,
+                maxit = 500, entropy = TRUE, trace = FALSE)
+    round(auc(predict(net, test), test$dropout), 3)
+  })
+  print(c(decay = decay, test_auc))
+}
 ```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The seed sets the random starting weights; inside the function, use the value that `sapply()` passes in.
+:::
+:::
 
 ::: { .solution exercise="ex3" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-autocorrelations[c(2, 53)]
+set.seed(seed)
 ```
 
-About 0.69 at lag 1 and 0.68 at lag 52, as in the chapter: each week is like the week before, and like the same week a year earlier.
+With a weight decay of 1, the three seeds give test AUCs of 0.900, 0.899, and 0.900: the seed hardly matters. With a decay of 0.01, they give 0.839, 0.773, and 0.813; with none, 0.832, 0.800, and 0.848. Training starts from random weights, and with little or no penalty, a network with 5 hidden neurons has many different sets of weights that fit the training data about equally well, so each seed ends somewhere different, and each overfits in its own way. A strong penalty pulls every run towards the same small-weight solution. (The tuned network in the download project, with 10 hidden neurons and a decay of 3.2, gives exactly the same test AUC, 0.853, for all three seeds, against 0.75 to 0.79 with a decay of 0.01.) If results change with the seed, the model is not regularised enough, and the seed must be reported.
 :::
 :::
 
-### Exercise 4: The unusual week
+### Exercise 4: Epochs
 
-Decompose the series with `stl()`, find the week with the largest remainder, and show its date and number of visits.
+Train a 20-neuron network without weight decay for 10, 100, and 1,000 epochs (`maxit` in nnet), and describe how the training and test AUCs change.
 
 ```{webr}
 #| exercise: ex4
-decomposition <- stl(visits, s.window = "periodic", robust = TRUE)
-plot(decomposition)
-remainder <- decomposition$time.series[, "______"]
-biggest <- which.max(abs(remainder))
-counselling[biggest, ]
+for (epochs in c(10, 100, 1000)) {
+  set.seed(1)
+  net <- nnet(dropout ~ ., data = train, size = 20, decay = 0,
+              maxit = ______, entropy = TRUE, trace = FALSE)
+  print(round(c(epochs = epochs,
+                train = auc(predict(net, train), train$dropout),
+                test  = auc(predict(net, test), test$dropout)), 3))
+}
 ```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Inside the loop, the number of epochs takes each value in turn; pass it to `maxit`.
+:::
+:::
 
 ::: { .solution exercise="ex4" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-remainder <- decomposition$time.series[, "remainder"]
+net <- nnet(dropout ~ ., data = train, size = 20, decay = 0,
+            maxit = epochs, entropy = TRUE, trace = FALSE)
 ```
 
-The week of 23 October 2023, with 71 visits: the mental health awareness week. `s.window = "periodic"` makes the seasonal pattern exactly the same every year, a simpler version of the chapter's STL.
+After 10 epochs, the training AUC is 0.88 and the test AUC 0.84: the network has learned the broad pattern and nothing more. After 100 epochs, the training AUC is a perfect 1.00 and the test AUC has fallen to 0.74, and 1,000 epochs change nothing further. The network, with 221 weights for 411 students, first learns the pattern and then memorises the noise. Stopping early is itself a form of regularisation, but a fragile one, since the best moment depends on the seed and the data; weight decay is the more reliable defence. (The download project's tidymodels version shows the same: 0.72 after 10 epochs, 0.64 after 100.)
 :::
 :::
 
-## Forecasting the test year
+### Exercise 5: Explaining the choice to the research group
 
-### Exercise 5: Seasonal naive on the test year
+In two or three sentences, explain to the research group why the thesis does not use a neural network for the dropout model. Write your answer first, then open the model answer.
 
-Forecast the fifth academic year with the seasonal naive method (a copy of the fourth year) and with the mean of the first four years, and compare their MAEs. (`year_of(k)` returns the 52 weeks of academic year `k`.)
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
 
-```{webr}
-#| exercise: ex5
-actual <- year_of(5)
-snaive_fc <- year_of(______)
-mean_fc <- mean(counselling$visits[1:208])
-c(snaive = mae(actual, snaive_fc), mean = mae(actual, mean_fc))
-```
-
-::: { .solution exercise="ex5" }
-::: { .callout-tip collapse="false"}
-## Solution
-
-```r
-snaive_fc <- year_of(4)
-```
-
-An MAE of about 7.0 visits a week for the seasonal naive forecast, and about 16.3 for the mean: the same values as fable gave in the chapter.
-:::
+*"A carefully tuned neural network predicted dropout no better than logistic regression: both reached a cross-validated AUC of about 0.80, and the small difference on the test students is within chance. The network's hundreds of weights cannot be interpreted, while logistic regression gives odds ratios that show how each factor relates to the risk of dropping out, so we kept logistic regression and report the network as a model we tried."* The answer names the comparison and its result, and the reason for the choice when the accuracy is equal.
 :::
 
-### Exercise 6: A better benchmark
+### Exercise 6: The learning rate
 
-The seasonal naive forecast copies one year's noise, including the awareness week. Average the third and fourth years instead, then multiply by 1.06 to allow for about 6% growth a year. How does the MAE compare with the chapter's STL and ETS model (5.6)?
+Repeat the chapter's gradient-descent loop with a learning rate of 0.1 and of 10, and then of 100. Describe how the loss curve changes, and explain what goes wrong when the learning rate is too large.
 
 ```{webr}
 #| exercise: ex6
-actual <- year_of(5)
-average_fc <- (year_of(3) + year_of(4)) / 2
-growth_fc <- average_fc * ______
-c(average = mae(actual, average_fc), with_growth = mae(actual, growth_fc))
+six <- data.frame(stress  = c(2.0, 2.5, 3.0, 3.5, 4.0, 4.5) - 3.25,
+                  dropout = c(0,   0,   1,   0,   1,   1))
+log_loss <- function(b0, b1) {
+  p <- sigmoid(b0 + b1 * six$stress)
+  -mean(six$dropout * log(p) + (1 - six$dropout) * log(1 - p))
+}
+
+par(mfrow = c(1, 3))
+for (learning_rate in c(0.1, ______, 100)) {
+  b0 <- 0
+  b1 <- 0
+  loss_history <- numeric(200)
+  for (step in 1:200) {
+    p  <- sigmoid(b0 + b1 * six$stress)
+    b0 <- b0 - learning_rate * mean(p - six$dropout)
+    b1 <- b1 - learning_rate * mean((p - six$dropout) * six$stress)
+    loss_history[step] <- log_loss(b0, b1)
+  }
+  plot(loss_history, type = "l", main = paste("Learning rate", learning_rate),
+       xlab = "Step", ylab = "Log loss")
+  print(c(learning_rate = learning_rate, b1 = b1, final_loss = loss_history[200]))
+}
 ```
+
+::: { .hint exercise="ex6" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The blank is the middle learning rate from the exercise. The chapter used 1; the answer from `glm()` is a stress weight of 2.43.
+:::
+:::
 
 ::: { .solution exercise="ex6" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-growth_fc <- average_fc * 1.06
+for (learning_rate in c(0.1, 10, 100)) {
 ```
 
-About 5.9 for the average of two years, and about 5.7 with growth: almost as good as the STL and ETS model. Averaging smooths away one-off weeks, and the growth factor adds the trend, which is essentially what the model does, estimated from the data rather than chosen by hand.
+With 0.1, the steps are small: the loss falls smoothly but slowly, still 0.44 after 100 steps, and 2,000 steps are needed to reach the answer. With 10, the first step overshoots (the stress weight jumps to 2.92, past the answer of 2.43) and the loss settles within a few steps; this tiny, well-behaved problem tolerates a large rate. With 100, each step overshoots so far that the weight swings from 29 to −0.8 to 42, the loss bounces up and down, and after a few steps the probabilities reach exactly 0 and 1, so the log loss becomes infinite and R reports `NaN`. A learning rate that is too large makes gradient descent jump across the minimum instead of walking down to it; one that is too small wastes time. In real networks, with thousands of weights, the safe range is much narrower than here.
 :::
 :::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 7: Gradient descent with two predictors
+
+Train a neuron with two inputs, stress and support, by gradient descent on the training students, and compare its weights with `glm()`. With several inputs, the gradient of every weight has the same form: the average prediction error multiplied by that weight's input.
+
+```{webr}
+#| exercise: gf1
+X <- cbind(1, train$stress, train$support)   # a column of 1s for the bias
+y <- train$dropout
+b <- c(0, 0, 0)
+for (step in 1:2000) {
+  p <- sigmoid(X %*% b)
+  b <- b - 1 * t(X) %*% (p - ______) / nrow(X)
+}
+rbind(gradient_descent = as.vector(b),
+      glm = coef(glm(dropout ~ stress + support, data = train, family = binomial)))
+```
+
+::: { .hint exercise="gf1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The prediction error is the predicted probability minus the actual outcome; the outcomes are in `y`. `t(X) %*% error` multiplies each input by the errors and adds them up, for all three weights at once.
+:::
+:::
+
+::: { .solution exercise="gf1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+b <- b - 1 * t(X) %*% (p - y) / nrow(X)
+```
+
+After 2,000 steps, the weights are −2.246 for the bias, 0.915 for stress, and −0.649 for support, identical to `glm()` to four decimal places. Writing the step with matrices handles any number of inputs in the same line of code, which is how neural network software does it. With only 100 steps, the weights are already close (0.909 and −0.647), because this problem has one smooth minimum; networks with hidden layers have many, which is why they need more care.
+:::
+:::
+
+### Exercise 8: A hidden layer by hand
+
+A tiny network has two inputs (stress and support), two hidden neurons, and one output neuron, all with sigmoid activations. Its weights are given below. Calculate the hidden neurons' outputs and the network's prediction for three students.
+
+```{webr}
+#| exercise: gf2
+students_3 <- data.frame(stress = c(4, 2, 3.5), support = c(2, 4, 1.5))
+
+h1 <- sigmoid(-3 + 1.5 * students_3$stress - 0.5 * students_3$support)
+h2 <- sigmoid( 2 - 0.2 * students_3$stress - 1.0 * students_3$support)
+output <- ______(-2 + 3 * h1 + 2 * h2)
+round(cbind(students_3, h1, h2, output), 3)
+```
+
+::: { .hint exercise="gf2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The output neuron works exactly like the hidden ones: a weighted sum of its inputs (here `h1` and `h2`) plus a bias, passed through the activation function.
+:::
+:::
+
+::: { .solution exercise="gf2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+output <- sigmoid(-2 + 3 * h1 + 2 * h2)
+```
+
+The first hidden neuron responds to high stress (0.88 for the student with stress 4, 0.12 for stress 2); the second to low support (0.45 for the student with support 1.5, 0.08 for support 4). The output combines them: 0.78 for the stressed, poorly supported student, 0.19 for the relaxed, well supported one, and 0.80 for the third, whose moderate stress is made worse by very low support. Each hidden neuron has learned its own feature, and the output weighs the features. Real networks learn such weights from data instead of being given them; that is the only difference.
+:::
+:::
+
+### Exercise 9: Weight decay with a small sample
+
+Networks need more data than regression. Train networks with 5 hidden neurons on only 60 training students, with weight decays of 0, 0.1, 1, and 10 and three seeds each, and compare them with logistic regression on the same 60 students.
+
+```{webr}
+#| exercise: gf3
+set.seed(7)
+small <- train[sample(nrow(train), 60), ]
+for (decay in c(0, 0.1, 1, 10)) {
+  test_auc <- sapply(1:3, function(seed) {
+    set.seed(seed)
+    net <- nnet(dropout ~ ., data = small, size = 5, decay = ______,
+                maxit = 1000, entropy = TRUE, trace = FALSE)
+    round(auc(predict(net, test), test$dropout), 3)
+  })
+  print(c(decay = decay, test_auc))
+}
+auc(predict(glm(dropout ~ ., data = small, family = binomial), test, type = "response"),
+    test$dropout)
+```
+
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Inside the loop, the weight decay takes each value in turn; pass it on to `nnet()`.
+:::
+:::
+
+::: { .solution exercise="gf3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+net <- nnet(dropout ~ ., data = small, size = 5, decay = decay,
+            maxit = 1000, entropy = TRUE, trace = FALSE)
+```
+
+Without weight decay, the test AUC is 0.76 to 0.81, depending on the seed; with 0.1, 0.81 to 0.85; with 1, 0.889 for every seed; with 10, 0.85, as the penalty begins to flatten real patterns too. Logistic regression on the same 60 students (9 of whom considered dropping out) gives 0.85. With so little data, a network is worse than logistic regression unless it is heavily penalised, and even the best penalty gains little. The right amount of decay is found by cross-validation, and in small samples it is large.
+:::
+:::
+
+### Exercise 10: A network for timber volume
+
+R's built-in `trees` data records the girth, height, and timber volume of 31 black cherry trees. Fit a regression network (`linout = TRUE` gives a numeric output instead of a probability) and a linear regression, and compare them with leave-one-out cross-validation.
+
+```{webr}
+#| exercise: gf4
+cherry <- datasets::trees
+cherry_scaled <- data.frame(scale(cherry[, c("Girth", "Height")]), Volume = cherry$Volume)
+
+loo_rmse <- function(fit_and_predict) {
+  errors <- sapply(1:nrow(cherry_scaled), function(i) {
+    cherry_scaled$Volume[i] - fit_and_predict(cherry_scaled[-i, ], cherry_scaled[i, ])
+  })
+  sqrt(mean(errors^2))
+}
+c(linear = loo_rmse(function(fit_data, new_data)
+                      predict(lm(Volume ~ Girth + Height, data = fit_data), new_data)),
+  network = loo_rmse(function(fit_data, new_data) {
+    set.seed(1)
+    net <- nnet(Volume ~ Girth + Height, data = fit_data, size = 3, decay = 0.1,
+                linout = ______, maxit = 2000, trace = FALSE)
+    predict(net, new_data)
+  }))
+```
+
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+For a numeric outcome, the output neuron must be linear rather than a sigmoid, which would squeeze every prediction between 0 and 1.
+:::
+:::
+
+::: { .solution exercise="gf4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+net <- nnet(Volume ~ Girth + Height, data = fit_data, size = 3, decay = 0.1,
+            linout = TRUE, maxit = 2000, trace = FALSE)
+```
+
+The straight line predicts a left-out tree's volume with an RMSE of 4.3 cubic feet; the network with 3 hidden neurons does worse, 5.5. With 31 trees, the network's 13 weights are too many to estimate reliably, even with some weight decay, while the linear model needs only 3. Chapter 13's playground found a better model still, by taking logarithms, with an RMSE of 2.6. Flexible methods need data to be flexible with; with small samples, a simple model, or a thoughtfully transformed one, wins.
+:::
+:::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** Why is a single neuron with a sigmoid activation the same as a logistic regression?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because it computes the same thing: a weighted sum of the inputs plus a constant, passed through the sigmoid, which turns any number into a probability. The bias is the intercept, the weights are the coefficients, and training it by minimising the log loss finds the same values as `glm()`. Networks become more than logistic regression only when neurons are combined in layers.
+:::
+
+**2.** What does the learning rate control?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+How far the weights move at each step of gradient descent, in the direction that reduces the error. Too small, and training is slow; too large, and each step overshoots the minimum, so the error bounces around or grows without limit. It is a setting chosen before training, not something the network learns.
+:::
+
+**3.** What does weight decay prevent?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Overfitting. It adds a penalty on large weights to the error that training minimises, like the ridge penalty in Chapter 13. Without it, a network with many weights can keep adjusting them until it memorises the noise of its training data; with it, the weights stay small, the network's function stays smooth, and different random starts end at similar solutions.
+:::
+
+**4.** Why must the seed be set, and reported, when training a neural network?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because training starts from random weights, and a network can end at different solutions depending on where it starts, especially with little regularisation. Setting the seed makes the result reproducible; reporting it lets others repeat it. If results change noticeably with the seed, that is itself a warning that the model is not stable enough to trust.
+:::
+
+**5.** When are neural networks worth using?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+When there is a lot of data and the relationship is complex, with many interacting inputs whose combinations matter, as in images, sound, and text, where deep networks learn features that no one could specify by hand. For tabular data of a few hundred cases with a smooth relationship, like most thesis data, they rarely beat regression, and they cost interpretability, stability, and tuning effort.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. Each code space below is empty and ready to run: write your own code, as you would for a thesis. The data (`train`, `test`, and `dropout_data`), the functions `auc()` and `sigmoid()`, and the dplyr and nnet packages are already loaded, and R's built-in datasets are always available.
+
+**1.** Build a network for a different outcome, such as whether a student lives away from their family, or their semester 1 GPA (with `linout = TRUE`). Choose the number of hidden neurons and the weight decay by cross-validation, compare the network fairly with a regression model on the same folds, and decide which you would use. (In the download project, do this with tidymodels.)
+
+```{webr}
+# Your code here
+```
+
+**2.** Explain to a friend who has never studied statistics what "training" a neural network means, using your own gradient-descent loop as the example: what the loop starts from, what each step does, and how it knows when it is done. Write the explanation as comments above the code.
+
+```{webr}
+# Your code here
+```
+
+**3.** For each of these three research projects, decide whether a neural network is worth trying, and why: (a) predicting the diagnosis of a skin lesion from 20,000 labelled photographs; (b) predicting which of 300 survey respondents will change jobs, from 12 questionnaire scores; (c) predicting next week's hospital admissions from ten years of daily records. No code is needed; write your answers on paper or in a document.
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 15 project
 
-The project uses tsibble, fable, and feasts, as in the chapter: time plots, STL decomposition, benchmark, ETS, and ARIMA forecasts, accuracy on a test year, and simulated yearly totals, with exercises and solutions.
+The project contains the data and all four parts of this page as an R script. Its Practise part uses tidymodels exactly as the chapter does; the other parts use base R and nnet, as on this page. Answers to the questions are in `solutions.R`, and the open tasks have space to write your code.
 
 - [Download chapter15.zip](chapter15.zip), unzip it, and double-click `chapter15.Rproj`.
 - Or type this one line in RStudio's Console:

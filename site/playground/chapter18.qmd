@@ -1,220 +1,532 @@
 ---
 title: "Playground: Chapter 18"
-subtitle: Putting It All Together
+subtitle: Using AI with R
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
   - students.csv
   - semesters.csv
-  - questionnaire.csv
+  - open_responses.csv
+  - open_responses_coded.csv
+  - ai_coding_results.csv
   - chapter18.zip
 webr:
   packages:
     - dplyr
+    - stringr
   resources:
     - students.csv
     - semesters.csv
-    - questionnaire.csv
+    - open_responses.csv
+    - open_responses_coded.csv
+    - ai_coding_results.csv
 ---
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-The main practice for Chapter 18 is Elaf's complete project, which you can download at the bottom of this page and run on your own computer: from the raw survey export to a results chapter. The exercises below practise the small pieces that make a results chapter: helper functions for reporting, a sample table, and sentences with numbers taken from models. Where you see `______`, replace it with your own code.
+This page practises the ideas of Chapter 18 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with new questions about agreement and about checking code. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with no answers: you decide how to use and check AI in your own work, as you will in your thesis.
+
+Calling a language model needs a local model on your own computer (Ollama) or an API key, so that step is practised in the [download project](#work-on-your-own-computer). Everything around it runs here: checking code an assistant suggests, the keyword method, Cohen's kappa, and the language model's saved results from the chapter, which the book's script produced once with a local model (Gemma 4, e4b version, through Ollama). In the exercises, replace each `______` with your own code and press **Run Code**.
 
 ```{webr}
 #| setup: true
-#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+#| exercise: [ex1, ex2, ex3, ex4, ex6, gf1, gf2, gf3, gf4]
 library(dplyr)
-students      <- read.csv("students.csv")
-semesters     <- read.csv("semesters.csv")
-questionnaire <- read.csv("questionnaire.csv")
-scores <- questionnaire |>
-  mutate(
-    stress_4 = 6 - stress_4,
-    stress   = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
-    support  = rowMeans(pick(support_1:support_6), na.rm = TRUE)
-  ) |>
-  select(student_id, stress, support)
-study <- students |>
-  left_join(scores, join_by(student_id)) |>
-  left_join(semesters |> filter(semester == 1), join_by(student_id))
+library(stringr)
+students             <- read.csv("students.csv")
+semesters            <- read.csv("semesters.csv")
+open_responses       <- read.csv("open_responses.csv")
+open_responses_coded <- read.csv("open_responses_coded.csv")
+ai_coding            <- read.csv("ai_coding_results.csv")
+
+keywords <- c(
+  Supervision = "\\b(supervis|feedback|guidance|meeting)",
+  Workload    = "\\b(time|deadline|workload|too much|assignment|reading|busy)",
+  Finances    = "\\b(money|fee|scholarship|rent|afford|salary|income|funding|stipend|loan)",
+  Family      = "\\b(famil|child|kid|son\\b|daughter|baby|parent|mother|father|husband|wife)",
+  Health      = "\\b(sleep|tired|stress|anxi|health|ill\\b|burnout|headache|coffee|exhaust)",
+  Isolation   = "\\b(lonel|alone|friends|outsider|miss (home|my)|far from|know no one)",
+  Other       = "\\b(ethic|participant|statistic|library|procedure|english|power cut|laptop|internet|software)"
+)
+code_by_keywords <- function(answer, dictionary = keywords) {
+  hits <- sapply(dictionary, \(pattern) str_count(str_to_lower(answer), pattern))
+  if (all(hits == 0)) "Other" else names(dictionary)[which.max(hits)]
+}
+
+# Cohen's kappa: agreement beyond chance, (observed - chance) / (1 - chance)
+kappa_of <- function(a, b) {
+  levels <- union(a, b)
+  a <- factor(a, levels)
+  b <- factor(b, levels)
+  observed <- mean(a == b)
+  chance   <- sum(prop.table(table(a)) * prop.table(table(b)))
+  (observed - chance) / (1 - chance)
+}
 ```
 
-## Helper functions for reporting
+```{webr}
+#| include: false
+library(dplyr)
+library(stringr)
+students             <- read.csv("students.csv")
+semesters            <- read.csv("semesters.csv")
+open_responses       <- read.csv("open_responses.csv")
+open_responses_coded <- read.csv("open_responses_coded.csv")
+ai_coding            <- read.csv("ai_coding_results.csv")
+keywords <- c(
+  Supervision = "\\b(supervis|feedback|guidance|meeting)",
+  Workload    = "\\b(time|deadline|workload|too much|assignment|reading|busy)",
+  Finances    = "\\b(money|fee|scholarship|rent|afford|salary|income|funding|stipend|loan)",
+  Family      = "\\b(famil|child|kid|son\\b|daughter|baby|parent|mother|father|husband|wife)",
+  Health      = "\\b(sleep|tired|stress|anxi|health|ill\\b|burnout|headache|coffee|exhaust)",
+  Isolation   = "\\b(lonel|alone|friends|outsider|miss (home|my)|far from|know no one)",
+  Other       = "\\b(ethic|participant|statistic|library|procedure|english|power cut|laptop|internet|software)"
+)
+code_by_keywords <- function(answer, dictionary = keywords) {
+  hits <- sapply(dictionary, \(pattern) str_count(str_to_lower(answer), pattern))
+  if (all(hits == 0)) "Other" else names(dictionary)[which.max(hits)]
+}
+kappa_of <- function(a, b) {
+  levels <- union(a, b)
+  a <- factor(a, levels)
+  b <- factor(b, levels)
+  observed <- mean(a == b)
+  chance   <- sum(prop.table(table(a)) * prop.table(table(b)))
+  (observed - chance) / (1 - chance)
+}
+```
 
-### Exercise 1: Mean and SD in one string
+## Practise the chapter
 
-Theses report "mean (SD)" with one decimal place. Complete the function, and use it on the students' ages.
+These are the exercises at the end of Chapter 18, with the same numbers. In the setup, `open_responses_coded` holds the 200 hand-coded answers (`theme`), `ai_coding` the language model's saved theme for every answer, `keywords` and `code_by_keywords()` the chapter's dictionary method, and `kappa_of()` calculates Cohen's kappa.
+
+### Exercise 1: Checking an assistant's code
+
+An assistant, asked for the average sleep in each faculty and semester, suggested the first block of code below. Run it, check it with a tiny example and by another route, and fix it.
 
 ```{webr}
 #| exercise: ex1
-mean_sd <- function(x) {
-  sprintf("%.1f (%.1f)", mean(x, na.rm = TRUE), ______(x, na.rm = TRUE))
-}
-mean_sd(study$age)
-mean_sd(study$wellbeing)
+# The assistant's suggestion
+semesters |>
+  left_join(students, join_by(student_id)) |>
+  summarise(sleep = mean(sleep_hours), .by = c(faculty, semester)) |>
+  head()
+
+# A tiny example with a known answer
+mean(c(6, 7, NA))
+
+# The fix, and a check by another route for one faculty and semester
+fixed <- semesters |>
+  left_join(students, join_by(student_id)) |>
+  summarise(sleep = mean(sleep_hours, na.rm = ______),
+            missing = sum(is.na(sleep_hours)),
+            .by = c(faculty, semester))
+head(fixed)
+education_1 <- semesters |>
+  left_join(students, join_by(student_id)) |>
+  filter(faculty == "Education", semester == 1)
+sum(education_1$sleep_hours, na.rm = TRUE) / sum(!is.na(education_1$sleep_hours))
 ```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The tiny example shows what one missing value does to a mean. The argument that removes missing values before calculating was met in Chapter 1.
+:::
+:::
 
 ::: { .solution exercise="ex1" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-mean_sd <- function(x) {
-  sprintf("%.1f (%.1f)", mean(x, na.rm = TRUE), sd(x, na.rm = TRUE))
-}
+summarise(sleep = mean(sleep_hours, na.rm = TRUE), ...)
 ```
 
-"29.7 (4.8)" and "60.5 (12.0)". Written once, the function formats every mean in the thesis the same way.
+The suggestion runs without an error, but 13 of the 20 faculty-semester averages are `NA`: a single missing sleep value in a group makes its mean missing, as the tiny example shows. With `na.rm = TRUE`, every group has an average (Education students slept 6.64 hours in semester 1), and counting the missing values shows how many answers each average leaves out, which a thesis should report. The check by another route, a sum divided by a count, gives the same 6.64. An assistant's code that runs is not necessarily code that answers the question.
 :::
 :::
 
-### Exercise 2: Formatting p-values
+### Exercise 2: Three more keywords
 
-APA style writes p-values without a leading zero, with three decimals, and "p < .001" for very small values. Complete the function and test it.
+Add three keywords to the dictionary that you think would fix some of its mistakes, and report whether the kappa improves. Discuss whether you are now fitting the dictionary to these answers.
 
 ```{webr}
 #| exercise: ex2
-format_p <- function(p) {
-  if (p < ______) "p < .001" else paste("p =", sub("^0", "", sprintf("%.3f", p)))
-}
-format_p(0.0004)
-format_p(0.0321)
-format_p(0.5)
+check <- open_responses_coded |>
+  mutate(keyword_theme = sapply(biggest_challenge, code_by_keywords))
+c(agreement = mean(check$theme == check$keyword_theme),
+  kappa = kappa_of(check$theme, check$keyword_theme))
+
+new_keywords <- keywords
+new_keywords["Workload"]  <- "\\b(time|deadline|workload|too much|assignment|reading|busy|thesis|work|______)"
+new_keywords["Isolation"] <- "\\b(lonel|alone|friends|outsider|miss (home|my)|far from|know no one|isolat|on my own)"
+check_new <- open_responses_coded |>
+  mutate(keyword_theme = sapply(biggest_challenge, code_by_keywords, dictionary = new_keywords))
+c(agreement = mean(check_new$theme == check_new$keyword_theme),
+  kappa = kappa_of(check_new$theme, check_new$keyword_theme))
 ```
+
+::: { .hint exercise="ex2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Add a word of your choice inside the Workload pattern, for example `course`. Any word you add must appear in the answers to change anything.
+:::
+:::
 
 ::: { .solution exercise="ex2" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-format_p <- function(p) {
-  if (p < 0.001) "p < .001" else paste("p =", sub("^0", "", sprintf("%.3f", p)))
-}
+new_keywords["Workload"] <- "\\b(time|deadline|workload|too much|assignment|reading|busy|thesis|work|course)"
 ```
 
-"p < .001", "p = .032", and "p = .500". `sub("^0", "", ...)` removes the zero at the start of the text.
+The original dictionary agrees with the hand coding on 61% of the answers (kappa 0.51). With `thesis`, `work`, and `course` added to Workload, and `isolat` and `on my own` added to Isolation, the agreement rises only to 61.5%, and the kappa does not improve (0.51): every new word fixes some answers and breaks others ("work" also appears in answers about jobs and money). Other choices will do a little better or worse. Either way, adjusting the dictionary while looking at these 200 answers is the overfitting of Chapter 11: the improvement would be smaller, or vanish, on the 335 answers the dictionary was not tuned on. A fair test needs answers that were not used to build it.
 :::
 :::
 
-## The sample table
+### Exercise 3: Reading the disagreements
 
-### Exercise 3: One column of Table 1
-
-`describe()` builds one column of a sample table for any group of students. Use it for the PhD students.
+Read ten answers where the keyword coding disagrees with the hand coding, and say whether you would agree with the hand coding in every case.
 
 ```{webr}
 #| exercise: ex3
-mean_sd <- function(x) sprintf("%.1f (%.1f)", mean(x, na.rm = TRUE), sd(x, na.rm = TRUE))
-percent <- function(x) sprintf("%.0f%%", 100 * mean(x, na.rm = TRUE))
-describe <- function(d) {
-  data.frame(
-    Characteristic = c("Students", "Age, mean (SD)", "Women", "Part-time"),
-    Value = c(nrow(d), mean_sd(d$age), percent(d$gender == "Female"),
-              percent(d$study_mode == "Part-time"))
-  )
-}
-describe(filter(study, programme == "______"))
+disagreements <- open_responses_coded |>
+  mutate(keyword_theme = sapply(biggest_challenge, code_by_keywords)) |>
+  filter(theme ______ keyword_theme)
+nrow(disagreements)
+set.seed(18)
+disagreements |>
+  slice_sample(n = 10) |>
+  select(biggest_challenge, theme, keyword_theme)
 ```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Keep the answers where the two themes are *not* equal.
+:::
+:::
 
 ::: { .solution exercise="ex3" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-describe(filter(study, programme == "PhD"))
+filter(theme != keyword_theme)
 ```
 
-174 PhD students, with an average age of 34.2 (SD 5.1). Running `describe(study)` gives the column for all students, with no copied code.
+The keywords disagree with the hand coding on 78 of the 200 answers. In most of the ten, the hand coding is clearly right, and the keyword failure is instructive: "the comments I get are very brief" is about supervision without a single supervision keyword; "the other students already knew each other when I arrived" is isolation without "lonely" or "alone"; "I drink far too much coffee just to stay awake. Plus there are too many deadlines" has keywords for both health and workload, and the dictionary picks the wrong one. A few are genuinely ambiguous, mentioning two challenges equally, and a second human coder might have chosen differently. Reading disagreements shows whether the benchmark itself is trustworthy, and where the codebook needs clearer rules.
 :::
 :::
 
-## Sentences from models
+### Exercise 4: The language model's coding
 
-### Exercise 4: The effect of sleep on GPA
-
-Fit the chapter's regression, then report the sleep coefficient and its 95% confidence interval in a sentence.
+Code 20 of the hand-coded answers with a language model, using the chapter's codebook, and count how many agree with the hand coding; then change one theme definition and code them again. Running a model needs Ollama or an API key, so that is done in the [download project](#work-on-your-own-computer). Here, look at what the chapter's model did with the same 200 answers: its saved themes are in `ai_coding`.
 
 ```{webr}
 #| exercise: ex4
-gpa_model <- lm(gpa ~ sleep_hours + study_hours + stress + support, data = study)
-b  <- coef(gpa_model)["sleep_hours"]
-ci <- confint(gpa_model)["______", ]
-sprintf("Each extra hour of sleep was associated with a GPA %.2f points higher (95%% CI %.2f to %.2f).",
-        b, ci[1], ci[2])
+model_check <- open_responses_coded |>
+  left_join(ai_coding, join_by(student_id))
+
+sum(model_check$theme[1:20] == model_check$ai_theme[1:20])     # the first 20 answers
+c(agreement = mean(model_check$theme == model_check$ai_theme),
+  kappa     = kappa_of(model_check$theme, model_check$______))
+table(hand = model_check$theme, model = model_check$ai_theme)
+mean(model_check$ai_theme == model_check$ai_theme_rerun)      # the same answers, asked again
 ```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Kappa compares the hand coding with the model's theme, in the column `ai_theme`.
+:::
+:::
 
 ::: { .solution exercise="ex4" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-ci <- confint(gpa_model)["sleep_hours", ]
+kappa = kappa_of(model_check$theme, model_check$ai_theme)
 ```
 
-"Each extra hour of sleep was associated with a GPA 0.11 points higher (95% CI 0.08 to 0.13)." In `sprintf()`, `%%` writes a single percent sign.
+The model agrees with the hand coding on 18 of the first 20 answers, and on 90% of all 200, with a kappa of 0.87, almost perfect agreement, against 0.51 for the keywords. Its disagreements are spread thinly, the largest being answers the hand coding called Supervision (8 of 68 went elsewhere). Asked the same 200 answers a second time, at temperature 0, it gave exactly the same themes. In the download project, coding 20 answers with your own model and changing one theme definition shows how much the results depend on the wording of the codebook, which is why the codebook used must be reported.
 :::
 :::
 
-### Exercise 5: An odds ratio in a sentence
+### Exercise 5: A methods paragraph for AI coding
 
-Fit the logistic regression for considering dropout and report the odds ratio for stress.
+Write the paragraph for your own methods section describing how you would use and validate AI coding in a study of your own. Write your answer first, then open the model answer.
 
-```{webr}
-#| exercise: ex5
-dropout_model <- glm(I(considering_dropout == "Yes") ~ stress + support + financial_worry,
-                     data = study, family = binomial)
-odds_ratio <- exp(coef(dropout_model)["______"])
-sprintf("Each one-point increase in stress multiplied the odds of considering dropout by %.1f.",
-        odds_ratio)
-```
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
 
-::: { .solution exercise="ex5" }
-::: { .callout-tip collapse="false"}
-## Solution
-
-```r
-odds_ratio <- exp(coef(dropout_model)["stress"])
-```
-
-About 3.8 with this simpler model (the chapter's model, which also includes employment and study mode, gives 3.6). Always say which variables the model adjusted for.
-:::
+*"Open-ended answers were coded into [n] themes defined in a codebook (Appendix X). A random sample of 200 answers was first coded by the author. All answers were then coded by a large language model ([model and version], run locally with [software], temperature 0), given the codebook and one answer at a time. Agreement between the model and the author on the hand-coded sample was assessed with Cohen's kappa, and disagreements were read and discussed; the model's coding was used only because agreement was almost perfect (κ = [value]). The model was run a second time on the sample to check that its coding was stable. No identifiable data was sent to an online service. The prompts, the model's replies, and the date of the run are available in the supplementary material."* The paragraph names the model, its settings, how it was validated against a human, and how the data was protected.
 :::
 
-### Exercise 6: Check before you report
+### Exercise 6: A coder who always says Workload
 
-Before reporting a model, check how many students it used. `nobs()` gives the number of observations; compare it with the number of students.
+In the two-coder example at the start of the chapter, change the second coder so that it puts every answer under Workload. Calculate the raw agreement and kappa, and explain the result.
 
 ```{webr}
 #| exercise: ex6
-gpa_model <- lm(gpa ~ sleep_hours + study_hours + stress + support, data = study)
-nobs(gpa_model)
-nrow(study) - ______
+coder_a <- c(rep("Workload", 16), rep("Family", 4))
+coder_b <- rep("______", 20)
+c(agreement = mean(coder_a == coder_b), kappa = kappa_of(coder_a, coder_b))
 ```
+
+::: { .hint exercise="ex6" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The second coder gives the same theme to all 20 answers.
+:::
+:::
 
 ::: { .solution exercise="ex6" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-nrow(study) - nobs(gpa_model)
+coder_b <- rep("Workload", 20)
 ```
 
-13 students were left out because at least one of the model's variables was missing. A thesis reports the number of students each model used (*n* = 587 here), and Chapter 5 discusses whether leaving them out could bias the results.
+The raw agreement is 80%, higher than many real coders manage, and kappa is exactly 0. The second coder has done no coding at all; it agrees on the 16 Workload answers only because it says Workload to everything, which is exactly the agreement expected by chance given the two coders' proportions. Kappa removes that chance agreement and reveals that nothing is left. A lazy coder, or a model that always predicts the most common theme, can look good on raw agreement; kappa cannot be fooled this way.
 :::
 :::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 7: Kappa with three themes
+
+Two coders read 20 answers and agree on 16. Calculate the agreement and kappa, then add more answers on which both coders say Workload (10, 20, 40, and 80 of them in all), keeping the same four disagreements, and watch how the two measures change.
+
+```{webr}
+#| exercise: gf1
+for (n_workload in c(10, 20, 40, 80)) {
+  coder_a <- c(rep("Workload", n_workload), rep("Family", 6), rep("Finances", 4))
+  coder_b <- c(rep("Workload", n_workload - 2), "Family", "Finances",
+               rep("Family", 5), "Workload", rep("Finances", 3), "Workload")
+  print(round(c(workload_answers = n_workload,
+                agreement = mean(coder_a == coder_b),
+                kappa = kappa_of(coder_a, ______)), 3))
+}
+```
+
+::: { .hint exercise="gf1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Kappa compares the two coders, `coder_a` and `coder_b`.
+:::
+:::
+
+::: { .solution exercise="gf1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+kappa = kappa_of(coder_a, coder_b)
+```
+
+With 10 Workload answers, the coders agree on 80% of the answers, and kappa is 0.68. As Workload becomes more common, the raw agreement climbs to 87%, 92%, and 96%, but kappa rises much less, to 0.73, 0.76, and 0.78. The four disagreements stay the same, and the extra agreement comes from a theme that both coders would often pick by chance, so kappa gives it little credit. When one category dominates, raw agreement flatters the coders; kappa keeps the rarer themes, where coding is hard, in view.
+:::
+:::
+
+### Exercise 8: The dictionary's most common confusion
+
+Make the confusion matrix of the keyword coding against the hand coding, and list the most common kinds of disagreement.
+
+```{webr}
+#| exercise: gf2
+check <- open_responses_coded |>
+  mutate(keyword_theme = sapply(biggest_challenge, code_by_keywords))
+confusion <- table(hand = check$theme, keywords = check$keyword_theme)
+confusion
+as.data.frame(confusion) |>
+  filter(hand ______ keywords) |>
+  arrange(desc(Freq)) |>
+  head(3)
+```
+
+::: { .hint exercise="gf2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The disagreements are the cells where the hand-coded theme and the keyword theme are different.
+:::
+:::
+
+::: { .solution exercise="gf2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+filter(hand != keywords)
+```
+
+The most common confusion is Workload answers coded as Other (10): answers about workload that contain none of the Workload keywords, such as "I underestimated how much work a thesis is", fall through to Other. Next come Isolation answers coded as Supervision (8) and as Other (6): isolation is described in many different words ("nobody in my group works on anything close to my topic"), and mentions of a supervisor pull answers to Supervision. Isolation is the theme the dictionary handles worst, with only 8 of 31 correct. A confusion matrix tells you where a method fails, which a single agreement figure hides.
+:::
+:::
+
+### Exercise 9: Long answers and short answers
+
+Count the words in each hand-coded answer with `str_count()`, and compare the average length by theme, and between answers the keywords coded correctly and incorrectly.
+
+```{webr}
+#| exercise: gf3
+lengths <- open_responses_coded |>
+  mutate(words = str_count(biggest_challenge, "______"),
+         keyword_theme = sapply(biggest_challenge, code_by_keywords))
+lengths |>
+  summarise(answers = n(), mean_words = round(mean(words), 1), .by = theme) |>
+  arrange(desc(mean_words))
+lengths |>
+  mutate(correct = theme == keyword_theme) |>
+  summarise(mean_words = round(mean(words), 1), .by = correct)
+```
+
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+A word is a run of characters that are not spaces; the regular expression `\\S+` matches one.
+:::
+:::
+
+::: { .solution exercise="gf3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+mutate(words = str_count(biggest_challenge, "\\S+"))
+```
+
+Supervision answers are the longest (21 words on average) and Isolation answers the shortest (15). The keywords coded correctly answers averaging 17 words, and incorrectly answers averaging 20: longer answers tend to mention more than one challenge, and a dictionary that counts keywords is easily pulled towards the wrong one. Short answers are hard in a different way, since they give so few words to go on. Knowing which answers are hard helps to decide where a human should check the automatic coding.
+:::
+:::
+
+### Exercise 10: Three mistakes an assistant might make
+
+An assistant wrote the three snippets below. Each runs, or almost runs, and each has a different kind of mistake. Run them, find each mistake, and fix it.
+
+```{webr}
+#| exercise: gf4
+# 1. "The average age of the students"
+mean(students$age)
+
+# 2. "The number of students in the Faculty of Education"
+students |> filter(faculty == "education") |> nrow()
+
+# 3. "The percentage of part-time students in each faculty"
+students |>
+  count(faculty, study_mode) |>
+  mutate(percent = 100 * n / sum(n)) |>
+  filter(study_mode == "______")
+```
+
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+For each result, ask whether it is possible: an average of `NA`, a faculty with no students, and percentages that do not describe each faculty. Check the exact spelling of the categories with `unique(students$faculty)`.
+:::
+:::
+
+::: { .solution exercise="gf4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+mean(students$age, na.rm = TRUE)                              # 29.7
+students |> filter(faculty == "Education") |> nrow()          # 148
+students |>
+  count(faculty, study_mode) |>
+  mutate(percent = 100 * n / sum(n), .by = faculty) |>
+  filter(study_mode == "Part-time")
+```
+
+The first returns `NA`, because one age is missing: a missing-value mistake, easy to spot. The second returns 0, because the faculty is spelled "Education" with a capital letter: a mistake about the data, which an assistant cannot know unless it is told the exact values. The third runs and gives plausible numbers, but divides by all 600 students, so the percentages are shares of the whole university, not of each faculty; adding `.by = faculty` makes each faculty's rows add up to 100. This last kind, a silent logic error like the chapter's example, is the most dangerous, because nothing looks wrong.
+:::
+:::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** Why can raw agreement between two coders be misleading?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because some agreement happens by chance, and when one theme is common, chance agreement is high: two coders who both choose the common theme most of the time will agree often even if they are guessing. Cohen's kappa subtracts the agreement expected by chance, so a coder who always chooses the most common theme gets a kappa of 0, however high the raw agreement.
+:::
+
+**2.** What is a hallucination?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+A confident, fluent answer from a language model that is false: an invented function, argument, reference, or fact. It happens because a language model generates plausible text rather than looking things up. Hallucinations are found by checking: running code, reading help pages, and verifying every reference.
+:::
+
+**3.** Why is a temperature of 0 used when a model codes research data?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Temperature controls how much randomness the model uses when choosing each word. At 0, it always chooses the most likely answer, so the same answer gets the same theme when asked again, as the chapter's rerun showed. Coding needs consistency and reproducibility, not variety; a higher temperature is for creative text.
+:::
+
+**4.** What must be recorded so that AI coding can be reproduced and checked?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+The provider and the exact model and version, the date, the settings (such as temperature), the full prompt and codebook, the software versions, and the model's replies themselves, saved to a file. Models change and are withdrawn, so the saved replies are often the only way to check the results later.
+:::
+
+**5.** When must data not be sent to an online model?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+When it could identify participants or is otherwise confidential, unless the ethics approval, the consent form, and the university's rules explicitly allow it, and the provider's terms protect the data. Open answers can identify people through the details they contain. A local model, which keeps the data on your own computer, avoids the problem, as the chapter's run did.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. The code space is empty and ready to run; the data and the functions `code_by_keywords()` and `kappa_of()` are already loaded.
+
+**1.** Invent a new open question, such as "What would most improve your supervision?", and write ten plausible answers of your own. Write a codebook of four or five themes, code the answers yourself, then ask a fellow student (or a language model, in the download project) to code them with your codebook, and calculate the kappa between the two codings. Which themes caused disagreement?
+
+```{webr}
+# Your code here
+```
+
+**2.** In the download project, change one theme definition in the chapter's codebook, code 20 hand-coded answers with a local model using the new codebook, and compare the agreement with the hand coding before and after the change.
+
+**3.** Write the paragraph that discloses the use of AI in a thesis of your own: what tools you used, for what (code, language, coding of data), how you checked their output, and where the details can be found. No code is needed; write it in a document.
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 18 project
 
-Elaf's complete project: the raw export in `data-raw/`, the numbered scripts in `R/` (cleaning, then analysis), and `results.qmd`, which renders the results chapter with every number taken from the code. `exercises.txt` suggests changes to make, and the last exercise starts your own project with the same structure.
+The project contains the data, the language model's saved results, and all four parts of this page as an R script, with the ellmer code to code answers with a language model: a free local model through Ollama, or an online model with your own API key (see `README.txt`). Answers to the questions are in `solutions.R`, and the open tasks have space to write your code.
 
 - [Download chapter18.zip](chapter18.zip), unzip it, and double-click `chapter18.Rproj`.
 - Or type this one line in RStudio's Console:

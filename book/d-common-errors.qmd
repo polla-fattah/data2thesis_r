@@ -30,7 +30,7 @@ When a long message appears, read it from the end: the last lines usually say wh
 mean(sleep_hours)
 ```
 
-R does not know the name. The usual causes: a typing mistake (names are case-sensitive: `Sleep_hours` is not `sleep_hours`); the object was never created, because the line that creates it was not run; or the name is a column inside a data frame, which must be reached through the data frame, as in `mean(semesters$sleep_hours)` or inside a dplyr verb. If a document fails to render with this error although the code works in the Console, the object was created in the Console but not in the document (Chapter 16).
+R does not know the name. The usual causes: a typing mistake (names are case-sensitive: `Sleep_hours` is not `sleep_hours`); the object was never created, because the line that creates it was not run; or the name is a column inside a data frame, which must be reached through the data frame, as in `mean(semesters$sleep_hours)` or inside a dplyr verb. If a document fails to render with this error although the code works in the Console, the object was created in the Console but not in the document (Chapter 17).
 
 ### could not find function "..."
 
@@ -136,7 +136,7 @@ Values that could not be converted to numbers became `NA`. Look at which ones (`
 mean(c(6.5, NA, 7))
 ```
 
-Not an error: any calculation that includes a missing value gives `NA`, because the true answer is unknown. Add `na.rm = TRUE` to calculate from the available values, and report how many were missing (Chapter 5).
+Not an error: any calculation that includes a missing value gives `NA`, because the true answer is unknown. Add `na.rm = TRUE` to calculate from the available values, and report how many were missing (Chapter 6).
 
 ### object '...' not found, inside dplyr
 
@@ -255,7 +255,7 @@ ggplot(students, aes(x = faculty, y = age)) + geom_bar()
 t.test(age ~ faculty, data = students)
 ```
 
-A two-sample t-test compares exactly two groups, but `faculty` has five. Use ANOVA for more than two groups (Chapter 7), or filter the data to the two groups you want to compare.
+A two-sample t-test compares exactly two groups, but `faculty` has five. Use ANOVA for more than two groups (Chapter 8), or filter the data to the two groups you want to compare.
 
 ### not enough 'x' observations
 
@@ -282,7 +282,7 @@ A categorical predictor has only one value in the data used, here because the da
 chisq.test(matrix(c(3, 1, 2, 4), nrow = 2))
 ```
 
-Some expected counts are below 5, so the chi-square test's p-value may be inaccurate (Chapter 6). Use Fisher's exact test (`fisher.test()`), or combine small categories.
+Some expected counts are below 5, so the chi-square test's p-value may be inaccurate (Chapter 7). Use Fisher's exact test (`fisher.test()`), or combine small categories.
 
 ### glm.fit: fitted probabilities numerically 0 or 1 occurred; algorithm did not converge
 
@@ -304,11 +304,11 @@ lmer(wellbeing ~ semester + (semester | supervisor_id),
      data = left_join(semesters, students, join_by(student_id)))
 ```
 
-A mixed-effects model estimated some random-effect variance as zero, or a correlation as exactly ±1: the random effects part is too complex for the data (Chapter 9). Simplify it, for example by removing the random slope: `(1 | supervisor_id)`.
+A mixed-effects model estimated some random-effect variance as zero, or a correlation as exactly ±1: the random effects part is too complex for the data (Chapter 10). Simplify it, for example by removing the random slope: `(1 | supervisor_id)`.
 
 ### Observations deleted due to missingness
 
-Not an error, but a line in the output of `summary()` for `lm()` and `glm()`: rows with a missing value in any variable of the model are left out. Check how many with `nobs(model)`, report the number used, and think about whether the missing rows differ from the others (Chapters 5 and 7).
+Not an error, but a line in the output of `summary()` for `lm()` and `glm()`: rows with a missing value in any variable of the model are left out. Check how many with `nobs(model)`, report the number used, and think about whether the missing rows differ from the others (Chapters 6 and 8).
 
 ## Machine learning
 
@@ -320,7 +320,7 @@ library(tidymodels)
 fit(logistic_reg(), considering_dropout ~ age, data = students)
 ```
 
-tidymodels needs a categorical outcome to be a factor. Convert it first, and set the event of interest as the first level (Chapter 10): `mutate(considering_dropout = factor(considering_dropout, levels = c("Yes", "No")))`.
+tidymodels needs a categorical outcome to be a factor. Convert it first, and set the event of interest as the first level (Chapter 11): `mutate(considering_dropout = factor(considering_dropout, levels = c("Yes", "No")))`.
 
 ### Can't select columns that don't exist ... `.pred_Yes`
 
@@ -338,5 +338,5 @@ A column name does not exist in the data given to a yardstick function. The pred
 2. **Restart R and run the script from the top** (*Session > Restart R*). Many mysterious errors come from objects left over from earlier work.
 3. **Check your data** with `str()`, `glimpse()`, or `summary()`: wrong types and unexpected missing values cause most errors in real analyses.
 4. **Make the problem small.** Reproduce it with a few rows of data or a tiny example, like those at the start of every chapter. Often the cause becomes obvious; if not, a small example is what others need to help you. The reprex package formats such an example for sharing.
-5. **Search for the message** in quotation marks, or ask an AI assistant, including the code, the full message, and a description of your data (Chapter 17). Check the answer before trusting it.
+5. **Search for the message** in quotation marks, or ask an AI assistant, including the code, the full message, and a description of your data (Chapter 18). Check the answer before trusting it.
 6. **Ask a person**: a colleague, your supervisor, the Posit Community forum, or Stack Overflow. A clear question with a small example usually gets a quick answer.

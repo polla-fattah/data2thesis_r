@@ -12,6 +12,8 @@ book:
   repo-subdir: book
   repo-actions: [edit, issue]
   search: true
+  sidebar:
+    style: docked
   navbar:
     left:
       - text: Home
@@ -20,6 +22,12 @@ book:
         href: index.qmd
       - text: Playground
         href: ../playground/index.html
+      - text: Get the data
+        href: ../index.html#get-the-data
+    right:
+      - icon: github
+        href: https://github.com/polla-fattah/R4NTR
+        aria-label: GitHub
   chapters:
     - index.qmd
     - part: "Foundations of R Programming and Data Handling"
@@ -30,24 +38,25 @@ book:
         - 04-data-visualization.qmd
     - part: "Statistical Analysis for Research"
       chapters:
-        - 05-descriptive-statistics.qmd
-        - 06-hypothesis-testing.qmd
-        - 07-anova-regression.qmd
-        - 08-multivariate.qmd
-        - 09-mixed-models.qmd
+        - 05-research-question.qmd
+        - 06-descriptive-statistics.qmd
+        - 07-hypothesis-testing.qmd
+        - 08-anova-regression.qmd
+        - 09-multivariate.qmd
+        - 10-mixed-models.qmd
     - part: "Machine Learning with R"
       chapters:
-        - 10-machine-learning.qmd
-        - 11-classification.qmd
-        - 12-predictive-regression.qmd
-        - 13-advanced-clustering.qmd
-        - 14-neural-networks.qmd
-        - 15-time-series.qmd
+        - 11-machine-learning.qmd
+        - 12-classification.qmd
+        - 13-predictive-regression.qmd
+        - 14-advanced-clustering.qmd
+        - 15-neural-networks.qmd
+        - 16-time-series.qmd
     - part: "Reproducible Research and Applications"
       chapters:
-        - 16-reproducible-research.qmd
-        - 17-ai.qmd
-        - 18-putting-it-together.qmd
+        - 17-reproducible-research.qmd
+        - 18-ai.qmd
+        - 19-putting-it-together.qmd
     - references.qmd
   appendices:
     - a-installation.qmd
@@ -67,7 +76,19 @@ execute:
 format:
   html:
     theme:
-      light: [cosmo, ../site/styles/theme.scss]
-      dark: [darkly, ../site/styles/theme.scss]
+      light: [cosmo, ../site/styles/light.scss, ../site/styles/theme.scss]
+      dark: [darkly, ../site/styles/dark.scss, ../site/styles/theme.scss]
     code-link: true
     fig-align: center
+    # Wider sidebar and text column, like the author's front-end book
+    grid:
+      sidebar-width: 320px
+      body-width: 780px
+      margin-width: 240px
+    include-after-body:
+      text: |
+        <script>
+          // Chapter titles are shortened to one line in the sidebar; show the full title on hover
+          document.querySelectorAll(".sidebar-navigation .menu-text, .sidebar-navigation .sidebar-item-text")
+            .forEach(function (el) { el.title = el.textContent.replace(/\s+/g, " ").trim(); });
+        </script>

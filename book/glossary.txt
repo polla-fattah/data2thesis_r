@@ -239,7 +239,7 @@ package :: A collection of R functions, data, and documentation that adds featur
 paired t-test :: A test comparing two measurements on the same cases.
 Pandoc :: The document converter that Quarto uses to produce HTML, Word, PDF, and other formats.
 parallel analysis :: Choosing the number of factors by comparing eigenvalues with those from random data.
-parameter :: A quantity describing a population (Chapter 6); a value learned by a model, such as a coefficient (Chapter 10); or an input to a Quarto report (Chapter 16).
+parameter :: A quantity describing a population (Chapter 7); a value learned by a model, such as a coefficient (Chapter 11); or an input to a Quarto report (Chapter 17).
 patchwork :: A package that combines ggplot2 plots into one figure.
 penalty (lambda) | penalty | lambda :: In regularised regression or a neural network, the strength of the penalty on large coefficients or weights.
 permutation importance :: A predictor's importance measured by how much shuffling its values reduces a model's accuracy.
@@ -405,3 +405,68 @@ working directory :: The folder R reads files from and saves files to by default
 XGBoost :: Extreme gradient boosting: a fast, widely used boosting method.
 YAML header :: The settings at the top of a Quarto document, between two `---` lines.
 z-score :: A value expressed as the number of standard deviations from the mean.
+research question :: A focused question that says precisely what a study will find out, narrow enough that data can answer it.
+descriptive question :: A research question about what is: how much, how many, how often.
+relational question :: A research question about which variables go together. It establishes association, not cause.
+causal question :: A research question about what leads to what. It needs a design that rules out other explanations, ideally an experiment.
+hypothesis :: A prediction, stated before the data is analysed, of what the data will show; precise enough to be wrong.
+falsifiability :: The property of a claim that some possible result would contradict it. A hypothesis that fits every possible result tells us nothing.
+directional hypothesis :: A hypothesis that predicts the direction of an effect, such as "higher" or "lower".
+non-directional hypothesis :: A hypothesis that predicts a difference or relationship without saying in which direction.
+unit of analysis :: What one row of the data represents, and what the question is about: a student, a semester, a supervisor.
+construct :: An idea that cannot be observed directly, such as stress or wellbeing, and must be measured indirectly.
+operationalisation :: The decision about how a construct is measured: which questions, records, or instruments turn it into a variable.
+self-report :: A measure based on what participants say about themselves, such as their estimated hours of sleep.
+level of measurement :: What the values of a variable mean (nominal, ordinal, interval, or ratio), which decides the summaries and tests that make sense.
+nominal :: A level of measurement for categories with no order, such as faculty.
+ordinal :: A level of measurement for ordered categories whose distances are unknown, such as none, part-time, and full-time employment.
+interval :: A level of measurement with equal distances between values but no true zero, such as a wellbeing index.
+ratio :: A level of measurement with equal distances and a true zero, so that "twice as much" is meaningful, such as hours of sleep.
+ordered factor :: A factor whose levels have an order, created with `factor(..., ordered = TRUE)`.
+moderator :: A variable that changes the strength or direction of the relationship between a predictor and an outcome.
+mediator :: A variable on the path between a predictor and an outcome, through which the predictor has its effect.
+validity :: Whether a measure measures what it claims to, or whether a study's conclusions are justified.
+internal consistency :: The extent to which the items of a scale agree with each other, often measured with Cronbach's alpha.
+test-retest reliability :: The extent to which a measure gives similar results for the same people on two occasions.
+inter-rater reliability :: The extent to which two people coding or rating the same material agree, often measured with Cohen's kappa.
+content validity :: Whether the items of a measure cover the whole construct.
+construct validity :: Whether a score behaves as the construct should: related to similar measures, less related to different ones.
+internal validity :: Whether a study can rule out other explanations for its results. Highest in randomised experiments.
+external validity :: Whether a study's results apply beyond it, to other people, places, and times.
+study design :: The plan for who is measured, on what, when, and under which conditions.
+randomised experiment :: A study in which the researcher assigns the treatment by chance, so that the groups differ only by chance at the start.
+quasi-experiment :: A study that compares groups receiving different treatments that were not assigned by chance.
+self-selection :: When people choose their own group, such as volunteering for a workshop, so that the groups may differ from the start.
+cross-sectional design :: A design that measures every variable once, at one time.
+longitudinal design :: A design that measures the same people repeatedly over time.
+sampling frame :: A list of the members of a population, from which a sample can be drawn.
+simple random sampling :: Sampling in which every member of the population has the same chance of being chosen.
+stratified sampling :: Sampling in which the population is divided into groups (strata) and a random sample is drawn from each.
+cluster sampling :: Sampling whole groups, such as all the students of randomly chosen supervisors.
+convenience sampling :: Sampling whoever is easy to reach. Common, and the weakest basis for generalising.
+random error :: The difference between an estimate and the truth caused by which cases happened to be selected. It shrinks as the sample grows.
+power :: The probability that a study detects an effect of a given size, if the effect is real. A common target is 80%.
+permutation test :: A test that builds the null distribution by shuffling group labels many times, and compares the observed result with the shuffled ones.
+null distribution :: The distribution of a statistic that would be expected if the null hypothesis were true, used to judge how surprising the observed result is.
+multiple testing :: Running many tests in one study. Each test carries its own risk of a false alarm, so the chance of at least one grows with the number of tests.
+case :: One unit that is measured in a study, such as a student, a patient, or a school; one row of a data table.
+variable :: One characteristic measured on every case, such as age or faculty; one column of a data table.
+data matrix :: The arrangement of data as a table with one row per case and one column per variable.
+data cleaning :: Preparing raw data for analysis: removing test and duplicate cases, making categories consistent, marking missing values, and correcting or removing impossible values, with every decision recorded.
+exploratory graph :: A quick graph made by the researcher to understand the data: to check distributions, find unusual values, and notice patterns.
+explanatory graph :: A carefully designed graph made for readers, to show a finding clearly and accurately.
+graphical perception :: How people read values from graphs. Positions and lengths are judged most accurately, then angles, areas, and colours.
+aspect ratio :: The ratio of a graph's width to its height. It changes how steep lines and slopes appear.
+qualitative palette :: A set of clearly different colours of similar strength, used to distinguish categories.
+sequential palette :: Colours running from light to dark, used for quantities that go in one direction.
+diverging palette :: Colours running in two directions away from a meaningful midpoint, such as zero, used for values that can be positive or negative.
+deviation :: The distance of a value from the mean, $x_i - \bar{x}$. The standard deviation summarises the deviations of all values.
+latent variable :: A variable that cannot be observed directly, such as stress, and is assumed to cause part of the answers to the items that measure it.
+design effect :: How many times more grouped observations are needed to give the same information as independent ones: 1 + (m - 1) × ICC, where m is the group size.
+generalisation :: The ability of a model to perform well on new data, not only on the data it learned from.
+bias-variance trade-off :: The balance between a model too simple to capture the pattern (high bias) and one so flexible that it follows the noise of each sample (high variance). Error on new data is lowest in between.
+misclassification cost :: The cost assigned to each kind of error of a classifier, such as missing a case or raising a false alarm. The costs determine the best threshold.
+log loss :: The measure of error used to fit logistic regression and classification networks: small when high probabilities are given to the cases that did occur and low probabilities to those that did not.
+garden of forking paths :: The many reasonable choices in an analysis. Choosing among them after seeing the results inflates the chance of a false positive.
+chain of reasoning :: The sequence of steps behind a research conclusion: question, hypothesis, design, variables, analysis, result, conclusion, and limitation.
+reporting standard :: A published list of the information a research report must contain, such as JARS for psychology, CONSORT for randomised trials, and STROBE for observational studies.

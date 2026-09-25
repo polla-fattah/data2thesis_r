@@ -17,21 +17,35 @@ A practical guide to analysing research data with R, for researchers with no pro
 | `archive/jekyll/` | The earlier Jekyll version of the site, including the first chapter drafts (source material for the rewrites) |
 | `plan.md` | The revision plan: decisions, instructions for every chapter, and the order of work |
 
-## Building the site
+## Building and running the site locally
 
-Requires [Quarto](https://quarto.org) and R. Build the website first, then the book, which goes inside it:
+Requires [Quarto](https://quarto.org), R, and Python (only for the local web server). On Windows, the script `build.ps1` in the project root does everything. Open a PowerShell terminal in the project folder and run:
 
-```bash
-cd site && quarto render && cd ../book && quarto render
+```powershell
+.\build.ps1
 ```
 
-The result is in `_site/`. To look at it locally:
+It renders the website, then the book (which is published inside the website), and then serves the result at <http://localhost:4300>. Leave the terminal open while you browse; press Ctrl+C to stop the server. If Windows refuses to run the script, use `powershell -ExecutionPolicy Bypass -File .\build.ps1`.
+
+| Command | What it does |
+|---|---|
+| `.\build.ps1` | Build the website and the book, then serve them |
+| `.\build.ps1 -NoBuild` | Serve what is already built (the quickest way to reopen the site) |
+| `.\build.ps1 -NoServe` | Build only |
+| `.\build.ps1 -Chapter 07-hypothesis-testing.qmd` | Render one book chapter only, then serve |
+| `.\build.ps1 -Playground` | Also rebuild the playground download zips (after changing `playground-src/`) |
+| `.\build.ps1 -Port 4400` | Serve on another port |
+
+The script expects Quarto in `C:\Program Files\Quarto` and R 4.4.3 in `C:\Program Files\R\R-4.4.3`; change the two paths at the top of `build.ps1` if yours differ.
+
+On other systems, or without the script, the same steps are:
 
 ```bash
-python -m http.server 4200 --directory _site
+cd site && quarto render && cd ../book && quarto render && cd ..
+python -m http.server 4300 --directory _site
 ```
 
-Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them after changing any code, so the site can be published by GitHub Actions (`.github/workflows/publish.yml`) without R.
+Chapters whose code has not changed are not run again: their results are stored in `site/_freeze/` and `book/_freeze/`, so a full build takes a few minutes. Commit these folders after changing any code, so the site can be published by GitHub Actions (`.github/workflows/publish.yml`) without R.
 
 ## Outline
 
@@ -78,17 +92,27 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 
 ## **Part 2: Statistical Analysis for Research**
 
-### **Chapter 5: Descriptive Statistics and Exploratory Data Analysis (EDA)**
+### **Chapter 5: From Research Question to Data**
+
+- Why research questions come first, and what makes a question answerable with data.
+- From a research question to a testable, falsifiable hypothesis, and to the null hypothesis a test will check.
+- Variables, constructs, and levels of measurement, shown in Elaf's data.
+- Reliability and validity: does a measure measure consistently, and does it measure the right thing?
+- Study designs: descriptive, correlational, experimental, and longitudinal, and what each can claim.
+- Populations, samples, and sampling, with a simulation.
+- Planning the analysis in advance: sample size, power, and preregistration.
+
+### **Chapter 6: Descriptive Statistics and Exploratory Data Analysis (EDA)**
 
 - Exploratory, inferential, and predictive analysis, and the analysis workflow.
 - Centre (mean, median, mode) and spread (SD, variance, IQR), and when to report which.
-- Shape: skewness, modality, the normal distribution and the 68–95–99.7 rule, z-scores, and Q-Q plots.
+- Shape: skewness, modality, the normal distribution and the 68-95-99.7 rule, z-scores, and Q-Q plots.
 - Unusual values: the box plot and z-score rules, and what (not) to do with outliers.
 - Missing data: how much, and why (missing completely at random, at random, not at random); attrition in Elaf's study.
 - Correlation, scatter plot matrices, and why correlation is not causation.
 - Describing the sample in a thesis.
 
-### **Chapter 6: Hypothesis Testing and Statistical Inference**
+### **Chapter 7: Hypothesis Testing and Statistical Inference**
 
 - Populations and samples; sampling distributions by simulation, the standard error, and the central limit theorem.
 - Confidence intervals, including bootstrap confidence intervals.
@@ -99,7 +123,7 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 - Non-parametric tests: Mann-Whitney U and Wilcoxon signed-rank.
 - Choosing the right test, and reporting results in a thesis.
 
-### **Chapter 7: ANOVA and Regression**
+### **Chapter 8: ANOVA and Regression**
 
 - One-way ANOVA, eta squared, Tukey post-hoc tests, Levene's test, and Kruskal-Wallis.
 - Two-way ANOVA: main effects, interactions, and interaction plots.
@@ -108,7 +132,7 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 - Diagnostic plots, and tidy reporting with broom.
 - Logistic regression: odds, odds ratios, and predicted probabilities for considering dropout.
 
-### **Chapter 8: Multivariate Statistical Methods**
+### **Chapter 9: Multivariate Statistical Methods**
 
 - Exploring many correlations at once (sorted correlation plots).
 - Principal component analysis: components, eigenvalues, scree plots, the Kaiser rule, and parallel analysis.
@@ -116,7 +140,7 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 - Reliability with Cronbach's alpha.
 - Cluster analysis: scaling, k-means, choosing the number of clusters (elbow, silhouette), describing clusters, and hierarchical clustering with dendrograms.
 
-### **Chapter 9: Mixed-Effects Models**
+### **Chapter 10: Mixed-Effects Models**
 
 - Repeated measures and nested data, and why ordinary regression gets the uncertainty wrong (in either direction).
 - Random intercepts and random slopes with `lme4`, starting from the real `sleepstudy` data; the intraclass correlation (ICC).
@@ -128,7 +152,7 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 
 ## **Part 3: Machine Learning with R**
 
-### **Chapter 10: Introduction to Machine Learning in R**
+### **Chapter 11: Introduction to Machine Learning in R**
 
 - Supervised and unsupervised learning; prediction versus explanation.
 - The tidymodels framework: splitting (rsample), recipes, model specifications (parsnip), workflows, tuning, and yardstick.
@@ -137,7 +161,7 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 - Overfitting, cross-validation, hyperparameter tuning (tree depth), and the final test with `last_fit()`.
 - Fairness and responsible use of predictions about people.
 
-### **Chapter 11: Classification Models**
+### **Chapter 12: Classification Models**
 
 - Decision trees (how splits are chosen, reading a tree) and random forests (bootstrap samples, `mtry`, permutation importance).
 - k-nearest neighbours (distances, why normalisation matters, tuning k) and support vector machines (margins, linear and RBF kernels).
@@ -146,7 +170,7 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 - Choosing the classification threshold with the ROC curve and cross-validated predictions, and reporting it.
 - Imbalanced outcomes: upsampling, downsampling, SMOTE, and class weights with themis, and what they do (and do not) change.
 
-### **Chapter 12: Predictive Regression**
+### **Chapter 13: Predictive Regression**
 
 - Predicting Elaf's final GPA from year-one information: wide-format predictors with `pivot_wider()`, and the limits of a model trained only on students who stayed.
 - Measuring numeric predictions: MAE, RMSE, and R², always against a baseline that predicts the mean.
@@ -155,7 +179,7 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 - Boosting: building a model from many small trees, and tuning XGBoost.
 - Comparing models with cross-validation, the final test, and what year-one GPA alone achieves.
 
-### **Chapter 13: Advanced Clustering**
+### **Chapter 14: Advanced Clustering**
 
 - What k-means assumes: hard assignments, round clusters of similar size, and no room for outliers.
 - Gaussian mixture models with mclust: membership probabilities, covariance structures, and choosing the number of clusters with BIC; three student profiles and the students who fit none clearly.
@@ -163,14 +187,14 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 - Evaluating a clustering: silhouette, BIC, agreement between methods (adjusted Rand index), stability, and relevance to outcomes such as considering dropout.
 - Reporting clustering choices in a thesis.
 
-### **Chapter 14: Neural Networks**
+### **Chapter 15: Neural Networks**
 
 - How a neural network works: neurons, layers, weights, and activation functions.
 - Fitting and tuning a neural network with tidymodels (`mlp()` with the `nnet` engine) on the dropout question.
-- Comparing it fairly with the models of Chapters 10 and 11.
+- Comparing it fairly with the models of Chapters 11 and 12.
 - Deep learning: what it is, when it helps, and where to go next (`keras3`, `torch`).
 
-### **Chapter 15: Time Series Forecasting**
+### **Chapter 16: Time Series Forecasting**
 
 - Time series data in R with `tsibble`, and time plots.
 - Trend and seasonality: decomposition and seasonal plots with `feasts`.
@@ -180,7 +204,7 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 
 ## **Part 4: Reproducible Research and Applications**
 
-### **Chapter 16: Reproducible Research**
+### **Chapter 17: Reproducible Research**
 
 - What reproducible research is, and why copying results by hand goes wrong.
 - Quarto documents: YAML header, Markdown text, code chunks, inline code, chunk options, numbered tables and figures, citations from a BibTeX file, and LaTeX equations; rendering to HTML, Word, and PDF; parameterised reports. A note on R Markdown for older projects.
@@ -189,7 +213,7 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 - Open science: sharing data and code with a DOI and a licence, protecting participants (small cells), preregistration and registered reports.
 - Optional: keeping a project's history with git and GitHub.
 
-### **Chapter 17: Using AI with R**
+### **Chapter 18: Using AI with R**
 
 - How large language models work, and why they make confident mistakes (hallucinations, outdated knowledge).
 - Using AI assistants to write, explain, and debug R code, and checking what they produce; AI inside RStudio and Positron.
@@ -197,7 +221,7 @@ Code results are stored in `site/_freeze/` and `book/_freeze/`. Commit them afte
 - Validating AI coding against human coding: accuracy, confusion matrix, Cohen's kappa, reading disagreements, and consistency between runs.
 - Responsible use: checking, data privacy and local models, reproducibility (models, prompts, saved outputs), disclosure, and bias.
 
-### **Chapter 18: Putting It All Together**
+### **Chapter 19: Putting It All Together**
 
 - The path of a research project, and how to organise one: read-only raw data, numbered scripts, relative paths, a README, and a Quarto results document.
 - Elaf's complete pipeline, from the raw survey export to clean data (checked against the package), a sample table, and three research questions answered with the methods of the book.

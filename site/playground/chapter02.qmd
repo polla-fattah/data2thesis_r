@@ -4,8 +4,8 @@ subtitle: Data Structures in R
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
@@ -20,13 +20,30 @@ webr:
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-These exercises practise the ideas from Chapter 2: vectors, factors, data frames, matrices, and lists. Edit the code in any box and press **Run Code**. Where you see `______`, replace it with your own code.
+This page practises the ideas of Chapter 2 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with new questions and some of R's built-in datasets. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with an empty code space and no answers: you decide how to write the code, as you will in your own thesis.
 
-## Vectors and factors
+In the exercises, replace each `______` with your own code and press **Run Code**. One exercise reads an SPSS file, which needs the haven package; it is marked as a task for the download project.
 
-### Exercise 1: Picking values with a condition
+```{webr}
+#| setup: true
+#| exercise: [ex3, ex4, gf2, gf3]
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+```
 
-Here are the ages of five students. Show only the ages over 30, then count how many there are.
+```{webr}
+#| include: false
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+```
+
+## Practise the chapter
+
+These are the exercises at the end of Chapter 2, with the same numbers.
+
+### Exercise 1: Ages over 30
+
+Create a vector with the ages 24, 31, 28, 45, and 26. Use logical indexing to show only the ages over 30, and count how many there are.
 
 ```{webr}
 #| exercise: ex1
@@ -39,7 +56,7 @@ sum(______)
 ::: { .callout-note collapse="false"}
 ## Hint
 
-The condition is `ages > 30`. Put it inside the brackets to select, and inside `sum()` to count.
+A condition such as `ages > 30` gives `TRUE` or `FALSE` for every value. Inside square brackets it keeps the `TRUE` values; inside `sum()` it counts them, because each `TRUE` counts as 1.
 :::
 :::
 
@@ -53,55 +70,30 @@ ages[ages > 30]
 sum(ages > 30)
 ```
 
-Two students are over 30: those aged 31 and 45.
+Two ages, 31 and 45, are over 30. The same condition did two jobs: it selected the values and it counted them. Selecting rows of a data frame, later in the chapter, works in exactly the same way.
 :::
 :::
 
-### Exercise 2: A whole vector at once
+### Exercise 2: Levels in order
 
-Elaf's sleep over five nights is stored below. Convert it to minutes, and find the share of nights shorter than 7 hours.
+Create a factor from `c("Agree", "Disagree", "Neutral", "Agree")` whose levels run from `"Disagree"` through `"Neutral"` to `"Agree"`. Check the order with `table()`.
 
 ```{webr}
 #| exercise: ex2
-sleep <- c(6.5, 7, 5.5, 8, 6)
-sleep * ______
-mean(sleep ______ 7)
-```
-
-::: { .solution exercise="ex2" }
-::: { .callout-tip collapse="false"}
-## Solution
-
-```r
-sleep <- c(6.5, 7, 5.5, 8, 6)
-sleep * 60
-mean(sleep < 7)
-```
-
-`mean()` of a `TRUE`/`FALSE` vector is the share of `TRUE` values: 0.6, or 60% of nights.
-:::
-:::
-
-### Exercise 3: Ordered categories
-
-Make a factor from these answers whose levels run from `"Disagree"` through `"Neutral"` to `"Agree"`, and check the order with `table()`.
-
-```{webr}
-#| exercise: ex3
 answers <- factor(c("Agree", "Disagree", "Neutral", "Agree"),
                   levels = ______)
 table(answers)
 ```
 
-::: { .hint exercise="ex3" }
+::: { .hint exercise="ex2" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-`levels` takes a vector of the categories in the order you want: `c("Disagree", ______, ______)`.
+The `levels` argument takes a vector of the categories, written in the order you want.
 :::
 :::
 
-::: { .solution exercise="ex3" }
+::: { .solution exercise="ex2" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
@@ -110,32 +102,56 @@ answers <- factor(c("Agree", "Disagree", "Neutral", "Agree"),
                   levels = c("Disagree", "Neutral", "Agree"))
 table(answers)
 ```
+
+The table now lists Disagree (1), Neutral (1), and Agree (2) in the order of the scale. Without the `levels` argument, R would sort the categories alphabetically, putting "Neutral" last, and every table and graph would show the scale in a meaningless order.
 :::
 :::
 
-## Elaf's data
+### Exercise 3: Part-time students with children
+
+Using `students`, count the students who are part-time and have children.
 
 ```{webr}
-#| setup: true
-#| exercise: [ex4, ex5, ex6]
-students <- read.csv("students.csv")
+#| exercise: ex3
+sum(students$study_mode == "Part-time" ______ students$has_children == "Yes")
 ```
 
-### Exercise 4: Selecting rows
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
 
-How many students study part-time **and** have children? Fill in the second condition.
+Both conditions must be true at the same time. The operator for "and" is a single symbol.
+:::
+:::
+
+::: { .solution exercise="ex3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+sum(students$study_mode == "Part-time" & students$has_children == "Yes")
+```
+
+51 students are part-time *and* have children. With `|` ("or") instead of `&`, the count would include every student who meets at least one of the two conditions, which is a different question.
+:::
+:::
+
+### Exercise 4: A new column
+
+Add a column to `students` called `over_30` that is `TRUE` for students older than 30. Count those students, and explain why the count might need `na.rm = TRUE`.
 
 ```{webr}
 #| exercise: ex4
-both <- students[students$study_mode == "Part-time" & ______, ]
-nrow(both)
+students$over_30 <- students$age ______ 30
+sum(students$over_30)
+sum(students$over_30, ______)
 ```
 
 ::: { .hint exercise="ex4" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-The variable is `has_children`, and its values are `"Yes"` and `"No"`. Remember `==` for "is equal to".
+The new column is a comparison. Run the first `sum()` and look at the answer: one student's age is missing.
 :::
 :::
 
@@ -144,130 +160,277 @@ The variable is `has_children`, and its values are `"Yes"` and `"No"`. Remember 
 ## Solution
 
 ```r
-both <- students[students$study_mode == "Part-time" & students$has_children == "Yes", ]
-nrow(both)
-```
-:::
-:::
-
-### Exercise 5: Adding a column
-
-Add a column called `over_30` that is `TRUE` for students older than 30, then count them. Run it first as it is: why is the answer `NA`?
-
-```{webr}
-#| exercise: ex5
 students$over_30 <- students$age > 30
 sum(students$over_30)
+sum(students$over_30, na.rm = TRUE)
 ```
 
-::: { .hint exercise="ex5" }
+205 students are older than 30. The first `sum()` returns `NA` because one student's age is missing, and for that student R cannot tell whether the answer is `TRUE` or `FALSE`, so the comparison gives `NA` as well. The missing value passes from the age to the new column, and from there to anything calculated from it.
+:::
+:::
+
+### Exercise 5: A question behind a variable
+
+Read the SPSS file with `read_sav()` and find the question behind `support_3`.
+
+This exercise needs the haven package and the SPSS file, so it is done in the [download project](#work-on-your-own-computer), where the file is included. The code is:
+
+```r
+library(haven)
+spss <- read_sav("wellbeing.sav")
+attr(spss$support_3, "label")
+```
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Solution
+
+The label is *"My supervisor cares about my wellbeing."* The SPSS file stores the wording of each question with its variable, which the CSV files cannot do; this is why the chapter keeps the labels when it imports SPSS data and uses them to start a codebook.
+:::
+
+### Exercise 6: Units of analysis
+
+State the unit of analysis of each table in the package: `students`, `semesters`, `questionnaire`, and `supervisors`. For each, name one research question it could answer on its own. Write your answer first, then open the model answer.
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
+
+In `students`, one row is a **student** (600 rows): for example, *are part-time students more likely to consider dropping out than full-time students?* In `semesters`, one row is **one student in one semester** (2,326 rows, up to four per student): *does sleep change over the four semesters?* In `questionnaire`, one row is again a **student**, with their answers to the 22 items: *are stress and burnout scores related?* In `supervisors`, one row is a **supervisor** (120 rows): *do professors supervise more students than lecturers?* A question about students should count each student once, so a question about students' sleep needs one value per student, such as the first semester or an average, and not all 2,326 semester rows.
+:::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 7: A data frame of every kind
+
+Build a small data frame of five invented students with one variable of each kind: a nominal category (faculty), an ordered category (how often they exercise), a number (age), and a logical value (whether they work). Then check the type of every column.
+
+```{webr}
+#| exercise: gf1
+five <- data.frame(
+  faculty  = factor(c("Science", "Education", "Science", "Engineering", "Education")),
+  exercise = factor(c("Rarely", "Often", "Sometimes", "Rarely", "Often"),
+                    levels = c("Rarely", "Sometimes", "Often"),
+                    ______ = TRUE),
+  age      = c(26, 34, 29, 41, 25),
+  works    = c(TRUE, FALSE, FALSE, TRUE, TRUE)
+)
+______(five)
+```
+
+::: { .hint exercise="gf1" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-One student's age is missing, so one value of `over_30` is `NA`. `sum()` has an `na.rm` argument, just like `mean()`.
+`factor()` has an argument that marks the levels as ordered, so that R knows Rarely < Sometimes < Often. The function that lists every column with its type is short for *structure*.
 :::
 :::
 
-::: { .solution exercise="ex5" }
+::: { .solution exercise="gf1" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-students$over_30 <- students$age > 30
-sum(students$over_30, na.rm = TRUE)
-table(students$over_30)   # table() leaves NA out unless you ask for it
+five <- data.frame(
+  faculty  = factor(c("Science", "Education", "Science", "Engineering", "Education")),
+  exercise = factor(c("Rarely", "Often", "Sometimes", "Rarely", "Often"),
+                    levels = c("Rarely", "Sometimes", "Often"),
+                    ordered = TRUE),
+  age      = c(26, 34, 29, 41, 25),
+  works    = c(TRUE, FALSE, FALSE, TRUE, TRUE)
+)
+str(five)
+five$exercise > "Rarely"
 ```
+
+`str()` shows a factor, an ordered factor (`Ord.factor`, with `"Rarely" < "Sometimes" < "Often"`), a number, and a logical column. Because the second factor is ordered, a comparison such as `five$exercise > "Rarely"` makes sense; for the faculty, which has no order, the same comparison would be meaningless, and R would warn you.
 :::
 :::
 
-### Exercise 6: Categories as a factor
+### Exercise 8: The student with no age
 
-Turn `faculty` into a factor and list its levels. How many levels are there?
+Find the students whose age is missing, and show their ID, faculty, and programme.
 
 ```{webr}
-#| exercise: ex6
-students$faculty <- ______(students$faculty)
-levels(students$faculty)
+#| exercise: gf2
+students[______(students$age), c("student_id", "faculty", "programme")]
 ```
 
-::: { .solution exercise="ex6" }
+::: { .hint exercise="gf2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The rows go before the comma, the columns after it. The function that answers "is this value missing?" with `TRUE` or `FALSE` is the one from Chapter 1.
+:::
+:::
+
+::: { .solution exercise="gf2" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-students$faculty <- factor(students$faculty)
-levels(students$faculty)
-length(levels(students$faculty))   # 5 faculties
+students[is.na(students$age), c("student_id", "faculty", "programme")]
 ```
+
+One student, S0007, a Master's student in Health Sciences, has no age. Looking at the rows with missing values, rather than only counting them, is the first step in deciding what to do about them: here, one student out of 600 changes nothing, but a pattern (for example, all missing ages in one faculty) would matter.
 :::
 :::
 
-## Matrices and lists
+### Exercise 9: Rows and students
+
+The `semesters` table has more rows than there are students. Show the rows of student S0001, count all the rows, and count the different students.
 
 ```{webr}
-#| setup: true
-#| exercise: [ex7, ex8]
-semesters <- read.csv("semesters.csv")
+#| exercise: gf3
+semesters[semesters$student_id == "S0001", ]
+nrow(semesters)
+length(______(semesters$student_id))
+table(semesters$semester)
 ```
 
-### Exercise 7: A correlation matrix
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
 
-Calculate the correlations between GPA, sleep, and wellbeing, round them to two decimal places, and pick out the correlation between sleep and wellbeing.
+`unique()` keeps each different value once, so the length of its result is the number of different students.
+:::
+:::
 
-```{webr}
-#| exercise: ex7
-vars <- semesters[, c("gpa", "sleep_hours", "wellbeing")]
-correlations <- cor(vars, use = "complete.obs")
-round(correlations, 2)
-correlations["______", "______"]
-```
-
-::: { .solution exercise="ex7" }
+::: { .solution exercise="gf3" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-vars <- semesters[, c("gpa", "sleep_hours", "wellbeing")]
-correlations <- cor(vars, use = "complete.obs")
-round(correlations, 2)
-correlations["sleep_hours", "wellbeing"]
+semesters[semesters$student_id == "S0001", ]
+nrow(semesters)
+length(unique(semesters$student_id))
+table(semesters$semester)
 ```
+
+Student S0001 has four rows, one for each semester. The table has 2,326 rows but only 600 students, and the last line shows why the total is not 4 × 600 = 2,400: 37 students have no records for semesters 3 and 4, because they left the programme. Counting rows here would count semesters, not students, and would give students who stayed more weight than students who left.
 :::
 :::
 
-### Exercise 8: Results are lists
+### Exercise 10: A codebook for a built-in dataset
 
-Run a t-test asking whether students sleep 7 hours on average in their first semester. The result is a list: list its parts with `names()`, then pick out the p-value.
+R's built-in `ToothGrowth` data records the length of tooth-growing cells in 60 guinea pigs given vitamin C in two ways and three doses. Build its codebook as a data frame, with the name, meaning, type, and possible values of each variable.
 
 ```{webr}
-#| exercise: ex8
-first_semester <- semesters[semesters$semester == 1, ]
-result <- t.test(first_semester$sleep_hours, mu = 7)
-names(result)
-result$______
+#| exercise: gf4
+codebook <- data.frame(
+  variable = names(ToothGrowth),
+  meaning  = c("Length of the tooth-growing cells (odontoblasts)",
+               "How vitamin C was given: orange juice (OJ) or ascorbic acid (VC)",
+               "Dose of vitamin C in milligrams per day"),
+  type     = ______(ToothGrowth, class),
+  values   = c("4.2 to 33.9", "OJ, VC", "0.5, 1, 2")
+)
+codebook
 ```
 
-::: { .solution exercise="ex8" }
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The chapter's SPSS codebook used a function that applies another function, here `class`, to every column in turn and collects the results.
+:::
+:::
+
+::: { .solution exercise="gf4" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-first_semester <- semesters[semesters$semester == 1, ]
-result <- t.test(first_semester$sleep_hours, mu = 7)
-names(result)
-result$p.value
+codebook <- data.frame(
+  variable = names(ToothGrowth),
+  meaning  = c("Length of the tooth-growing cells (odontoblasts)",
+               "How vitamin C was given: orange juice (OJ) or ascorbic acid (VC)",
+               "Dose of vitamin C in milligrams per day"),
+  type     = sapply(ToothGrowth, class),
+  values   = c("4.2 to 33.9", "OJ, VC", "0.5, 1, 2"),
+  row.names = NULL
+)
+codebook
 ```
 
-The p-value is tiny: students sleep clearly less than 7 hours on average. Chapter 6 explains what a p-value means.
+`len` and `dose` are numeric, and `supp` is a factor. The meanings come from the help page, `?ToothGrowth`, and the values from `range()` and `table()`. Notice that `dose` is stored as a number although it takes only three values: whether to treat it as a number or as three groups is an analysis decision, and a codebook is a good place to record it.
 :::
 :::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** Why does `c(6.5, "seven")` become a vector of text?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+A vector holds values of one type only. Text cannot be turned into a number, but a number can always be written as text, so R converts `6.5` to `"6.5"` and the whole vector becomes character. One word in a column of numbers has the same effect when a file is read, which is why a numeric column that R reads as text usually hides a stray word or symbol.
+:::
+
+**2.** What is the difference between `x[2]` and `x[-2]`?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+`x[2]` keeps only the second value; `x[-2]` keeps everything *except* the second value. For `x <- c(10, 20, 30)`, the first gives 20 and the second gives 10 and 30.
+:::
+
+**3.** What are a factor's levels for?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+The levels list the possible categories and fix their order. The order controls how tables, graphs, and models show the categories, and it decides which category is the reference in a regression (Chapter 8). The levels also record categories that may have no cases in the data, which a plain text vector cannot do.
+:::
+
+**4.** Why should a question about students count each student once, even when a table has several rows per student?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because the unit of the question is the student. Counting rows would count semesters, giving students with more semesters more weight, and would treat four measurements of the same person as four independent people. Rows from the same student are related, and the methods of Chapter 10 are needed to analyse them together.
+:::
+
+**5.** What does a codebook add to a data file?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+The meaning of every value. A data file holds names and numbers; the codebook says what each variable measures, the question behind it, its units or answer scale, which numbers stand for which categories, and how missing values are coded. Without it, even the researcher cannot be sure what the data means a year later.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. Each code space below is empty and ready to run: write your own code, as you would for a thesis. The files `students.csv` and `semesters.csv` are available to read, the data frames `students` and `semesters` are already loaded, and R's built-in datasets are always available.
+
+**1.** Import the semester file, `semesters.csv`, yourself. Check its structure, and report how many rows, how many different students, and how many semesters it contains.
+
+```{webr}
+# Your code here
+```
+
+**2.** Choose three variables from `students` (for example, `gender`, `employment`, and `financial_worry`). Decide whether each should be a factor, an ordered factor, or a number, convert it, check the result with `str()`, and justify each choice in one sentence.
+
+```{webr}
+# Your code here
+```
+
+**3.** R's built-in `esoph` data comes from a study of cancer of the oesophagus. Look at it with `str()` and `head()`, and read its help page with `?esoph`. What does one row represent? How many people does the data describe? Which variables are ordered factors, and why?
+
+```{webr}
+# Your code here
+```
+
+**4.** This task is for the download project. Read the SPSS file, `wellbeing.sav`, build its codebook with the variable name, label, and type of every variable, add a column for notes, and save it as a CSV file with `write.csv()`.
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 2 project
 
-The project contains the data (including the Excel and SPSS files), these exercises, an extra exercise on importing the SPSS file, and the solutions.
+The project contains the data (as CSV, Excel, and SPSS files) and all four parts of this page as an R script: the exercises with blanks, the questions to check your understanding (answers in `solutions.R`), and the open tasks, each with space to write your code.
 
 - [Download chapter02.zip](chapter02.zip), unzip it, and double-click `chapter02.Rproj`.
 - Or type this one line in RStudio's Console:

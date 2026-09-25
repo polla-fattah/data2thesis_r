@@ -1,0 +1,508 @@
+# Predictive Regression {#sec-ch13}
+
+```{r}
+#| label: setup
+#| include: false
+library(data2thesis)
+```
+
+Research data often contains many possible predictors for rather few cases. A questionnaire with dozens of items, several rounds of measurement, and a background survey can easily supply 50 predictors for a sample of 60 or 100 people. Ordinary regression estimates a coefficient for every predictor, and with that much freedom it can fit its own data almost perfectly while predicting new cases badly: the overfitting of Chapter 11, now in its most common form. The problem is made worse when predictors are correlated, as questionnaire items usually are.
+
+This chapter introduces two families of methods that make many predictors usable. **Regularised regression** (ridge, lasso, and elastic net) keeps the familiar linear model but shrinks its coefficients towards zero, trading a little fit on the training data for much better predictions. **Boosting** builds a flexible model from many small decision trees, each correcting the errors of the ones before. The chapter also introduces the measures used to judge numeric predictions. The outcome is now a number, so this is a **regression** problem in the machine learning sense of Chapter 11. In the study, it answers the tenth research question (RQ10): the university's academic advisers meet every student at the end of the first year, and would like to know from year-one information which students are heading for a low final GPA, so that extra support can be planned.
+
+::: {.callout-tip appearance="simple"}
+## By the end of this chapter you will be able to
+
+- Measure the accuracy of numeric predictions with RMSE, MAE, and R², and compare them with a baseline.
+- Explain why ordinary regression overfits when there are many predictors.
+- Fit and tune ridge, lasso, and elastic net regression, and read which predictors the lasso keeps.
+- Explain how boosting builds a model from many small trees, and tune an XGBoost model.
+- Choose between models with cross-validation, and report the final model's accuracy on the test set.
+:::
+
+## Data for predicting final GPA
+
+The advisers meet students at the end of year one, so the model may use only what is known by then: the students' background, their questionnaire answers, and their records from semesters 1 and 2. The outcome is GPA in semester 4.
+
+This time, every questionnaire item is used as a separate predictor, rather than the four scale scores, to show how the methods cope with many related predictors. The semester records are in long format (one row per student per semester); for prediction, they are needed in wide format, one row per student, with a column for each measure in each semester. `pivot_wider()` from Chapter 3 does this:
+
+```{r}
+library(tidymodels)
+tidymodels_prefer()
+
+year_one <- semesters |>
+  filter(semester <= 2) |>
+  pivot_wider(id_cols = student_id, names_from = semester,
+              values_from = gpa:wellbeing, names_glue = "{.value}_s{semester}")
+
+final_gpa <- semesters |>
+  filter(semester == 4, !is.na(gpa)) |>
+  select(student_id, final_gpa = gpa)
+
+gpa_data <- students |>
+  left_join(questionnaire, join_by(student_id)) |>
+  left_join(year_one, join_by(student_id)) |>
+  inner_join(final_gpa, join_by(student_id)) |>
+  select(-student_id, -supervisor_id, -considering_dropout)
+
+dim(gpa_data)
+```
+
+The argument `names_glue` builds the new column names, such as `gpa_s1` and `sleep_hours_s2`, and `inner_join()` keeps only students who have a final GPA. That is an important limitation: the `r nrow(students) - nrow(gpa_data)` students who left the programme have no final GPA, so the model can only predict the final GPA of students who stay. (Chapter 6 showed that the leavers were not a random group, so the model should not be used to judge them.)
+
+The split, folds, and recipe follow Chapter 11. With a numeric outcome, `strata` splits the outcome into quartiles and samples within each, so that both sets cover the full range of GPAs. The recipe adds `step_impute_mode()` to fill in any missing categories:
+
+```{r}
+set.seed(2026)
+gpa_split <- initial_split(gpa_data, prop = 0.75, strata = final_gpa)
+gpa_train <- training(gpa_split)
+gpa_test  <- testing(gpa_split)
+
+set.seed(2026)
+gpa_folds <- vfold_cv(gpa_train, v = 10, strata = final_gpa)
+
+gpa_recipe <- recipe(final_gpa ~ ., data = gpa_train) |>
+  step_impute_median(all_numeric_predictors()) |>
+  step_impute_mode(all_nominal_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_normalize(all_numeric_predictors())
+
+gpa_recipe |> prep() |> bake(new_data = NULL) |> ncol()
+```
+
+After the dummy variables are created, there are `r ncol(bake(prep(gpa_recipe), new_data = NULL)) - 1` predictors, plus the outcome.
+
+## Measuring prediction error
+
+The quality of a numeric prediction is judged by its errors. Five students whose final GPA a model has predicted show how:
+
+```{r}
+tiny <- tibble(
+  actual    = c(3.2, 2.8, 3.6, 3.0, 2.5),
+  predicted = c(3.0, 2.9, 3.3, 3.1, 2.9)
+)
+tiny |> mutate(error = actual - predicted)
+```
+
+Each **error** (or residual) is the actual value minus the prediction, and three measures summarise them. The **MAE** (mean absolute error) is the average size of the errors, ignoring their sign; here, (0.2 + 0.1 + 0.3 + 0.1 + 0.4) / 5 = 0.22 GPA points. The **RMSE** (root mean squared error) squares the errors, averages them, and takes the square root. Squaring gives large errors more weight, so the RMSE is always at least as large as the MAE, and much larger when there are a few big misses. **R²**, in yardstick, is the squared correlation between the predictions and the actual values: as in Chapter 8, the share of the variation in the outcome that the predictions capture, from 0 to 1. The yardstick package calculates all three:
+
+```{r}
+regression_metrics <- metric_set(rmse, mae, rsq)
+tiny |> regression_metrics(truth = actual, estimate = predicted)
+```
+
+MAE and RMSE are in the units of the outcome, here GPA points, which makes them easy to explain: "the model's predictions are typically off by about 0.2 GPA points". Lower is better. R² has no units; higher is better.
+
+A number on its own means little, so every model should be compared with a **baseline**: the simplest possible prediction. For a numeric outcome, the baseline predicts the same value, the training mean, for everyone, which is what parsnip's `null_model()` does:
+
+```{r}
+null_wf <- workflow(gpa_recipe, null_model(mode = "regression"))
+
+set.seed(2026)
+null_cv <- fit_resamples(null_wf, resamples = gpa_folds, metrics = metric_set(rmse, mae))
+collect_metrics(null_cv)
+```
+
+```{r}
+#| include: false
+null_rmse <- collect_metrics(null_cv) |> filter(.metric == "rmse") |> pull(mean)
+```
+
+Predicting the average GPA for everyone gives an RMSE of `r sprintf("%.2f", null_rmse)`. Any useful model must do clearly better. (The R² of the baseline cannot be calculated, because its predictions do not vary, so it is left out here.)
+
+## Ordinary regression with many predictors
+
+The obvious model is the multiple regression of Chapter 8, using every predictor:
+
+```{r}
+lm_wf <- workflow(gpa_recipe, linear_reg())
+
+set.seed(2026)
+lm_cv <- fit_resamples(lm_wf, resamples = gpa_folds, metrics = regression_metrics)
+collect_metrics(lm_cv)
+```
+
+```{r}
+#| include: false
+lm_cv_rmse <- collect_metrics(lm_cv) |> filter(.metric == "rmse") |> pull(mean)
+```
+
+A cross-validated RMSE of `r sprintf("%.3f", lm_cv_rmse)`, much better than the baseline. With `r nrow(gpa_train)` training students and `r ncol(bake(prep(gpa_recipe), new_data = NULL)) - 1` predictors, ordinary regression works reasonably well. But watch what happens with fewer students. Many theses have samples of 50 or 60, so here is the same model fitted to 60 randomly chosen training students, and tested on the test set:
+
+```{r}
+set.seed(3)
+small_train <- gpa_train |> slice_sample(n = 60)
+
+lm_small <- fit(lm_wf, data = small_train)
+augment(lm_small, new_data = small_train) |> regression_metrics(final_gpa, .pred)
+augment(lm_small, new_data = gpa_test) |> regression_metrics(final_gpa, .pred)
+```
+
+```{r}
+#| include: false
+small_train_rmse <- augment(lm_small, new_data = small_train) |> rmse(final_gpa, .pred) |> pull(.estimate)
+small_test_rmse <- augment(lm_small, new_data = gpa_test) |> rmse(final_gpa, .pred) |> pull(.estimate)
+```
+
+On its own 60 students, the model looks excellent: an RMSE of `r sprintf("%.2f", small_train_rmse)`. On new students, its RMSE is `r sprintf("%.2f", small_test_rmse)`, *worse than predicting the average GPA for everyone*. With `r ncol(bake(prep(gpa_recipe), new_data = NULL)) - 1` coefficients estimated from 60 students, the model has enough freedom to fit the noise in its sample, and the coefficients that fit the noise do not carry over. In the extreme, with as many predictors as students, a regression can fit its data perfectly and predict nothing.
+
+The problem is made worse by **multicollinearity**: many of the predictors are strongly correlated (six stress items, two semesters of GPA), and regression struggles to divide the credit between correlated predictors. Their coefficients become large, unstable, and sometimes of opposite signs, cancelling each other out on the training data but not on new data.
+
+## Regularised regression
+
+**Regularisation** tackles this directly: it fits the regression while penalising large coefficients. Ordinary regression chooses the coefficients that minimise the sum of squared errors. Regularised regression minimises
+
+$$
+\text{sum of squared errors} + \lambda \times \text{size of the coefficients}.
+$$
+
+The **penalty** $\lambda$ (lambda) sets how much large coefficients cost. With $\lambda = 0$, this is ordinary regression; as $\lambda$ grows, the coefficients are pulled, or **shrunk**, towards zero. A little shrinkage costs almost nothing in fit to the training data, but makes the model much more stable on new data. Because the penalty depends on the size of the coefficients, the predictors must be on the same scale, which the recipe's `step_normalize()` ensures. There are three versions, which differ in how "size" is measured. **Ridge regression** uses the sum of the *squared* coefficients: it shrinks all coefficients towards zero and shares the credit among correlated predictors, but keeps every predictor in the model. The **lasso** (least absolute shrinkage and selection operator) uses the sum of the *absolute* coefficients [@tibshirani1996]. It shrinks too, but it also sets some coefficients to exactly zero, removing those predictors, so it also *selects* predictors and leaves a simpler model. The **elastic net** mixes the two, with a **mixture** parameter that runs from 0 (pure ridge) to 1 (pure lasso).
+
+In tidymodels, all three are `linear_reg()` with the **glmnet** engine, with `penalty` for $\lambda$ and `mixture` for the mix. The 60 students are now refitted with a lasso:
+
+```{r}
+lasso_small <- workflow(gpa_recipe,
+                        linear_reg(penalty = 0.03, mixture = 1) |> set_engine("glmnet")) |>
+  fit(data = small_train)
+
+augment(lasso_small, new_data = gpa_test) |> regression_metrics(final_gpa, .pred)
+```
+
+```{r}
+#| include: false
+lasso_small_rmse <- augment(lasso_small, new_data = gpa_test) |> rmse(final_gpa, .pred) |> pull(.estimate)
+```
+
+From the same 60 students, the lasso's RMSE on new students is `r sprintf("%.2f", lasso_small_rmse)`, against `r sprintf("%.2f", small_test_rmse)` for ordinary regression. The penalty kept the model from chasing noise.
+
+The difference lies in the coefficients. @fig-shrinkage compares, predictor by predictor, the coefficients that ordinary regression and the lasso estimated from the same 60 students:
+
+```{r}
+#| label: fig-shrinkage
+#| fig-cap: "Coefficients estimated from the same 60 students by ordinary regression (horizontal axis) and by the lasso (vertical axis), one point per predictor. Ordinary regression spreads large coefficients over many predictors; the lasso sets most of them to zero and keeps a few, smaller ones."
+#| fig-alt: "Scatter plot with ordinary regression coefficients on the x axis, spread widely in both directions, and lasso coefficients on the y axis. Most points lie on the horizontal line at zero; a handful sit above or below it, close to zero compared with their spread along the x axis."
+#| fig-width: 6
+#| fig-height: 4
+coefficient_comparison <- tidy(lm_small) |>
+  select(term, ordinary = estimate) |>
+  inner_join(tidy(lasso_small) |> select(term, lasso = estimate), join_by(term)) |>
+  filter(term != "(Intercept)")
+
+ggplot(coefficient_comparison, aes(x = ordinary, y = lasso)) +
+  geom_hline(yintercept = 0, colour = "grey70") +
+  geom_vline(xintercept = 0, colour = "grey70") +
+  geom_point(size = 2, alpha = 0.7, colour = "#2f6793") +
+  labs(x = "Ordinary regression coefficient", y = "Lasso coefficient") +
+  theme_minimal(base_size = 12)
+```
+
+```{r}
+#| include: false
+n_nonzero_small <- sum(coefficient_comparison$lasso != 0)
+coef_of <- function(model, term) {
+  sprintf("%.2f", coefficient_comparison[[model]][coefficient_comparison$term == term])
+}
+```
+
+Ordinary regression gives every predictor a coefficient, many of them large and in both directions: with 60 students, it cannot tell real effects from the chance patterns of this sample, so it fits both. Some of its coefficients make no sense. Semester 1 GPA, one of the best predictors of final GPA, receives a negative coefficient (`r coef_of("ordinary", "gpa_s1")`), and caffeine in semester 2 receives a larger one (`r coef_of("ordinary", "caffeine_mg_s2")`) than semester 2 GPA (`r coef_of("ordinary", "gpa_s2")`). The lasso gives both GPA measures positive coefficients (`r coef_of("lasso", "gpa_s1")` and `r coef_of("lasso", "gpa_s2")`) and almost nothing to caffeine. The lasso keeps only `r n_nonzero_small` of the `r nrow(coefficient_comparison)` predictors and shrinks even those. This is the sense in which shrinkage trades fit for stability: coefficients pulled towards zero cannot chase the noise of one sample, so they carry over better to the next.
+
+### Choosing the penalty
+
+The penalty and mixture are hyperparameters, so they are tuned with cross-validation, now on the full training set. The grid tries 20 penalties, spread evenly on a logarithmic scale from 0.0001 to 1, for ridge, an even elastic net, and lasso:
+
+```{r}
+glmnet_wf <- workflow(gpa_recipe,
+                      linear_reg(penalty = tune(), mixture = tune()) |> set_engine("glmnet"))
+
+glmnet_grid <- expand_grid(penalty = 10^seq(-4, 0, length.out = 20),
+                           mixture = c(0, 0.5, 1))
+
+set.seed(2026)
+glmnet_tuning <- tune_grid(glmnet_wf, resamples = gpa_folds, grid = glmnet_grid,
+                           metrics = metric_set(rmse))
+```
+
+```{r}
+#| label: fig-glmnet-tuning
+#| fig-cap: "Cross-validated RMSE of ridge (mixture 0), elastic net (0.5), and lasso (1) regression for a range of penalties."
+#| fig-alt: "Line chart of RMSE against penalty on a logarithmic scale, with three lines. All three start at similar values for small penalties. The lasso and elastic net lines dip to a minimum at moderate penalties, then rise steeply to the baseline's error. The ridge line stays almost flat and rises only for the largest penalties."
+#| fig-width: 6.5
+#| fig-height: 3.8
+autoplot(glmnet_tuning) + theme_minimal(base_size = 12)
+```
+
+@fig-glmnet-tuning shows the typical pattern. With a tiny penalty, all three behave like ordinary regression. As the penalty grows, the RMSE improves, reaches a minimum, and then rises steeply once the penalty is so large that it shrinks away real effects too. At the far right, the lasso has shrunk every coefficient to zero and predicts the mean for everyone: its RMSE equals the baseline's.
+
+```{r}
+show_best(glmnet_tuning, metric = "rmse", n = 3)
+```
+
+```{r}
+#| include: false
+best_glmnet <- show_best(glmnet_tuning, metric = "rmse", n = 1)
+```
+
+The best combination is a mixture of `r best_glmnet$mixture` with a penalty of `r signif(best_glmnet$penalty, 2)`, but the top few are nearly identical. The function `select_best()` picks the winner, and `finalize_workflow()` plugs it in:
+
+```{r}
+best_penalty <- select_best(glmnet_tuning, metric = "rmse")
+lasso_fit <- glmnet_wf |>
+  finalize_workflow(best_penalty) |>
+  fit(data = gpa_train)
+```
+
+### Predictors kept by the lasso
+
+The function `tidy()` lists the coefficients, most of which are exactly zero:
+
+```{r}
+lasso_coefs <- tidy(lasso_fit)
+lasso_coefs |>
+  filter(estimate != 0) |>
+  arrange(desc(abs(estimate)))
+```
+
+```{r}
+#| include: false
+n_kept <- sum(lasso_coefs$estimate != 0 & lasso_coefs$term != "(Intercept)")
+n_all <- sum(lasso_coefs$term != "(Intercept)")
+```
+
+Of `r n_all` predictors, the lasso keeps `r n_kept`. Because the predictors are normalised, the coefficients are comparable: the change in predicted final GPA for a one-standard-deviation difference in the predictor. Year-one GPA dominates. A student whose semester 2 GPA is one standard deviation above average is predicted to finish about `r sprintf("%.2f", lasso_coefs$estimate[lasso_coefs$term == "gpa_s2"])` GPA points higher; the other predictors add small adjustments.
+
+@fig-lasso-path shows how the lasso arrives at this. As the penalty decreases from left to right, predictors enter the model one by one, and the two GPA measures enter first.
+
+```{r}
+#| label: fig-lasso-path
+#| fig-cap: "Lasso coefficient paths. Each line is one predictor's coefficient as the penalty decreases from left to right. The dashed line marks the chosen penalty."
+#| fig-alt: "Line chart of coefficients against penalty (logarithmic scale, decreasing to the right). At large penalties all coefficients are zero. Two lines, semester 2 GPA and semester 1 GPA, rise first and highest. Many other lines leave zero only at smaller penalties and stay close to zero."
+#| fig-width: 6.5
+#| fig-height: 4
+#| echo: false
+lasso_path <- workflow(gpa_recipe, linear_reg(penalty = 0.01, mixture = 1) |> set_engine("glmnet")) |>
+  fit(data = gpa_train) |>
+  extract_fit_engine() |>
+  tidy() |>
+  filter(term != "(Intercept)")
+ggplot(lasso_path, aes(x = lambda, y = estimate, group = term)) +
+  geom_line(colour = "grey70") +
+  geom_line(data = filter(lasso_path, term %in% c("gpa_s1", "gpa_s2")),
+            aes(colour = term), linewidth = 1) +
+  geom_vline(xintercept = best_penalty$penalty, linetype = "dashed") +
+  scale_x_continuous(transform = scales::transform_compose("log10", "reverse")) +
+  scale_colour_manual(values = c(gpa_s1 = "#e07b39", gpa_s2 = "#2f6793")) +
+  labs(x = "Penalty (lambda)", y = "Coefficient", colour = NULL) +
+  theme_minimal(base_size = 12)
+```
+
+::: {.callout-warning}
+## Selected is not the same as causal
+
+It is tempting to read the lasso's choice as a list of what *matters* for grades. It is not. Sleep affects GPA in the wellbeing data (Chapter 8), yet the lasso drops the sleep variables, because their effect is already reflected in year-one GPA: once the model knows a student's past grades, knowing their sleep adds little to the *prediction*. Among correlated predictors, the lasso tends to keep one and drop the others, and which one it keeps can change from sample to sample. Use the lasso to predict, and use the methods of Chapters 8 and 10 to explain.
+:::
+
+## Boosting
+
+The second family builds a model in a completely different way. **Boosting** starts with a very simple prediction, the average, and then adds small decision trees one at a time, each fitted to the *errors* of the model so far. The first tree learns the biggest pattern in the errors; the next tree learns what the first missed; and so on. Each tree's contribution is scaled down by a **learning rate** (for example 0.1), so the model improves in small steps and no single tree dominates. Hundreds of trees, each weak on its own, add up to a strong model.
+
+@fig-boosting shows the idea with a single predictor, semester 2 GPA, and trees with a single split. After one tree, the prediction is a single step; after ten, a staircase; after a hundred, a curve that follows the data.
+
+```{r}
+#| label: fig-boosting
+#| fig-cap: "Boosting with one predictor. Predicted final GPA from semester 2 GPA after 1, 10, and 100 trees, each with a single split."
+#| fig-alt: "Three panels of final GPA against semester 2 GPA, with the training students as grey points. In the first panel, the prediction is a single step; in the second, a staircase with a few steps; in the third, a finely stepped line rising with semester 2 GPA and following the points closely."
+#| fig-width: 8
+#| fig-height: 3.2
+#| echo: false
+boost_data <- gpa_train |> filter(!is.na(gpa_s2))
+boost_grid <- tibble(gpa_s2 = seq(min(boost_data$gpa_s2), max(boost_data$gpa_s2), length.out = 200))
+set.seed(2026)
+boost_curves <- purrr::map(c(1, 10, 100), \(n) {
+  fitted <- boost_tree(trees = n, tree_depth = 1, learn_rate = 0.3) |>
+    set_engine("xgboost") |>
+    set_mode("regression") |>
+    fit(final_gpa ~ gpa_s2, data = boost_data)
+  predict(fitted, boost_grid) |>
+    bind_cols(boost_grid) |>
+    mutate(trees = paste(n, if (n == 1) "tree" else "trees"))
+}) |> list_rbind() |>
+  mutate(trees = factor(trees, levels = c("1 tree", "10 trees", "100 trees")))
+ggplot(boost_data, aes(x = gpa_s2, y = final_gpa)) +
+  geom_point(colour = "grey70", size = 0.8) +
+  geom_step(data = boost_curves, aes(y = .pred), colour = "#2f6793", linewidth = 1) +
+  facet_wrap(~ trees) +
+  labs(x = "Semester 2 GPA", y = "Final GPA") +
+  theme_minimal(base_size = 12)
+```
+
+Boosting is closely related to the random forests of Chapter 12, which also combine many trees. The difference is that a forest grows its trees *independently* and averages them, while boosting grows them *in sequence*, each correcting the last. **XGBoost** ("extreme gradient boosting") is a fast, popular implementation [@chen2016], and one of the most successful methods for tables of data. Its main hyperparameters are the number of trees, the learning rate, and the depth of each tree. A small learning rate needs more trees; deeper trees capture interactions between predictors. Here, 500 trees are used, and the learning rate and depth are tuned:
+
+```{r}
+xgb_wf <- workflow(gpa_recipe,
+                   boost_tree(trees = 500, learn_rate = tune(), tree_depth = tune()) |>
+                     set_engine("xgboost") |>
+                     set_mode("regression"))
+
+set.seed(2026)
+xgb_tuning <- tune_grid(xgb_wf, resamples = gpa_folds,
+                        grid = expand_grid(learn_rate = c(0.01, 0.03, 0.1),
+                                           tree_depth = c(1, 2, 4)),
+                        metrics = metric_set(rmse))
+show_best(xgb_tuning, metric = "rmse", n = 3)
+```
+
+```{r}
+#| include: false
+best_xgb <- show_best(xgb_tuning, metric = "rmse", n = 1)
+```
+
+The best settings use trees of depth `r best_xgb$tree_depth`, and the best RMSE is `r sprintf("%.3f", best_xgb$mean)`. Trees of depth 1 use one predictor each, so a boosted model built from them adds up separate effects of each predictor, with no interactions. That the shallowest trees work best is another sign that the wellbeing data has no strong interactions for the trees to find.
+
+## Comparing the models
+
+All the models were evaluated with the same folds, so their cross-validated RMSEs can be compared directly:
+
+```{r}
+bind_rows(
+  collect_metrics(null_cv) |> mutate(model = "Baseline (mean)"),
+  collect_metrics(lm_cv) |> mutate(model = "Linear regression"),
+  show_best(glmnet_tuning |> filter_parameters(mixture == 0), metric = "rmse", n = 1) |>
+    mutate(model = "Ridge"),
+  show_best(glmnet_tuning |> filter_parameters(mixture == 0.5), metric = "rmse", n = 1) |>
+    mutate(model = "Elastic net"),
+  show_best(glmnet_tuning |> filter_parameters(mixture == 1), metric = "rmse", n = 1) |>
+    mutate(model = "Lasso"),
+  show_best(xgb_tuning, metric = "rmse", n = 1) |> mutate(model = "XGBoost")
+) |>
+  filter(.metric == "rmse") |>
+  select(model, rmse = mean, std_err) |>
+  arrange(rmse)
+```
+
+The function `filter_parameters()` keeps only the tuning results with a given mixture, so the best ridge, elastic net, and lasso can be picked out separately.
+
+The regularised models come out on top, followed closely by XGBoost, and all of them improve on ordinary regression. The differences between the best models are smaller than their standard errors. The lasso is chosen: it predicts as well as any, and it uses only `r n_kept` predictors, which makes it the easiest to explain and to use.
+
+## The final test
+
+As always, the test set is used once, at the end. The function `last_fit()` fits the chosen model on the full training set and evaluates it on the test students:
+
+```{r}
+final_lasso <- glmnet_wf |>
+  finalize_workflow(best_penalty) |>
+  last_fit(gpa_split, metrics = regression_metrics)
+collect_metrics(final_lasso)
+```
+
+```{r}
+#| include: false
+final_m <- collect_metrics(final_lasso)
+final_rmse <- final_m$.estimate[final_m$.metric == "rmse"]
+final_mae <- final_m$.estimate[final_m$.metric == "mae"]
+final_rsq <- final_m$.estimate[final_m$.metric == "rsq"]
+```
+
+On new students, the lasso's predictions are off by `r sprintf("%.2f", final_mae)` GPA points on average (MAE), with an RMSE of `r sprintf("%.2f", final_rmse)`, and they capture `r round(100 * final_rsq)`% of the variation in final GPA. @fig-pred-actual compares the predictions with the actual final GPAs.
+
+```{r}
+#| label: fig-pred-actual
+#| fig-cap: "Predicted and actual final GPA for the test students. Points on the dashed line are predicted perfectly."
+#| fig-alt: "Scatter plot of actual final GPA against predicted final GPA for the test students. The points form an upward band around the diagonal line. The predictions span a narrower range than the actual values: the lowest and highest actual GPAs are predicted closer to the average."
+#| fig-width: 5
+#| fig-height: 5
+collect_predictions(final_lasso) |>
+  ggplot(aes(x = .pred, y = final_gpa)) +
+  geom_abline(linetype = "dashed", colour = "grey50") +
+  geom_point(alpha = 0.6, colour = "#2f6793") +
+  coord_obs_pred() +
+  labs(x = "Predicted final GPA", y = "Actual final GPA") +
+  theme_minimal(base_size = 12)
+```
+
+The function `coord_obs_pred()` from tune gives both axes the same range, so the diagonal is at 45 degrees. The predictions are less spread out than the actual values: the model predicts the most extreme students closer to the average than they turn out to be. This is normal for any model that cannot predict perfectly, and it means that the model is most reliable for students in the middle of the range.
+
+A last comparison shows how much all the year-one measures add to past grades. A plain regression on the two year-one GPAs alone gives:
+
+```{r}
+gpa_only_wf <- workflow(recipe(final_gpa ~ gpa_s1 + gpa_s2, data = gpa_train), linear_reg())
+gpa_only_fit <- last_fit(gpa_only_wf, gpa_split, metrics = regression_metrics)
+collect_metrics(gpa_only_fit)
+```
+
+```{r}
+#| include: false
+gpa_only_rmse <- collect_metrics(gpa_only_fit) |> filter(.metric == "rmse") |> pull(.estimate)
+```
+
+Its test RMSE, `r sprintf("%.3f", gpa_only_rmse)`, is practically the same as the lasso's `r sprintf("%.3f", final_rmse)`. For the advisers, this is a useful, if humbling, result: past grades are by far the best predictor of future grades, and the questionnaire and semester records add little on top. That does not make sleep, stress, or support irrelevant to grades (Chapter 8 showed that they matter), but their influence is already visible in the year-one grades.
+
+::: {.callout-note icon="false"}
+## In your field: engineering
+
+Engineers predict the strength of concrete from its recipe. The `concrete` data in the **modeldata** package records the compressive strength of `r nrow(modeldata::concrete)` concrete samples, with the amounts of cement, water, and six other ingredients, and the age of the sample in days [@yeh1998]. Strength rises with age, but less and less, and the ingredients interact: exactly the kind of structure where boosting shines.
+
+```{r}
+data(concrete, package = "modeldata")
+set.seed(1)
+concrete_split <- initial_split(concrete)
+
+lm_concrete <- workflow(compressive_strength ~ ., linear_reg())
+xgb_concrete <- workflow(compressive_strength ~ .,
+                         boost_tree(trees = 500, learn_rate = 0.05, tree_depth = 4) |>
+                           set_engine("xgboost") |>
+                           set_mode("regression"))
+
+lm_concrete_fit  <- last_fit(lm_concrete, concrete_split)
+xgb_concrete_fit <- last_fit(xgb_concrete, concrete_split)
+collect_metrics(lm_concrete_fit)
+collect_metrics(xgb_concrete_fit)
+```
+
+```{r}
+#| include: false
+concrete_rmse <- function(f) collect_metrics(f) |> filter(.metric == "rmse") |> pull(.estimate)
+```
+
+As the code shows, `workflow()` also accepts a formula in place of a recipe. Boosting cuts the RMSE from `r sprintf("%.1f", concrete_rmse(lm_concrete_fit))` to `r sprintf("%.1f", concrete_rmse(xgb_concrete_fit))` megapascals. The lesson of this chapter and the last is the same from both sides: flexible models win when the data has curves and interactions, and simple models are just as good when it does not. Only a fair comparison can tell which case you are in.
+:::
+
+## Common misconceptions
+
+Predictive regression invites a few characteristic misreadings.
+
+- **"More predictors always help."** Each extra coefficient is another chance to fit noise; with few cases, adding predictors can make predictions worse.
+- **"The predictors the lasso keeps are the ones that matter."** The lasso keeps the predictors that help *prediction*, and among correlated predictors it keeps one more or less arbitrarily.
+- **"A low RMSE means every prediction is accurate."** The RMSE is a typical error; predictions for students at the extremes are pulled towards the average and can be far off.
+- **"Boosting is always better than regression."** Boosting wins when the data has curves and interactions; on smooth data, regularised regression predicts as well and is easier to explain.
+
+## Chapter review
+
+### Summary
+
+- For numeric predictions, the MAE and RMSE measure the typical error in the units of the outcome (lower is better), and R² the share of variation captured. Always compare with a baseline that predicts the mean.
+- With many predictors relative to the number of cases, and correlated predictors, ordinary regression overfits: excellent on the training data, poor on new data.
+- Regularised regression penalises large coefficients. Ridge shrinks all coefficients; the lasso also sets some to zero, selecting predictors; the elastic net mixes the two. The penalty and mixture are tuned by cross-validation, and the predictors must be normalised.
+- The predictors a lasso selects are useful for prediction, not evidence of causes.
+- Boosting adds small trees one at a time, each fitted to the errors of the model so far. XGBoost's main hyperparameters are the number of trees, the learning rate, and the tree depth.
+- On the wellbeing data, regularised regression and boosting predict final GPA about equally well, and year-one GPA carries most of the information. On data with curves and interactions, boosting can be far better.
+
+### Key terms
+
+Regression (prediction), error, residual, MAE, RMSE, R², baseline model, overfitting, multicollinearity, regularisation, penalty (lambda), shrinkage, ridge regression, lasso, elastic net, mixture, coefficient path, variable selection, boosting, weak learner, learning rate, XGBoost, tree depth.
+
+## Exercises
+
+The [playground](../playground/chapter13.html) has these and more, with hints and solutions.
+
+1. Calculate the MAE and RMSE of the tiny example by hand (or with basic R arithmetic), and check them against yardstick. Change one prediction so that it is off by 1.0 GPA point, and explain which measure changes more, and why.
+2. Repeat the 60-student experiment with 150 students, and report the gap between ordinary regression and the lasso.
+3. Fit a ridge regression (mixture 0) with the best ridge penalty, compare its coefficients with the lasso's, and count how many are exactly zero.
+4. Replace the 22 questionnaire items with the four scale scores (as in Chapter 11), and describe how the cross-validated RMSE of the lasso changes.
+5. Tune XGBoost with `trees = c(100, 500, 1000)` and a learning rate of 0.03, and describe what happens to the RMSE as trees are added.
+6. Write two sentences for the academic advisers explaining what an RMSE of 0.2 means for an individual student's predicted GPA.
+
+## Further reading
+
+- *Tidy Modeling with R* [@kuhn2022] covers regularised regression and boosted trees in tidymodels, including more efficient tuning methods.
+- *An Introduction to Statistical Learning* [@james2021islr] explains ridge regression, the lasso, and boosting clearly, with the ideas behind why shrinkage helps.
+- Tibshirani's paper introducing the lasso [@tibshirani1996] is a classic of modern statistics.

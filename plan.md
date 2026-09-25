@@ -17,14 +17,14 @@ The story comes from the author's lecture notes *Data Analysis for Research* (20
 
 **Teaching pattern (decided):** Elaf's data is used from Chapter 1. Each new idea, data structure, or code block is first shown on a tiny example (a few values, close to the theme where possible), then applied to Elaf's data, as in the author's lecture notes. Real datasets appear in the "in your field" boxes.
 
-**Dataset:** specified in [data/specification.md](data/specification.md); the author's decisions are in its section 9 (unnamed university, GPA 0–4, randomly invited workshop, counselling visits for time series, 600 students, five faculties, data as both files and an R package).
+**Dataset:** specified in [data/specification.md](data/specification.md); the author's decisions are in its section 9 (unnamed university, GPA 0-4, randomly invited workshop, counselling visits for time series, 600 students, five faculties, data as both files and an R package).
 
 **Dataset specification:** approved by the author.
 
 **Rewrite, not repair (decided):** each chapter is rewritten around Elaf's study, in the author's voice. The current chapter drafts and both sets of lecture notes are source material: correct explanations and code are reused, everything else is replaced. The defects in section 3 are fixed as part of each rewrite, not in a separate pass over the old text.
 
 **Playground (decided):** an online section of the website, separate from the chapters, with one page per chapter for hands-on practice. Git is never required.
-- **Try it in the browser:** exercises run directly on the page with webR (R running inside the browser), so readers need no installation. Best for Chapters 1–9; packages that cannot run in the browser (e.g. `keras`) are practised through the downloadable project instead.
+- **Try it in the browser:** exercises run directly on the page with webR (R running inside the browser), so readers need no installation. Best for Chapters 1-9; packages that cannot run in the browser (e.g. `keras`) are practised through the downloadable project instead.
 - **Download the chapter project:** a zip file with an RStudio project, Elaf's data, a starter script with the exercises, and a solutions script. Readers either click a download link or type one line in R: `usethis::use_course("<link to the zip>")`, which downloads, unzips, and opens the project in RStudio.
 - **Hidden solutions:** each exercise has an answer that expands when clicked, so readers try first and check afterwards.
 - **Version control is optional:** git and GitHub are introduced only in Chapter 16 (reproducible research), as an extra for readers who want it.
@@ -32,7 +32,7 @@ The story comes from the author's lecture notes *Data Analysis for Research* (20
 
 ---
 
-## 1. Book structure (18 chapters)
+## 1. Book structure (19 chapters)
 
 | Part | Ch | Title | File | Status |
 |---|---|---|---|---|
@@ -40,25 +40,26 @@ The story comes from the author's lecture notes *Data Analysis for Research* (20
 | 1 | 2 | Data Structures in R | `book/02-data-structures.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
 | 1 | 3 | Data Manipulation | `book/03-data-manipulation.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
 | 1 | 4 | Data Visualization | `book/04-data-visualization.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 2 | 5 | Descriptive Statistics and EDA | `book/05-descriptive-statistics.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 2 | 6 | Hypothesis Testing and Statistical Inference | `book/06-hypothesis-testing.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 2 | 7 | ANOVA and Regression | `book/07-anova-regression.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 2 | 8 | Multivariate Statistical Methods | `book/08-multivariate.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 2 | 9 | Mixed-Effects Models | `book/09-mixed-models.qmd` | **Written** (new chapter, first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 3 | 10 | Introduction to Machine Learning in R | `book/10-machine-learning.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 3 | 11 | Classification Models | `book/11-classification.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 3 | 12 | Predictive Regression | `book/12-predictive-regression.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 3 | 13 | Advanced Clustering | `book/13-advanced-clustering.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 3 | 14 | Neural Networks | `book/14-neural-networks.qmd` | **Written** (split from the old Ch 14; first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 3 | 15 | Time Series Forecasting | `book/15-time-series.qmd` | **Written** (split from the old Ch 14; first full draft, 2026-09-24), with playground page; awaiting the author's review |
-| 4 | 16 | Reproducible Research | `book/16-reproducible-research.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page and a Quarto project download; awaiting the author's review |
-| 4 | 17 | Using AI with R | `book/17-ai.qmd` | **Written** (new chapter, first full draft, 2026-09-24), with playground page; **the language-model results are pending**: the author runs `data-raw/run_ai_coding.R` with his API key, then deletes `book/_freeze/17-ai` and re-renders the chapter; awaiting the author's review |
-| 4 | 18 | Putting It All Together | `book/18-putting-it-together.qmd` | **Written** (new chapter, first full draft, 2026-09-24), with playground page and a complete project download; awaiting the author's review |
-| – | A | Installation and Setup | `book/a-installation.qmd` | **Rewritten** (first full draft, 2026-09-24), without screenshots (steps described in words); awaiting the author's review |
-| – | B | Glossary | `book/b-glossary.qmd` | **Written** (first full draft, 2026-09-24): definitions in `book/glossary.txt`, functions in `book/functions.txt`; chapter references are added automatically, and rendering stops if a chapter's key term has no definition; awaiting the author's review |
-| – | C | R Packages | `book/c-packages.qmd` | **Written** (first full draft, 2026-09-24): packages in `book/packages.txt`; chapters found automatically and versions read when the book is built; awaiting the author's review |
-| – | D | Common Errors | `book/d-common-errors.qmd` | **Written** (first full draft, 2026-09-24): every message is produced live when the book is built; awaiting the author's review |
-| – | E | Further Resources | `book/e-resources.qmd` | **Written** (first full draft, 2026-09-24); Arabic resources removed at the author's request; awaiting the author's review |
+| 2 | 5 | From Research Question to Data | `book/05-research-question.qmd` | **In progress** (new chapter, 2026-09-25) |
+| 2 | 6 | Descriptive Statistics and EDA | `book/06-descriptive-statistics.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 2 | 7 | Hypothesis Testing and Statistical Inference | `book/07-hypothesis-testing.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 2 | 8 | ANOVA and Regression | `book/08-anova-regression.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 2 | 9 | Multivariate Statistical Methods | `book/09-multivariate.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 2 | 10 | Mixed-Effects Models | `book/10-mixed-models.qmd` | **Written** (new chapter, first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 3 | 11 | Introduction to Machine Learning in R | `book/11-machine-learning.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 3 | 12 | Classification Models | `book/12-classification.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 3 | 13 | Predictive Regression | `book/13-predictive-regression.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 3 | 14 | Advanced Clustering | `book/14-advanced-clustering.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 3 | 15 | Neural Networks | `book/15-neural-networks.qmd` | **Written** (split from the old Ch 14; first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 3 | 16 | Time Series Forecasting | `book/16-time-series.qmd` | **Written** (split from the old Ch 14; first full draft, 2026-09-24), with playground page; awaiting the author's review |
+| 4 | 17 | Reproducible Research | `book/17-reproducible-research.qmd` | **Rewritten** (first full draft, 2026-09-24), with playground page and a Quarto project download; awaiting the author's review |
+| 4 | 18 | Using AI with R | `book/18-ai.qmd` | **Written** (new chapter, first full draft, 2026-09-24), with playground page; language-model results produced locally with Gemma 4 through Ollama (2026-09-24); awaiting the author's review |
+| 4 | 19 | Putting It All Together | `book/19-putting-it-together.qmd` | **Written** (new chapter, first full draft, 2026-09-24), with playground page and a complete project download; awaiting the author's review |
+| - | A | Installation and Setup | `book/a-installation.qmd` | **Rewritten** (first full draft, 2026-09-24), without screenshots (steps described in words); awaiting the author's review |
+| - | B | Glossary | `book/b-glossary.qmd` | **Written** (first full draft, 2026-09-24): definitions in `book/glossary.txt`, functions in `book/functions.txt`; chapter references are added automatically, and rendering stops if a chapter's key term has no definition; awaiting the author's review |
+| - | C | R Packages | `book/c-packages.qmd` | **Written** (first full draft, 2026-09-24): packages in `book/packages.txt`; chapters found automatically and versions read when the book is built; awaiting the author's review |
+| - | D | Common Errors | `book/d-common-errors.qmd` | **Written** (first full draft, 2026-09-24): every message is produced live when the book is built; awaiting the author's review |
+| - | E | Further Resources | `book/e-resources.qmd` | **Written** (first full draft, 2026-09-24); Arabic resources removed at the author's request; awaiting the author's review |
 
 Chapter order and parts are set in `book/_quarto.yml`. The earlier Jekyll drafts are in `archive/jekyll/_chapters/` and are source material for the rewrites.
 
@@ -69,7 +70,7 @@ Chapter order and parts are set in `book/_quarto.yml`. The earlier Jekyll drafts
 ### 2.1 Restructure
 - Each chapter follows the same template:
   1. Short introduction: why this matters to a researcher.
-  2. Learning objectives (3–5 bullets).
+  2. Learning objectives (3-5 bullets).
   3. Main sections, numbered `N.1`, `N.2`, … (sub-sections `N.1.1`).
   4. A worked case study or hands-on project.
   5. **Chapter review**: a short summary and a list of **key terms** (key terms are also added to the glossary in Appendix B).
@@ -134,20 +135,20 @@ Chapter order and parts are set in `book/_quarto.yml`. The earlier Jekyll drafts
 These are fixed as part of each chapter's rewrite (section 0). They are listed so nothing is carried over into the new text.
 
 ### Critical
-- [ ] **Chapters 4–15: code is not formatted as code.** About 180 code blocks are plain paragraphs under a lone `R` line, with escaped characters and output pasted as text. Inline code formatting was lost, leaving broken sentences (e.g. Ch 5: "mean() function performs this calculation.").
-- [x] **Chapter 4 contains the chapter twice.** (Resolved by the rewrite.) Lines 10–202 are an older, garbled copy (R comments render as headings); the real chapter starts at line 208 after a dashed separator.
+- [ ] **Chapters 4-15: code is not formatted as code.** About 180 code blocks are plain paragraphs under a lone `R` line, with escaped characters and output pasted as text. Inline code formatting was lost, leaving broken sentences (e.g. Ch 5: "mean() function performs this calculation.").
+- [x] **Chapter 4 contains the chapter twice.** (Resolved by the rewrite.) Lines 10-202 are an older, garbled copy (R comments render as headings); the real chapter starts at line 208 after a dashed separator.
 
 ### Chapter-specific
 - [x] Ch 2 (fixed in the rewrite): import/export comes before vectors; move it after data frames. Remove duplicated "Exporting Data" and "Aggregating Data" sections. Reduce the "Basic Exploratory Analysis" and missing-data sections, which overlap Chapters 3 and 5.
-- [x] Ch 2–3: act on, then delete, 9 reviewer notes in HTML comments. (Ch 2 rewritten without them; its notes were covered: e.g. simpler matrices, one summary section.)
-- [ ] Ch 1–3: 255 code fences have no language label.
+- [x] Ch 2-3: act on, then delete, 9 reviewer notes in HTML comments. (Ch 2 rewritten without them; its notes were covered: e.g. simpler matrices, one summary section.)
+- [ ] Ch 1-3: 255 code fences have no language label.
 - [x] Ch 8: first section numbered "1." instead of "8.1". (Resolved by the rewrite; Quarto numbers sections automatically.)
 - [ ] Ch 11: Table 11.2 appears before Table 11.1.
 - [x] Ch 12: add a plain linear model as a baseline in the life expectancy project. (Done in the rewrite: the chapter now uses Elaf's final GPA, with a mean baseline and a plain linear model; the concrete data replaces life expectancy in the "In your field" box.)
 - [x] Ch 14: section 14.1 (ensembles) repeats bagging (Ch 11.2) and boosting (Ch 12). Remove or reduce it, then retitle the chapter (e.g. "Neural Networks and Time Series Forecasting"), or split it into two chapters. (The author chose to split: Ch 14 Neural Networks, Ch 15 Time Series Forecasting; the ensembles section is dropped.)
 - [x] Ch 16 (formerly 15): no chapter summary. (Resolved by the rewrite.)
 - [x] Unused Jekyll stub `005-chapter00.md` ("Tempo") left behind in `archive/jekyll/`; not part of the Quarto book.
-- [ ] Part index pages have no titles, and Parts 2–4 are `published: false`; check whether this is intended.
+- [ ] Part index pages have no titles, and Parts 2-4 are `published: false`; check whether this is intended.
 
 ---
 
@@ -195,9 +196,9 @@ Proposed, not yet in the outline:
 4. [x] **Build the playground pilot**: `playground/chapter01.md` (7 browser exercises with hidden solutions) and `playground/chapter01.zip` (RStudio project), built by `data-raw/build_playground.R` from `playground-src/`. Tested on a local Jekyll server without cross-origin headers (the GitHub Pages situation): R starts, all exercises run, plots draw, errors display. **Still to confirm:** the same on the live GitHub Pages site after pushing.
 4b. [x] **Quarto prototype** (`quarto/`): a Quarto website (`quarto/site/`: landing page, playground with quarto-live) and a Quarto book (`quarto/book/`: welcome page and a sample chapter) rendered together into `quarto/_site/`. Build: render `site` first, then `book`. Verified: landing page sections and links, the sample chapter (code runs, figure numbering and cross-reference, Mermaid diagram, citation and reference list, callouts, numbers in the text taken from the code). **Still to verify:** the quarto-live exercises in a visible browser (they do not start in a hidden browser pane).
 4c. [ ] **Move the book to Quarto**. Done: the Jekyll site is archived in `archive/jekyll/`; the website is in `site/` and the book in `book/` (17 chapter and 5 appendix placeholders, each with Elaf's question and an outline; Chapter 6 starts with the written *Comparing two groups* section); the pre-render script is TypeScript (`site/copy_resources.ts`) and code results are frozen, so `.github/workflows/publish.yml` publishes without R (checked: a whole-project build runs no R code). **Checked 2026-09-24:** layout has no horizontal overflow at desktop or phone width; quarto-live exercises run in a visible browser (Chapters 3, 9, and 14: dplyr, lme4, and nnet, with results matching the book). **Still to do:** push, then switch GitHub Pages to "GitHub Actions" (Settings > Pages) and check the live site.
-5. [x] **Rewrite each chapter** around Elaf's study (section 0), using the template in 2.1 and following sections 2.2–2.7: tiny example first, then Elaf's data; fact-checked content and proper references; figures, diagrams, "in your field" boxes, exercises, and chapter reviews. Each chapter also gets its playground page. (First drafts of all 18 chapters and their playground pages done 2026-09-24; awaiting the author's review.)
-6. [x] **Write the new chapters** (9, 17, 18) and appendices B–E. (Done 2026-09-24; Chapter 17's language-model results produced with a local model on 2026-09-24.)
-7. [ ] **Unify style** across the whole book. First pass done 2026-09-24: every chapter follows the template (objectives, In your field box, review, key terms, exercises, playground link, further reading); spelling is consistently British except titles of cited works and the Ch 4 title "Data Visualization"; callout types unified (tip = practical advice and write-ups, important = rules, warning = pitfalls); all cross-chapter references checked after the renumbering. A fresh render of every chapter (2026-09-24, R 4.4.3, ggplot2 4.0.3) changed no number in the text; figures in Chapters 4–8 were redrawn by the newer ggplot2.
+5. [x] **Rewrite each chapter** around Elaf's study (section 0), using the template in 2.1 and following sections 2.2-2.7: tiny example first, then Elaf's data; fact-checked content and proper references; figures, diagrams, "in your field" boxes, exercises, and chapter reviews. Each chapter also gets its playground page. (First drafts of all 18 chapters and their playground pages done 2026-09-24; awaiting the author's review.)
+6. [x] **Write the new chapters** (9, 17, 18) and appendices B-E. (Done 2026-09-24; Chapter 17's language-model results produced with a local model on 2026-09-24.)
+7. [ ] **Unify style** across the whole book. First pass done 2026-09-24: every chapter follows the template (objectives, In your field box, review, key terms, exercises, playground link, further reading); spelling is consistently British except titles of cited works and the Ch 4 title "Data Visualization"; callout types unified (tip = practical advice and write-ups, important = rules, warning = pitfalls); all cross-chapter references checked after the renumbering. A fresh render of every chapter (2026-09-24, R 4.4.3, ggplot2 4.0.3) changed no number in the text; figures in Chapters 4-8 were redrawn by the newer ggplot2.
 8. [ ] **Publish**: set `published: true` chapter by chapter as each one is finished.
 
 ---
@@ -205,14 +206,14 @@ Proposed, not yet in the outline:
 ## 7. Decisions log
 
 - **Chapter titles** (short form where it fits): Ch 1 "Getting Started with R", Ch 7 "ANOVA and Regression", Ch 12 "Predictive Regression", Ch 13 "Advanced Clustering". Abstracts rewritten to match content.
-- **Mixed-Effects Models** placed as Ch 9, at the end of Part 2 (after Multivariate Methods), so Chapters 1–8 keep their numbers.
+- **Mixed-Effects Models** placed as Ch 9, at the end of Part 2 (after Multivariate Methods), so Chapters 1-8 keep their numbers.
 - **Using AI with R** placed as Ch 16 (Ch 17 since the split of Chapter 14), before the final chapter, because its section on disclosing AI use builds on Reproducible Research.
 - **Notice that the data is fictional** (2026-09-25, the author's request): a clear statement that Elaf, her study, and her data are fictional, generated by a program with patterns built in by the author, describe no real people, and must not be cited or used as findings about real students. It appears in full in a callout where the data is first loaded in Chapter 1, in the book's preface, and in the landing-page FAQ; and in a short form in the landing page's "Get the data" section, the data2thesis package description and help, and every playground project README.
 - **Chapter 17 uses a local model** (2026-09-24, the author's choice, replacing the earlier plan of an online model with an API key): the language-model results come from Google's Gemma 4 (`gemma4:e4b`), run locally through Ollama on the author's laptop (RTX 4060 GPU), with no key and no cost, so the answers never leave the computer. The model does not reliably follow ellmer's structured-output format, so the script asks for the theme name as text and checks each reply against the list of themes. The chapter, its download project, and `data-raw/run_ai_coding.R` describe both options (local and online).
 - **Specification updated to match the data** (2026-09-24, the author's choice): Chapter 12's trees do not beat a straight line for final GPA, and Chapter 13 finds three profiles rather than four; the specification now says so, and the chapters are unchanged. **Arabic resources** removed from Appendix E at the author's request.
 - **Chapter 17 data and AI results** (2026-09-24, the author's choices): the open-ended answers are regenerated with much more varied text as dataset version 1.1.0, keeping every other value identical (same random draws, themes, and coded subset); the chapter's language-model results come from a script that the author runs once with his own API key through `ellmer`, and the results are saved to a file that the chapter reads, so the book renders without a key; `ellmer` installed with the author's permission.
 - **Chapter 16 content** (2026-09-24, the author's choices): Quarto is taught first, with a short box on R Markdown for older projects; the chapter includes renv, git and GitHub as an optional section, and open science practices (sharing data and code, preregistration, ethics and anonymisation, citing software); `targets` is left out; Shiny is covered with a small, complete wellbeing dashboard.
-- **Chapter 14 split** (2026-09-24, the author's choice): the old "Advanced Machine Learning Techniques" became Ch 14 *Neural Networks* and Ch 15 *Time Series Forecasting*; its ensembles section was dropped (covered in Ch 11 and 12). Chapters 15–17 became 16–18, and files, section labels, cross-references, the landing page, README, and the dataset specification were updated in one pass.
+- **Chapter 14 split** (2026-09-24, the author's choice): the old "Advanced Machine Learning Techniques" became Ch 14 *Neural Networks* and Ch 15 *Time Series Forecasting*; its ensembles section was dropped (covered in Ch 11 and 12). Chapters 15-17 became 16-18, and files, section labels, cross-references, the landing page, README, and the dataset specification were updated in one pass.
 - **Renumbering** of files, slugs, section numbers, table numbers, and cross-references was done in one pass (chapters 9+ were unpublished, so no live links broke).
 - **Outside material** (the "Internet Links" bookmarks folder, EPIB607 course notes, YouTube channels) is used as suggestions, not as instructions.
 - **Running case study:** graduate student wellbeing (from the author's lecture notes), with "in your field" boxes for other fields. Alternatives considered: a diabetes clinic programme, a school reading programme, a wheat farming trial, employee wellbeing, and air quality and hospital visits. The student wellbeing study was chosen because nearly every reader is or was a graduate student, and the author's notes already exist.
@@ -227,3 +228,5 @@ Proposed, not yet in the outline:
 - **Packages for Part 3** (installed 2026-09-24 with the author's permission): tidymodels, kknn, ranger, kernlab, themis, glmnet, xgboost, mclust, dbscan, and lmerTest. `vip` is no longer available on CRAN for R 4.4, so variable importance is plotted with the model's own output and ggplot2. Chapters 14 and 15: the author chose `nnet` through tidymodels (`mlp()`) for neural networks, with deep learning (`keras3`, `torch`) described but not installed, and `fable`, `tsibble`, and `feasts` for forecasting (installed 2026-09-24 with the author's permission; `feasts` and `ggtime` as Windows binaries, because the newest `ggtime` needs compilation, plus `urca`, which `ARIMA()` needs for its unit-root tests).
 - **Follow-up:** the cover images (`assets/img/front-cover.png`, `back-cover.png`) still show the old title; to be redone later.
 - **Publishing system: Quarto** (replacing Jekyll and the jekyll-chapterbook theme). Code runs when the book is built, so outputs and plots always match the code; built-in Mermaid, callouts, cross-references, citations, search, dark mode, and PDF/EPUB output; the quarto-live extension provides the playground exercises; the same tools suit the future Python book. A Quarto website holds the landing page and playground, with the Quarto book at `/book/`.
+- **New Chapter 5, From Research Question to Data** (2026-09-25, the author's choice): a new chapter at the start of Part 2 on research questions, hypotheses and falsifiability, variables and measurement, reliability and validity, designs, sampling, and planning. Chapters 5-18 became 6-19; files, section labels, cross-references, playground pages and downloads, the landing page, README, and the dataset specification were updated in one pass. The second revision plan is in [revision-plan-2.md](revision-plan-2.md).
+- **Visual style** (2026-09-25, the author's request): the site and book take their look from the author's front-end book (`WebApp/new-lectures`): a pale blue-grey canvas (deep navy in dark mode), navy links, copper as a second accent, Inter for text, Chakra Petch for display titles, and IBM Plex Mono for code and small labels (from Google Fonts). Code sits in a white card; results sit below it in a quieter tinted box with a copper edge and an "Output" label; inline code is crimson on a light chip. The landing page has the same faint grid, hero, and card styles. Colours are in `site/styles/light.scss` and `dark.scss`; the shared rules are in `site/styles/theme.scss`.

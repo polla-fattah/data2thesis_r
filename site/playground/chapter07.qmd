@@ -1,11 +1,11 @@
 ---
 title: "Playground: Chapter 7"
-subtitle: ANOVA and Regression
+subtitle: Hypothesis Testing and Statistical Inference
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
@@ -16,6 +16,7 @@ resources:
 webr:
   packages:
     - dplyr
+    - ggplot2
   resources:
     - students.csv
     - semesters.csv
@@ -24,184 +25,595 @@ webr:
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-These exercises practise ANOVA, linear regression, and logistic regression on Elaf's data. Where you see `______`, replace it with your own code.
+This page practises the ideas of Chapter 7 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with new questions and some of R's built-in datasets. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with an empty code space and no answers: you decide how to analyse the data, as you will in your own thesis. Several results on this page are *not* significant; a non-significant result is still a result.
+
+In the exercises, replace each `______` with your own code and press **Run Code**.
 
 ```{webr}
 #| setup: true
-#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6, gf1, gf2, gf3, gf4, gf5]
 library(dplyr)
 students      <- read.csv("students.csv")
 semesters     <- read.csv("semesters.csv")
 questionnaire <- read.csv("questionnaire.csv")
-scores <- questionnaire |>
-  mutate(
-    stress_4 = 6 - stress_4,
-    stress   = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
-    support  = rowMeans(pick(support_1:support_6), na.rm = TRUE),
-    burnout  = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE)
-  ) |>
-  select(student_id, stress, support, burnout)
-study <- students |>
-  left_join(scores, join_by(student_id)) |>
-  left_join(semesters |> filter(semester == 1), join_by(student_id))
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
 ```
 
-## ANOVA
+```{webr}
+#| include: false
+library(dplyr)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
+```
 
-### Exercise 1: Wellbeing across faculties
+## Practise the chapter
 
-Does first-semester wellbeing differ between faculties? Run a one-way ANOVA and calculate $\eta^2$. Should you run Tukey's test?
+These are the exercises at the end of Chapter 7, with the same numbers.
+
+### Exercise 1: Two sampling distributions
+
+Draw 1,000 samples of 10 students' first-semester study hours, and 1,000 samples of 50. Compare the spread (SD) of the two sets of averages, plot the averages of 50, and explain the difference.
 
 ```{webr}
 #| exercise: ex1
-wellbeing_anova <- aov(wellbeing ~ ______, data = study)
-summary(wellbeing_anova)
-ss <- summary(wellbeing_anova)[[1]][["Sum Sq"]]
-ss[1] / sum(ss)
+study <- first_sem$study_hours[!is.na(first_sem$study_hours)]
+set.seed(1)
+means_10 <- replicate(1000, mean(sample(study, 10)))
+means_50 <- replicate(1000, mean(sample(study, ______)))
+sd(means_10)
+sd(means_50)
+hist(means_50)
 ```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The blank is the sample size: the second set of samples has 50 students each.
+:::
+:::
 
 ::: { .solution exercise="ex1" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-wellbeing_anova <- aov(wellbeing ~ faculty, data = study)
-summary(wellbeing_anova)
-ss <- summary(wellbeing_anova)[[1]][["Sum Sq"]]
-ss[1] / sum(ss)
+study <- first_sem$study_hours[!is.na(first_sem$study_hours)]
+set.seed(1)
+means_10 <- replicate(1000, mean(sample(study, 10)))
+means_50 <- replicate(1000, mean(sample(study, 50)))
+sd(means_10)
+sd(means_50)
+hist(means_50)
 ```
 
-The p-value is about 0.09, above 0.05, and $\eta^2$ is about 0.01: no evidence that wellbeing differs between faculties. Post-hoc tests are run only after a significant ANOVA, so there is no need for Tukey's test here. (Stress did differ between faculties; wellbeing does not.)
+The averages of 50 students vary much less (an SD of about 1.8 hours, against about 4.2 for samples of 10). Larger samples give more precise estimates: the standard error shrinks with $\sqrt{n}$, so five times as many students gives an error about $\sqrt{5} \approx 2.2$ times smaller.
 :::
 :::
 
-## Linear regression
+### Exercise 2: A confidence interval
 
-### Exercise 2: One predictor
-
-Regress first-semester wellbeing on sleep hours. Interpret the slope and R-squared.
+Calculate a 95% confidence interval for the average first-semester GPA, and explain in one sentence what it tells you.
 
 ```{webr}
 #| exercise: ex2
-wb_simple <- lm(______ ~ sleep_hours, data = study)
-summary(wb_simple)
+______(first_sem$gpa)$conf.int
 ```
+
+::: { .hint exercise="ex2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The function that tests the mean of one variable also returns a confidence interval for that mean, stored in `$conf.int`.
+:::
+:::
 
 ::: { .solution exercise="ex2" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-wb_simple <- lm(wellbeing ~ sleep_hours, data = study)
-summary(wb_simple)
+t.test(first_sem$gpa)$conf.int
 ```
 
-Each extra hour of sleep goes with wellbeing about 5.3 points higher, and sleep alone explains about 21% of the differences in wellbeing.
+The average GPA of graduate students is plausibly between about 3.08 and 3.13. The interval is narrow because 600 students give a precise estimate.
 :::
 :::
 
-### Exercise 3: More predictors
+### Exercise 3: A one-sample test against 60
 
-Add stress and support to the model. What happens to the slope of sleep, and to R-squared?
+Test whether the average first-semester wellbeing differs from 60. State the hypotheses, run the test, and write a one-sentence conclusion.
 
 ```{webr}
 #| exercise: ex3
-wb_multiple <- lm(wellbeing ~ sleep_hours + ______ + ______, data = study)
-summary(wb_multiple)
+# H0:
+# H1:
+t.test(first_sem$wellbeing, mu = ______)
 ```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+$H_0$: the average is 60. Look at the p-value and at whether the confidence interval includes 60.
+:::
+:::
 
 ::: { .solution exercise="ex3" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-wb_multiple <- lm(wellbeing ~ sleep_hours + stress + support, data = study)
-summary(wb_multiple)
+# H0: the average first-semester wellbeing is 60
+# H1: the average is not 60
+t.test(first_sem$wellbeing, mu = 60)
 ```
 
-The slope of sleep drops from about 5.3 to about 3.9: part of what looked like the effect of sleep was really stress, because stressed students also sleep less. R-squared doubles, to about 0.43. Each point of stress lowers wellbeing by about 6 points, holding sleep and support constant.
+The average is 60.5, the confidence interval (about 59.5 to 61.4) includes 60, and the p-value is about 0.35. A one-sentence conclusion: *average first-semester wellbeing did not differ significantly from 60 (M = 60.5, 95% CI [59.5, 61.4], p = .35).* This does not prove that the average is exactly 60, only that the data is consistent with it.
 :::
 :::
 
-### Exercise 4: A categorical predictor
+### Exercise 4: Full-time and part-time students
 
-Add `study_mode` to the model from Exercise 3. What is the reference category, and what does the coefficient mean?
+Compare the first-semester GPA of full-time and part-time students, first with a permutation test of 5,000 shuffles, then with a two-sample t-test. Calculate Cohen's *d* and compare the two p-values.
 
 ```{webr}
 #| exercise: ex4
-wb_mode <- lm(wellbeing ~ sleep_hours + stress + support + ______, data = study)
-summary(wb_mode)$coefficients
+observed <- mean(first_sem$gpa[first_sem$study_mode == "Full-time"]) -
+  mean(first_sem$gpa[first_sem$study_mode == "Part-time"])
+
+set.seed(2026)
+shuffled <- replicate(5000, {
+  mode <- sample(first_sem$______)
+  mean(first_sem$gpa[mode == "Full-time"]) - mean(first_sem$gpa[mode == "Part-time"])
+})
+mean(abs(shuffled) >= abs(observed))
+
+______(gpa ~ study_mode, data = first_sem)
+
+full <- first_sem$gpa[first_sem$study_mode == "Full-time"]
+part <- first_sem$gpa[first_sem$study_mode == "Part-time"]
+(mean(full) - mean(part)) / sqrt((var(full) + var(part)) / 2)
 ```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The permutation test shuffles the group labels, which breaks any link between study mode and GPA; its p-value is the share of shuffles at least as extreme as the observed difference. The formula `gpa ~ study_mode` compares the means of the two groups, which is the job of the two-sample t-test.
+:::
+:::
 
 ::: { .solution exercise="ex4" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-wb_mode <- lm(wellbeing ~ sleep_hours + stress + support + study_mode, data = study)
-summary(wb_mode)$coefficients
+observed <- mean(first_sem$gpa[first_sem$study_mode == "Full-time"]) -
+  mean(first_sem$gpa[first_sem$study_mode == "Part-time"])
+
+set.seed(2026)
+shuffled <- replicate(5000, {
+  mode <- sample(first_sem$study_mode)
+  mean(first_sem$gpa[mode == "Full-time"]) - mean(first_sem$gpa[mode == "Part-time"])
+})
+mean(abs(shuffled) >= abs(observed))
+
+t.test(gpa ~ study_mode, data = first_sem)
+
+full <- first_sem$gpa[first_sem$study_mode == "Full-time"]
+part <- first_sem$gpa[first_sem$study_mode == "Part-time"]
+(mean(full) - mean(part)) / sqrt((var(full) + var(part)) / 2)
 ```
 
-The reference category is `Full-time` (first in alphabetical order), so the coefficient `study_modePart-time` compares part-time with full-time students. Part-time students' wellbeing is about 3 points lower, holding sleep, stress, and support constant, and the difference is significant.
+The two groups differ by only 0.003 grade points. About 92% of the shuffles produce a difference at least as large, so the permutation p-value is about 0.92, almost identical to the t-test's (about 0.92): the two methods ask the same question in different ways. Cohen's *d* is about 0.01, practically zero. Part-time students have lower *wellbeing* (Chapter 8), but not lower grades.
 :::
 :::
 
-## Logistic regression
+### Exercise 5: Power by simulation
 
-### Exercise 5: Burnout and dropout
-
-Fit a logistic regression of considering dropout on burnout, and turn the coefficient into an odds ratio with a confidence interval.
+Using the chapter's `simulate_study()` function, find the power of a study with 40 students per group when the true workshop effect is 3 points instead of 5, and explain what the result means for a researcher planning such a study.
 
 ```{webr}
 #| exercise: ex5
-study <- study |> mutate(dropout = as.integer(considering_dropout == "Yes"))
-burnout_model <- glm(dropout ~ burnout, data = study, family = ______)
-exp(cbind(coef(burnout_model), confint.default(burnout_model)))
+simulate_study <- function(n_per_group, effect = 5, sd = 11) {
+  invited     <- rnorm(n_per_group, mean = 60 + effect, sd = sd)
+  not_invited <- rnorm(n_per_group, mean = 60, sd = sd)
+  t.test(invited, not_invited)$p.value < 0.05
+}
+
+set.seed(3)
+mean(replicate(2000, simulate_study(______, effect = ______)))
 ```
+
+::: { .hint exercise="ex5" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The first argument is the number of students per group. The average of 2,000 TRUE/FALSE results is the share of simulated studies that found the effect.
+:::
+:::
 
 ::: { .solution exercise="ex5" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-study <- study |> mutate(dropout = as.integer(considering_dropout == "Yes"))
-burnout_model <- glm(dropout ~ burnout, data = study, family = binomial)
-exp(cbind(coef(burnout_model), confint.default(burnout_model)))
+set.seed(3)
+mean(replicate(2000, simulate_study(40, effect = 3)))
+power.t.test(n = 40, delta = 3, sd = 11)$power
 ```
 
-The odds ratio for burnout is about 3.7 (95% CI about 2.5 to 5.4): each extra point of burnout multiplies the odds of considering dropout by nearly four.
+The power is only about 0.23: such a study would miss a real 3-point effect more than three times in four, and a non-significant result from it would say very little. Reaching 80% power for this effect needs about 212 students per group, which `power.t.test(delta = 3, sd = 11, power = 0.8)` confirms.
 :::
 :::
 
-### Exercise 6: A predicted probability
+### Exercise 6: Living away and dropout
 
-Using the model from Exercise 5, what is the predicted probability of considering dropout for a student with a burnout score of 2, and for one with a score of 4?
+Test whether living away from family (`lives_away`) is related to considering dropout. Make the table, look at the proportions, run a chi-square test, and check the expected counts.
 
 ```{webr}
 #| exercise: ex6
-study <- study |> mutate(dropout = as.integer(considering_dropout == "Yes"))
-burnout_model <- glm(dropout ~ burnout, data = study, family = binomial)
-predict(burnout_model, newdata = data.frame(burnout = c(2, 4)), type = ______)
+away <- table(students$lives_away, students$considering_dropout)
+away
+prop.table(away, margin = 1)
+test <- ______(away)
+test
+test$______
 ```
+
+::: { .hint exercise="ex6" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Two categorical variables in a table call for a chi-square test of independence, which R runs with `chisq.test()`. The counts the test expects under independence are stored in the result as `$expected`.
+:::
+:::
 
 ::: { .solution exercise="ex6" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-predict(burnout_model, newdata = data.frame(burnout = c(2, 4)), type = "response")
+away <- table(students$lives_away, students$considering_dropout)
+away
+prop.table(away, margin = 1)
+test <- chisq.test(away)
+test
+test$expected
 ```
 
-`type = "response"` gives probabilities. A student with low burnout has only a small chance of considering dropout; one with high burnout, a much larger chance.
+17% of students who live away from family have considered dropping out, against 14% of those who do not, but the p-value is about 0.31: a difference this size could easily be chance. The smallest expected count is about 38, far above 5, so the test is reliable. (For a 2 × 2 table, R applies a small correction, named in the output as Yates' continuity correction.)
 :::
 :::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 7: How often a confidence interval is right
+
+The book says that 95% of confidence intervals contain the true value. Check it: treat the 600 students as the population, draw 100 samples of 30 students, calculate a 95% interval for average wellbeing from each, and count how many contain the true average.
+
+```{webr}
+#| exercise: gf1
+population <- first_sem$wellbeing
+true_mean  <- mean(population)
+
+set.seed(4)
+covered <- replicate(100, {
+  ci <- t.test(sample(population, ______))$conf.int
+  ci[1] <= true_mean & true_mean <= ci[2]
+})
+sum(covered)
+```
+
+::: { .hint exercise="gf1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The blank is the size of each sample, 30 students. An interval contains the true value when its lower end, `ci[1]`, is below it and its upper end, `ci[2]`, is above it.
+:::
+:::
+
+::: { .solution exercise="gf1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+population <- first_sem$wellbeing
+true_mean  <- mean(population)
+
+set.seed(4)
+covered <- replicate(100, {
+  ci <- t.test(sample(population, 30))$conf.int
+  ci[1] <= true_mean & true_mean <= ci[2]
+})
+sum(covered)
+```
+
+95 of the 100 intervals contain the true average, exactly as the method promises. With a different seed the count will vary a little around 95. Any single interval either contains the true value or does not; the "95%" describes how often the method succeeds.
+:::
+:::
+
+### Exercise 8: A permutation test for medians
+
+The t-test compares means. A permutation test can compare any statistic. Test whether the median first-semester sleep of women and men differs, with 5,000 shuffles of the gender labels.
+
+```{webr}
+#| exercise: gf2
+sleepers <- first_sem |> filter(!is.na(sleep_hours))
+observed <- median(sleepers$sleep_hours[sleepers$gender == "Female"]) -
+  median(sleepers$sleep_hours[sleepers$gender == "Male"])
+
+set.seed(2026)
+shuffled <- replicate(5000, {
+  g <- sample(sleepers$______)
+  median(sleepers$sleep_hours[g == "Female"]) - median(sleepers$sleep_hours[g == "Male"])
+})
+c(observed = observed, p_value = mean(abs(shuffled) >= abs(______)))
+```
+
+::: { .hint exercise="gf2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Shuffle the labels that define the two groups, and compare each shuffled difference with the difference in the real data.
+:::
+:::
+
+::: { .solution exercise="gf2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+set.seed(2026)
+shuffled <- replicate(5000, {
+  g <- sample(sleepers$gender)
+  median(sleepers$sleep_hours[g == "Female"]) - median(sleepers$sleep_hours[g == "Male"])
+})
+c(observed = observed, p_value = mean(abs(shuffled) >= abs(observed)))
+```
+
+The medians differ by 0.1 hours, and about 81% of the shuffles produce a difference at least as large: no evidence of a difference. The same shuffling code works for medians, trimmed means, correlations, or any other statistic, which is the great strength of permutation tests.
+:::
+:::
+
+### Exercise 9: Many tests at once
+
+Compare the first-semester wellbeing of every pair of the five faculties, first without any correction and then with a Bonferroni correction. Count the "significant" comparisons each time.
+
+```{webr}
+#| exercise: gf3
+p_none <- pairwise.t.test(first_sem$wellbeing, first_sem$faculty,
+                          p.adjust.method = "______")$p.value
+p_bonf <- pairwise.t.test(first_sem$wellbeing, first_sem$faculty,
+                          p.adjust.method = "bonferroni")$p.value
+round(p_none, 3)
+sum(p_none < 0.05, na.rm = TRUE)
+sum(p_bonf < 0.05, na.rm = TRUE)
+```
+
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`p.adjust.method = "none"` gives the uncorrected p-values. Five faculties make 10 pairs.
+:::
+:::
+
+::: { .solution exercise="gf3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+p_none <- pairwise.t.test(first_sem$wellbeing, first_sem$faculty,
+                          p.adjust.method = "none")$p.value
+```
+
+Without correction, 2 of the 10 comparisons are "significant" (Education against Health Sciences and against Social Sciences, both with p just below 0.05). After the Bonferroni correction, which multiplies each p-value by the number of comparisons, none remains. With 10 tests, one or two p-values below 0.05 are expected by chance alone, so the uncorrected results would be weak evidence.
+:::
+:::
+
+### Exercise 10: Paired or not
+
+R's built-in `sleep` data records the extra hours of sleep of 10 patients on each of two drugs; the same patients took both. Analyse it correctly with a paired t-test, then wrongly as if the two groups were different people, and compare the results.
+
+```{webr}
+#| exercise: gf4
+drug1 <- sleep$extra[sleep$group == 1]
+drug2 <- sleep$extra[sleep$group == 2]
+t.test(drug2, drug1, paired = ______)
+t.test(drug2, drug1)
+```
+
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`paired = TRUE` compares each patient with themselves.
+:::
+:::
+
+::: { .solution exercise="gf4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+t.test(drug2, drug1, paired = TRUE)
+t.test(drug2, drug1)
+```
+
+The paired test finds a clear difference (p = 0.003; 95% CI 0.7 to 2.5 hours). Analysed as two independent groups, the same numbers give p = 0.08 and an interval from −0.2 to 3.4 that includes zero. The pairing removes the large differences *between* patients, so the paired test sees the effect of the drug much more clearly. Choosing the test that matches the design is not a detail.
+:::
+:::
+
+### Exercise 11: Bootstrap and rank tests
+
+Draw a random sample of 50 students' first-semester caffeine intake (use `set.seed(3)`), and calculate a 95% bootstrap confidence interval for its median with 2,000 resamples. Then compare the caffeine intake of full-time and part-time students with a Mann-Whitney U test, reporting the two medians.
+
+```{webr}
+#| exercise: gf5
+caffeine <- first_sem$caffeine_mg[!is.na(first_sem$caffeine_mg)]
+set.seed(3)
+small <- sample(caffeine, 50)
+median(small)
+boot <- replicate(2000, median(sample(small, replace = ______)))
+quantile(boot, c(0.025, 0.975))
+median(caffeine)
+
+tapply(first_sem$caffeine_mg, first_sem$study_mode, median, na.rm = TRUE)
+______(caffeine_mg ~ study_mode, data = first_sem)
+```
+
+::: { .hint exercise="gf5" }
+::: { .callout-note collapse="false"}
+## Hint
+
+A bootstrap resample draws *with* replacement. In R, the Mann-Whitney U test is named after Wilcoxon, who proposed the same test: `wilcox.test()`.
+:::
+:::
+
+::: { .solution exercise="gf5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+boot <- replicate(2000, median(sample(small, replace = TRUE)))
+quantile(boot, c(0.025, 0.975))
+wilcox.test(caffeine_mg ~ study_mode, data = first_sem)
+```
+
+The sample median is 150 mg, and the bootstrap interval runs from 120 to 185 mg; the median of all 600 students, 160 mg, lies inside it. Full-time and part-time students have medians of 160 and 165 mg, and the Mann-Whitney test finds no difference (p = 0.42).
+:::
+:::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** A study reports p = 0.03 for the difference between two groups. What does this number mean, and what does it *not* mean?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+If there were really no difference between the groups, a difference at least as large as the one observed would appear in about 3% of studies like this one. It is *not* the probability that the null hypothesis is true, and not the probability that the result is due to chance.
+:::
+
+**2.** A study of 12 students finds no significant difference between two teaching methods. Can it conclude that the methods are equally effective?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+No. With 12 students, the study has very low power, so it would usually miss even a real, moderate difference. A non-significant result from a small study means "not enough evidence", not "no difference". The confidence interval, which will be wide, shows how large a difference is still plausible.
+:::
+
+**3.** What is the difference between the standard deviation of a variable and the standard error of its mean?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+The standard deviation describes how much individual values differ from each other. The standard error describes how much the *mean* would vary from sample to sample; it equals the standard deviation divided by $\sqrt{n}$, so it shrinks as the sample grows, while the standard deviation does not.
+:::
+
+**4.** A researcher sees that the invited group scored higher and then decides to use a one-tailed test, which gives p = 0.04 instead of 0.08. What is wrong?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+The direction of the test was chosen after seeing the data. A one-tailed test is justified only when the direction is decided in advance, and when a result in the other direction would be irrelevant. Choosing it afterwards halves the p-value for free and turns a non-significant result into a "significant" one.
+:::
+
+**5.** With 10,000 students, a difference of 0.5 points on a 100-point wellbeing scale is highly significant. Is it an important finding?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Probably not. With a very large sample, even tiny differences become statistically significant. Importance is judged from the size of the effect (half a point is about 0.04 standard deviations) and what it would mean in practice, not from the p-value.
+:::
+
+**6.** In Exercise 4, the permutation test and the t-test gave almost the same p-value. Why?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Both ask the same question: how surprising the observed difference would be if study mode had no link with GPA. The permutation test builds the null distribution by shuffling; the t-test calculates it with a formula based on the normal distribution. With a large sample and roughly normal data, the two distributions are almost the same.
+:::
+
+**7.** A chi-square test has two expected counts below 5. What should you do?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+The chi-square approximation is unreliable with such small expected counts. Use Fisher's exact test, `fisher.test()`, or, if it makes sense for the research question, combine categories so that the expected counts become larger.
+:::
+
+**8.** Why does the paired test in Exercise 10 find the effect when the unpaired test does not?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Patients differ a great deal in how much extra sleep they get overall. The unpaired test counts those differences as noise, which hides the effect of the drug. The paired test compares each patient with themselves, so the differences between patients cancel out, and only the effect of the drug remains.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. Each code space below is empty and ready to run: write your own analysis, as you would for a thesis. The data (`students`, `semesters`, `questionnaire`, and `first_sem`) and the dplyr package are already loaded, R's built-in datasets are always available, and ggplot2 can be loaded with `library(ggplot2)` for graphs.
+
+**1.** Part-time students may report more stress than full-time students. Calculate each student's stress score from the questionnaire (reverse `stress_4` first, as in Chapter 3), state the hypotheses, compare the two groups with a graph and a suitable test, calculate an effect size, and write a reporting sentence.
+
+```{webr}
+# Your code here
+```
+
+**2.** Choose a claim of your own about the average of one variable in the study (for example, that graduate students study more than 25 hours a week in their first semester). State the hypotheses, decide whether a one-tailed or two-tailed test is justified, run the test, and report the result with a confidence interval.
+
+```{webr}
+# Your code here
+```
+
+**3.** Choose two categorical variables in `students` that the chapter did not relate (for example, `programme` and `has_children`, or `employment` and `study_mode`). Make the table and the proportions, test whether the variables are related, check the expected counts, and describe the result in words.
+
+```{webr}
+# Your code here
+```
+
+**4.** A colleague plans a study to detect a difference of 0.3 standard deviations between two groups. Use simulation to find how many participants per group are needed for 80% power, check your answer with `power.t.test()`, and write the sample-size justification for their methods section.
+
+```{webr}
+# Your code here
+```
+
+**5.** R's built-in `chickwts` data records the weight of chicks fed six different feeds. Choose two feeds, compare the chicks' weights with a graph and a test of your choice, justify the choice, and report the result with an effect size.
+
+```{webr}
+# Your code here
+```
+
+**6.** R's built-in `InsectSprays` data records the number of insects on plots treated with six sprays. Compare sprays C and D. Look at the distributions first, decide whether a t-test or a Mann-Whitney U test is more appropriate, run it, and explain your decision.
+
+```{webr}
+# Your code here
+```
+
+**7.** Test whether first-semester sleep differs between the five faculties with every pairwise t-test. Report how many comparisons are significant with and without a correction for multiple testing, and write the two sentences you would put in a thesis.
+
+```{webr}
+# Your code here
+```
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 7 project
 
-The project contains the data, these exercises, an extra exercise on a two-way ANOVA and regression diagnostics, and the solutions.
+The project contains the data and all four parts of this page as an R script: the exercises with blanks, the questions to check your understanding (answers in `solutions.R`), and the open tasks, each with space to write your code.
 
 - [Download chapter07.zip](chapter07.zip), unzip it, and double-click `chapter07.Rproj`.
 - Or type this one line in RStudio's Console:

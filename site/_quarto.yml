@@ -35,6 +35,6 @@ execute:
 format:
   html:
     theme:
-      light: [cosmo, styles/theme.scss]
-      dark: [darkly, styles/theme.scss]
+      light: [cosmo, styles/light.scss, styles/theme.scss]
+      dark: [darkly, styles/dark.scss, styles/theme.scss]
     toc: true

@@ -32,7 +32,7 @@ find_chapters <- function(pkg, extra) {
 }
 packages$chapters <- mapply(find_chapters, packages$package, packages$extra)
 packages$version <- vapply(packages$package, function(p) {
-  if (requireNamespace(p, quietly = TRUE)) as.character(packageVersion(p)) else "–"
+  if (requireNamespace(p, quietly = TRUE)) as.character(packageVersion(p)) else "-"
 }, character(1))
 ```
 
@@ -53,7 +53,7 @@ knitr::kable(
 )
 ```
 
-Two entries are collections rather than single packages. **tidyverse** installs and loads dplyr, tidyr, stringr, readr, ggplot2, purrr, and a few others; **tidymodels** does the same for the modelling packages of Chapters 10 to 14 (rsample, recipes, parsnip, workflows, tune, and yardstick, among others). Several model packages (ranger, kknn, kernlab, glmnet, xgboost, nnet) are rarely loaded by name: tidymodels calls them as **engines**, as in `set_engine("ranger")`, but they must be installed.
+Two entries are collections rather than single packages. **tidyverse** installs and loads dplyr, tidyr, stringr, readr, ggplot2, purrr, and a few others; **tidymodels** does the same for the modelling packages of Chapters 11 to 15 (rsample, recipes, parsnip, workflows, tune, and yardstick, among others). Several model packages (ranger, kknn, kernlab, glmnet, xgboost, nnet) are rarely loaded by name: tidymodels calls them as **engines**, as in `set_engine("ranger")`, but they must be installed.
 
 ## Finding and choosing packages
 
@@ -73,4 +73,4 @@ Package authors are researchers too, and citing their work is how they receive c
 citation("psych")
 ```
 
-Cite the packages that did substantial work in your analysis, and give their version numbers (Chapter 16). `packageVersion("psych")` shows the version installed on your computer.
+Cite the packages that did substantial work in your analysis, and give their version numbers (Chapter 17). `packageVersion("psych")` shows the version installed on your computer.

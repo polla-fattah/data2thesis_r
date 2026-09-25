@@ -4,73 +4,119 @@ subtitle: Data Manipulation
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
   - students.csv
   - semesters.csv
+  - supervisors.csv
+  - questionnaire.csv
   - chapter03.zip
 webr:
   packages:
     - dplyr
     - tidyr
+    - stringr
+    - readr
   resources:
     - students.csv
     - semesters.csv
+    - supervisors.csv
+    - questionnaire.csv
 ---
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-These exercises practise the ideas from Chapter 3: the pipe, the dplyr verbs, reshaping, joins, and cleaning. The first run on this page takes a little longer, because your browser downloads the dplyr and tidyr packages. Where you see `______`, replace it with your own code.
+This page practises the ideas of Chapter 3 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with new questions and some of R's built-in datasets. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with an empty code space and no answers: you decide how to prepare the data, as you will in your own thesis.
+
+The first run on this page takes a little longer, because your browser downloads the dplyr, tidyr, stringr, and readr packages. In the exercises, replace each `______` with your own code and press **Run Code**.
 
 ```{webr}
 #| setup: true
-#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6, ex7]
+#| exercise: [ex1, ex2, ex3, ex4, gf1, gf2, gf3, gf4]
 library(dplyr)
 library(tidyr)
-students  <- read.csv("students.csv")
-semesters <- read.csv("semesters.csv")
+library(stringr)
+library(readr)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+supervisors   <- read.csv("supervisors.csv")
+questionnaire <- read.csv("questionnaire.csv")
 ```
 
-## The pipe and the verbs
+```{webr}
+#| include: false
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(readr)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+supervisors   <- read.csv("supervisors.csv")
+questionnaire <- read.csv("questionnaire.csv")
+```
 
-### Exercise 1: Rewrite with the pipe
+## Practise the chapter
 
-Rewrite `round(mean(c(6.5, 7, 5.5, 8, 6)), 1)` using `|>`, so that it reads in the order the steps happen.
+These are the exercises at the end of Chapter 3, with the same numbers.
+
+### Exercise 1: Average age by faculty
+
+Using `students`, find the average age of students in each faculty, sorted from oldest to youngest.
 
 ```{webr}
 #| exercise: ex1
-c(6.5, 7, 5.5, 8, 6) |> ______ |> ______
+students |>
+  group_by(faculty) |>
+  ______(mean_age = mean(age, na.rm = TRUE)) |>
+  arrange(______(mean_age))
 ```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The verb that reduces each group to one row of summaries comes after `group_by()`. `arrange()` sorts from smallest to largest unless the column is wrapped in the function for *descending* order.
+:::
+:::
 
 ::: { .solution exercise="ex1" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-c(6.5, 7, 5.5, 8, 6) |> mean() |> round(1)
+students |>
+  group_by(faculty) |>
+  summarise(mean_age = mean(age, na.rm = TRUE)) |>
+  arrange(desc(mean_age))
 ```
+
+Natural Sciences students are the oldest on average (30.7 years) and Humanities students the youngest (29.2), but the five averages lie within one and a half years of each other. Sorting makes the order easy to read; whether the differences matter is a question for Chapter 8.
 :::
 :::
 
-### Exercise 2: Average age by faculty
+### Exercise 2: Sleep in three categories
 
-Find the average age of students in each faculty, sorted from oldest to youngest.
+Add a column to `semesters` that is `"Short"` when `sleep_hours` is under 6, `"Recommended"` when it is 7 or more, and `"Moderate"` otherwise. Count the semester records in each category.
 
 ```{webr}
 #| exercise: ex2
-students |>
-  summarise(mean_age = mean(age, na.rm = TRUE), .by = ______) |>
-  arrange(______)
+semesters |>
+  mutate(sleep_group = case_when(
+    sleep_hours < 6 ~ "Short",
+    sleep_hours ______ 7 ~ "Recommended",
+    .default = "Moderate"
+  )) |>
+  ______(sleep_group)
 ```
 
 ::: { .hint exercise="ex2" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-Group by `faculty`, and sort with `desc(mean_age)` for oldest first.
+"7 or more" includes 7 itself, so the comparison is not `>`. The shortcut verb for counting the rows in each category is named after what it does.
 :::
 :::
 
@@ -79,33 +125,37 @@ Group by `faculty`, and sort with `desc(mean_age)` for oldest first.
 ## Solution
 
 ```r
-students |>
-  summarise(mean_age = mean(age, na.rm = TRUE), .by = faculty) |>
-  arrange(desc(mean_age))
+semesters |>
+  mutate(sleep_group = case_when(
+    is.na(sleep_hours) ~ NA,
+    sleep_hours < 6 ~ "Short",
+    sleep_hours >= 7 ~ "Recommended",
+    .default = "Moderate"
+  )) |>
+  count(sleep_group)
 ```
+
+Run the starter code first, filled in, and look at the counts: 682 Short, 762 Recommended, and 882 Moderate. But 21 semester records have no sleep value, and `.default` caught them too, because a missing value fails every condition. They were counted as "Moderate", which is wrong. The solution adds `is.na(sleep_hours) ~ NA` as the first condition, so that missing values stay missing: Moderate falls to 861, and 21 records are `NA`. Whenever `.default` is used, check what happens to missing values.
 :::
 :::
 
-### Exercise 3: Categories with `case_when()`
+### Exercise 3: One column per semester
 
-Add a column `sleep_group`: `"Short"` under 6 hours, `"Recommended"` at 7 hours or more, and `"Moderate"` otherwise. Then count the semester records in each group.
+Using `semesters`, make a table of GPA with one row per student and one column per semester, using `pivot_wider()`. Show the first rows.
 
 ```{webr}
 #| exercise: ex3
 semesters |>
-  mutate(sleep_group = case_when(
-    sleep_hours < 6 ~ "Short",
-    ______ ~ "Recommended",
-    .default = ______
-  )) |>
-  count(sleep_group)
+  select(student_id, semester, gpa) |>
+  pivot_wider(names_from = ______, values_from = ______, names_prefix = "S") |>
+  head()
 ```
 
 ::: { .hint exercise="ex3" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-The second condition is `sleep_hours >= 7`, and `.default` gives the label for everything else.
+`names_from` is the column whose values become the new column names; `values_from` is the column whose values fill them.
 :::
 :::
 
@@ -115,31 +165,34 @@ The second condition is `sleep_hours >= 7`, and `.default` gives the label for e
 
 ```r
 semesters |>
-  mutate(sleep_group = case_when(
-    sleep_hours < 6 ~ "Short",
-    sleep_hours >= 7 ~ "Recommended",
-    .default = "Moderate"
-  )) |>
-  count(sleep_group)
+  select(student_id, semester, gpa) |>
+  pivot_wider(names_from = semester, values_from = gpa, names_prefix = "S") |>
+  head()
 ```
 
-Records with missing sleep fall through to `.default`, so they are counted as `"Moderate"` here. To keep them separate, add `is.na(sleep_hours) ~ NA` as the first condition.
+Each student now has one row, with columns `S1` to `S4`. Student S0004 has `NA` for semesters 3 and 4: the student left, and the wide table shows the gap that the long table hid by simply having fewer rows. Without `names_prefix`, the new columns would be named `1` to `4`, which are awkward names in R.
 :::
 :::
 
-## Reshaping and joining
+### Exercise 4: GPA by study mode
 
-### Exercise 4: One column per semester
-
-Make a table of each student's GPA with one column per semester. Show the first rows.
+Join `semesters` to `students` and compare the average semester GPA of full-time and part-time students.
 
 ```{webr}
 #| exercise: ex4
 semesters |>
-  select(student_id, semester, gpa) |>
-  pivot_wider(names_from = ______, values_from = ______) |>
-  head()
+  ______(students, join_by(student_id)) |>
+  group_by(study_mode) |>
+  summarise(mean_gpa = mean(gpa, na.rm = TRUE))
 ```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The join keeps every row of the first table, `semesters`, and adds the matching columns from `students`.
+:::
+:::
 
 ::: { .solution exercise="ex4" }
 ::: { .callout-tip collapse="false"}
@@ -147,114 +200,285 @@ semesters |>
 
 ```r
 semesters |>
-  select(student_id, semester, gpa) |>
-  pivot_wider(names_from = semester, values_from = gpa) |>
-  head()
-```
-:::
-:::
-
-### Exercise 5: Joining two tables
-
-Join `semesters` to `students` and compare the average semester GPA of full-time and part-time students.
-
-```{webr}
-#| exercise: ex5
-semesters |>
-  left_join(students, join_by(______)) |>
-  summarise(mean_gpa = mean(gpa, na.rm = TRUE), .by = ______)
-```
-
-::: { .solution exercise="ex5" }
-::: { .callout-tip collapse="false"}
-## Solution
-
-```r
-semesters |>
   left_join(students, join_by(student_id)) |>
-  summarise(mean_gpa = mean(gpa, na.rm = TRUE), .by = study_mode)
+  group_by(study_mode) |>
+  summarise(mean_gpa = mean(gpa, na.rm = TRUE))
 ```
+
+Full-time students average 3.09 and part-time students 3.10: no difference worth mentioning. `study_mode` lives in `students` and GPA in `semesters`, so the question could not be answered from either table alone. Note that these averages count semester records, so students who stayed for four semesters weigh more than students who left; for a question about students, an average per student first would be more exact.
 :::
 :::
 
-### Exercise 6: Who left the study?
+### Exercise 5: A reversed item
 
-Use `anti_join()` to find the students with no record for semester 4. How many are there?
+Explain why the `stress_4` item must be reversed before the stress score is calculated, and describe what would happen to the scores if it were not. Write your answer first, then open the model answer.
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
+
+The other five stress items are worded so that agreeing means *more* stress, but `stress_4` ("I feel confident handling problems in my studies") is worded the other way: agreeing means *less* stress. A score is the average of items that measure the same thing in the same direction, so `stress_4` must be turned round first (6 − answer on a 1-to-5 scale). Left as it is, it pulls every score towards the middle. A very stressed student who answers 5 on the five stress items and 1 on `stress_4` would score (5 + 5 + 5 + 1 + 5 + 5) / 6 = 4.33 instead of 5, and a relaxed student would score higher than they should. The scores would spread less, measure stress less reliably, and show weaker relationships with other variables.
+:::
+
+### Exercise 6: Clean data in your own field
+
+For each of the five qualities of clean data, give one example of a problem from your own field, and the cleaning decision it would require. Write your answer first, then open the model answer.
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
+
+Answers will differ by field; here is one example for each quality, from health research. **Valid:** a systolic blood pressure of 1,200 mmHg, a typing error; set it to missing, since the true value cannot be known, and report how many values were changed. **Accurate:** a laboratory records "below detection limit" as 0; decide whether to treat it as 0, as missing, or as half the detection limit, and state the choice. **Complete:** blood pressure is missing for patients who missed a visit; mark it as `NA` rather than 0 or −9, and check whether the patients who missed visits differ from the others. **Consistent:** weight recorded in kilograms at one site and pounds at another; convert everything to kilograms. **Unique:** a patient registered twice under slightly different spellings of their name; match the records on date of birth and hospital number, and keep one.
+:::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 7: The missing-code trap
+
+Seven students answered a question on a 1-to-5 scale; two skipped it, and the survey tool recorded each skip as `99`. Calculate the mean and the median with the codes left in, then with the codes marked as missing, and explain the difference.
 
 ```{webr}
-#| exercise: ex6
-students |>
-  anti_join(semesters |> filter(semester == ______), join_by(student_id)) |>
-  nrow()
+#| exercise: gf1
+answers <- c(4, 3, 5, 99, 2, 99, 1)
+mean(answers)
+median(answers)
+mean(______(answers, 99), na.rm = TRUE)
+median(______(answers, 99), na.rm = TRUE)
 ```
 
-::: { .solution exercise="ex6" }
-::: { .callout-tip collapse="false"}
-## Solution
-
-```r
-students |>
-  anti_join(semesters |> filter(semester == 4), join_by(student_id)) |>
-  nrow()
-```
-
-The same students are missing from semesters 3 and 4: they left after the first year.
-:::
-:::
-
-## Cleaning
-
-### Exercise 7: A small messy table
-
-This table mimics a survey export. Clean it so that `gender` has only `"Female"` and `"Male"`, and `stress` is a number with the missing code `99` turned into `NA`. Then calculate the average stress.
-
-```{webr}
-#| exercise: ex7
-messy <- tibble(
-  gender = c("F", "female", "Male", "m", "Female"),
-  stress = c("3", "99", "4", "2", "5")
-)
-clean <- messy |>
-  mutate(
-    gender = if_else(startsWith(tolower(gender), "f"), ______, ______),
-    stress = as.integer(na_if(stress, ______))
-  )
-clean
-mean(clean$stress, na.rm = TRUE)
-```
-
-::: { .hint exercise="ex7" }
+::: { .hint exercise="gf1" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-`if_else(condition, value if TRUE, value if FALSE)`. The missing code is the text `"99"`, in quotes, because the column is still text at that point.
+The dplyr function that turns a code into `NA` is named after what it does: "NA if" the value equals the code.
 :::
 :::
 
-::: { .solution exercise="ex7" }
+::: { .solution exercise="gf1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+answers <- c(4, 3, 5, 99, 2, 99, 1)
+mean(answers)
+median(answers)
+mean(na_if(answers, 99), na.rm = TRUE)
+median(na_if(answers, 99), na.rm = TRUE)
+```
+
+With the codes left in, the mean is 30.4, an impossible value on a 1-to-5 scale, and the median is 4. With the codes removed, both are 3. The median is much less affected, because it depends only on the order of the values, but it is still wrong: the two 99s pushed it up one step. A median that looks plausible is more dangerous than a mean that looks absurd, because nobody notices it.
+:::
+:::
+
+### Exercise 8: Checking two tables against each other
+
+The `supervisors` table records how many students each supervisor has (`n_students`). Count the students of each supervisor from the first-semester data yourself, calculate their average wellbeing, join the result to `supervisors`, and check whether the two counts ever disagree.
+
+```{webr}
+#| exercise: gf2
+check <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id)) |>
+  group_by(supervisor_id) |>
+  summarise(n_counted = ______(),
+            mean_wellbeing = mean(wellbeing, na.rm = TRUE)) |>
+  left_join(supervisors, join_by(supervisor_id))
+head(check)
+check |> filter(n_counted ______ n_students)
+```
+
+::: { .hint exercise="gf2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Inside `summarise()`, the function that counts the rows of each group takes no argument. The comparison for "is not equal to" is two symbols.
+:::
+:::
+
+::: { .solution exercise="gf2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+check <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id)) |>
+  group_by(supervisor_id) |>
+  summarise(n_counted = n(),
+            mean_wellbeing = mean(wellbeing, na.rm = TRUE)) |>
+  left_join(supervisors, join_by(supervisor_id))
+head(check)
+check |> filter(n_counted != n_students)
+```
+
+The filter returns no rows: for all 120 supervisors the two counts agree, and each supervises between 1 and 12 students. Checking one table against another is a cheap and powerful cleaning step, because an error in either table shows up as a disagreement. Note also how the question needed three tables: wellbeing from `semesters`, the supervisor from `students`, and the recorded count from `supervisors`.
+:::
+:::
+
+### Exercise 9: The questionnaire in long format
+
+The `questionnaire` table has one column per item. Reshape it to long format, with one row per student per item, and calculate the average answer to each item.
+
+```{webr}
+#| exercise: gf3
+long <- questionnaire |>
+  ______(-student_id, names_to = "item", values_to = "answer")
+dim(long)
+long |>
+  group_by(item) |>
+  summarise(mean_answer = mean(answer, na.rm = TRUE)) |>
+  print(n = 22)
+```
+
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The reshaping function that turns wide into long is the opposite of the one in Exercise 3. `-student_id` means "every column except `student_id`".
+:::
+:::
+
+::: { .solution exercise="gf3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+long <- questionnaire |>
+  pivot_longer(-student_id, names_to = "item", values_to = "answer")
+dim(long)
+long |>
+  group_by(item) |>
+  summarise(mean_answer = mean(answer, na.rm = TRUE)) |>
+  print(n = 22)
+```
+
+The long table has 13,200 rows, 600 students × 22 items, and three columns. In long format, the average of every item takes one `group_by()`, where the wide table would need 22 separate calculations. Look at the stress items: `stress_4` has the lowest average (2.90) of the six, because it is the reversed item of Exercise 5. Students who feel stressed disagree with it.
+:::
+:::
+
+### Exercise 10: A small messy table
+
+This table mimics a survey export: the faculty is spelled in several ways, and sleep was typed as text, sometimes with a decimal comma and sometimes with a unit. Clean both columns, count the students in each faculty, and calculate the average sleep.
+
+```{webr}
+#| exercise: gf4
+messy <- tibble(
+  faculty = c("Education", "education ", "EDUCATION", "Health Sciences", "health sci."),
+  sleep   = c("6,5", "7 hrs", "8", "5.5", "7,5")
+)
+clean <- messy |>
+  mutate(
+    faculty = if_else(str_detect(str_to_lower(faculty), "educ"), "Education", "Health Sciences"),
+    sleep   = parse_number(str_replace(sleep, ______, ______))
+  )
+clean
+count(clean, faculty)
+mean(clean$sleep)
+```
+
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`parse_number()` ignores text such as `"hrs"` but reads `"6,5"` as 65. Replace the comma with a full stop first: `str_replace()` takes the text to find and the text to put in its place, both in quotation marks.
+:::
+:::
+
+::: { .solution exercise="gf4" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
 clean <- messy |>
   mutate(
-    gender = if_else(startsWith(tolower(gender), "f"), "Female", "Male"),
-    stress = as.integer(na_if(stress, "99"))
+    faculty = if_else(str_detect(str_to_lower(faculty), "educ"), "Education", "Health Sciences"),
+    sleep   = parse_number(str_replace(sleep, ",", "."))
   )
 clean
-mean(clean$stress, na.rm = TRUE)   # 3.5; with the 99 left in, it would be 22.6
+count(clean, faculty)
+mean(clean$sleep)
 ```
 
-(Base R's `startsWith()` and `tolower()` do the same job as stringr's `str_starts()` and `str_to_lower()` from the chapter.)
+Three students are in Education and two in Health Sciences, and the average sleep is 6.9 hours. Without the comma fix, `parse_number()` reads 6,5 as 65 and 7,5 as 75, and the average becomes 32.1 hours, which no warning would tell you about. Always look at the cleaned values, not only at whether the code ran.
 :::
 :::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** Clean data is valid, accurate, complete, consistent, and unique. What does each quality guard against?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+**Valid** guards against impossible values, such as an age of 250. **Accurate** guards against values that do not mean what they seem, such as a missing-answer code read as a real answer. **Complete** guards against missing values hidden behind codes or blanks, which should be marked as missing. **Consistent** guards against the same answer being recorded in different ways, which splits one group into several. **Unique** guards against cases counted more than once, such as test entries and duplicates.
+:::
+
+**2.** Why is the raw data file never edited by hand?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because edits by hand leave no record. If the raw file stays untouched and every change is made by code, anyone can see each decision, check it, change it, and run the cleaning again from the start. An edited raw file cannot be undone, and nobody, including the researcher, can tell later what was changed.
+:::
+
+**3.** What is tidy data?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Data in which each variable forms a column, each observation forms a row, and each value sits in its own cell. A table with one column per semester is not tidy, because one variable (wellbeing) is spread across several columns and each row holds several observations.
+:::
+
+**4.** What is the difference between `left_join()` and `anti_join()`?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+`left_join()` keeps every row of the first table and adds the matching columns of the second. `anti_join()` adds nothing: it keeps only the rows of the first table that have *no* match in the second, which makes it the tool for finding what is missing, such as students with no records in a later semester.
+:::
+
+**5.** Why should a `99` not be replaced with `NA` everywhere in a file?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because 99 is not always a code. In a wellbeing score from 0 to 100, or in a weight in kilograms, 99 is a perfectly real value. Missing codes should be replaced only in the columns where the codebook says they are codes.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. Each code space below is empty and ready to run: write your own code, as you would for a thesis. The data (`students`, `semesters`, `supervisors`, and `questionnaire`) and the dplyr, tidyr, stringr, and readr packages are already loaded, and R's built-in datasets are always available.
+
+**1.** Which faculty has the largest share of students who live away from their family, and how does that share differ between Master's and PhD students in each faculty? Produce one table that answers both parts, and describe it in two sentences.
+
+```{webr}
+# Your code here
+```
+
+**2.** Calculate each student's burnout score as the average of the six burnout items, join it to the students' first-semester records, and compare the average burnout of students who have considered dropping out with those who have not.
+
+```{webr}
+# Your code here
+```
+
+**3.** R's built-in `airquality` data records daily air quality in New York in 1973. Find which columns have missing values and how many, decide what to do about them for an analysis of ozone, and write the sentence you would put in a methods section.
+
+```{webr}
+# Your code here
+```
+
+**4.** This task is for the download project, which contains the raw survey export. Clean `wellbeing_raw.xlsx` from scratch, without looking at the chapter's code, and compare your result with the clean tables: the number of students, the categories of each variable, and the average of a few variables.
+
+**5.** Also for the download project: write the methods paragraph reporting your cleaning in Task 4, with every number in it (test responses, duplicates, impossible values, missing codes) calculated by code rather than typed.
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 3 project
 
-The project contains the data, these exercises, a longer exercise that cleans Elaf's full survey export (`wellbeing_raw.xlsx`) from start to finish, and the solutions.
+The project contains the data, the raw survey export, and all four parts of this page as an R script: the exercises with blanks, the questions to check your understanding (answers in `solutions.R`), and the open tasks, each with space to write your code.
 
 - [Download chapter03.zip](chapter03.zip), unzip it, and double-click `chapter03.Rproj`.
 - Or type this one line in RStudio's Console:

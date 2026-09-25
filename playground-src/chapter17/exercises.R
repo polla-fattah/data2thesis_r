@@ -1,111 +1,148 @@
 # From Data to Thesis: Research Data Analysis with R
-# Playground, Chapter 17: Using AI with R
+# Playground, Chapter 17: Reproducible Research
+#
+# This script holds the R parts of the playground page. The Quarto and Shiny
+# tasks (Exercises 2, 3, 4, and 8) are in exercises.txt.
+#   A. Practise the chapter       the book's exercises, with blanks (______) to fill
+#   B. Go further                 new exercises beyond the book
+#   C. Check your understanding   short questions; answers in solutions.R
+#   D. Do it yourself             open tasks with no starter code and no answers
 #
 # Run a line with Ctrl+Enter (Cmd+Enter on a Mac).
-# Replace every ______ with your own code.
 # Try each exercise yourself before you look at solutions.R.
 
 library(dplyr)
-library(stringr)
-library(yardstick)
 
-students             <- read.csv("students.csv")
-open_responses       <- read.csv("open_responses.csv")
-open_responses_coded <- read.csv("open_responses_coded.csv")
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
 
-keywords <- c(
-  Supervision = "\\b(supervis|feedback|guidance|meeting)",
-  Workload    = "\\b(time|deadline|workload|too much|assignment|reading|busy)",
-  Finances    = "\\b(money|fee|scholarship|rent|afford|salary|income|funding|stipend|loan)",
-  Family      = "\\b(famil|child|kid|son\\b|daughter|baby|parent|mother|father|husband|wife)",
-  Health      = "\\b(sleep|tired|stress|anxi|health|ill\\b|burnout|headache|coffee|exhaust)",
-  Isolation   = "\\b(lonel|alone|friends|outsider|miss (home|my)|far from|know no one)",
-  Other       = "\\b(ethic|participant|statistic|library|procedure|english|power cut|laptop|internet|software)"
-)
-themes <- names(keywords)
 
-code_by_keywords <- function(answer) {
-  hits <- sapply(keywords, \(pattern) str_count(str_to_lower(answer), pattern))
-  if (all(hits == 0)) "Other" else names(keywords)[which.max(hits)]
+# ==============================================================================
+# A. PRACTISE THE CHAPTER
+# ==============================================================================
+
+# Exercise 1: A sentence that writes itself (as inline code would)
+sleep <- c(6.5, 7, 5.5)
+paste0("My three friends slept ", round(mean(sleep), ______), " hours on average last night.")
+sleep[2] <- 8
+paste0("My three friends slept ", round(mean(sleep), ______), " hours on average last night.")
+
+
+# Exercises 2 to 4: see exercises.txt
+
+
+# Exercise 5: The smallest cells
+cells <- students |>
+  count(faculty, study_mode, gender, has_children) |>
+  arrange(n)
+head(cells, 6)
+sum(cells$n < 5)
+for (drop in c("faculty", "study_mode", "gender", "has_children")) {
+  kept <- setdiff(c("faculty", "study_mode", "gender", "has_children"), drop)
+  smallest <- min(count(students, across(all_of(kept)))$n)
+  print(c(removed = drop, smallest_cell = ______))
 }
 
 
-# Exercise 1: Check an assistant's code
-# An assistant suggested this for "average sleep in each faculty". Does it
-# handle missing values? Check it with a tiny example first.
-tiny <- data.frame(faculty = c("A", "A", "B"), sleep = c(6, NA, 8))
-tiny |> summarise(sleep = mean(sleep), .by = faculty)
-# Fix it so that faculty A gets 6:
-tiny |> summarise(sleep = mean(sleep, ______), .by = faculty)
-
-
-# Exercise 2: Keyword coding and agreement
-keyword_check <- open_responses_coded |>
-  mutate(keyword_theme = sapply(biggest_challenge, code_by_keywords),
-         theme = factor(theme, levels = themes),
-         keyword_theme = factor(keyword_theme, levels = themes))
-keyword_check |> accuracy(truth = theme, estimate = ______)
-keyword_check |> kap(truth = theme, estimate = keyword_theme)
-
-
-# Exercise 3: Read the disagreements
-# Show ten answers where the keywords and Elaf disagree. Would you agree with
-# Elaf in every case?
-
-
-# Exercise 4: The confusion matrix
-# Which theme do the keywords find most reliably? Which do they miss most often?
-
-
-# Exercise 5 (needs Ollama or an API key): code 20 answers with a language model
-library(ellmer)
-codebook <- "
-You are helping a researcher code open-ended survey answers from graduate
-students, who were asked: 'What has been your biggest challenge during your
-studies?' Assign each answer to exactly ONE theme: the main challenge the
-student describes. If several challenges are mentioned, choose the one the
-student presents first or as most important.
-
-Themes:
-- Supervision: the supervisor; feedback, guidance, meetings, disagreements.
-- Workload: too much work or too little time; deadlines, coursework, reading.
-- Finances: money, fees, scholarships, living costs, paid work to pay for study.
-- Family: children, partners, parents, caring duties, studying at home.
-- Health: physical or mental health, sleep, stress, anxiety, burnout, illness.
-- Isolation: loneliness, being far from home, no colleagues or friends.
-- Other: anything else, such as ethics approval, statistics, academic English.
-
-Reply with the name of the theme only, exactly as written above.
-"
-
-# A local model through Ollama (free, no key; see README.txt), or set
-# use_local <- FALSE to use an online model with an API key in .Renviron.
-use_local <- TRUE
-make_chat <- function(prompt) {
-  if (use_local) {
-    chat_ollama(system_prompt = prompt, model = "gemma4:e4b", params = params(temperature = 0))
-  } else {
-    chat_anthropic(system_prompt = prompt, model = "claude-sonnet-5", params = params(temperature = 0))
-  }
+# Exercise 6: A sixth analysis (excluding the five highest scores)
+forking_paths <- function() {
+  group     <- rep(c("A", "B"), each = 30)
+  score     <- rexp(60, rate = 1 / 10)
+  covariate <- rnorm(60)
+  z <- abs(as.numeric(scale(score)))
+  keep <- rank(-score) > 5
+  p <- c(
+    t_test         = t.test(score ~ group)$p.value,
+    no_outliers    = t.test(score[z < 2] ~ group[z < 2])$p.value,
+    log_scale      = t.test(log(score) ~ group)$p.value,
+    rank_test      = wilcox.test(score ~ group)$p.value,
+    with_covariate = summary(lm(score ~ group + covariate))$coefficients[2, 4],
+    no_top_five    = t.test(score[______] ~ group[keep])$p.value
+  )
+  c(first_analysis = p[["t_test"]] < 0.05, any_analysis = any(p < 0.05))
 }
-model_available <- if (use_local) {
-  tryCatch({ models_ollama(); TRUE }, error = function(e) FALSE)
-} else {
-  Sys.getenv("ANTHROPIC_API_KEY") != ""
+set.seed(17)
+rowMeans(replicate(2000, forking_paths()))
+
+
+# ==============================================================================
+# B. GO FURTHER
+# ==============================================================================
+
+# Exercise 7: How many forking paths? (1, 2, 5, and 10 analyses)
+ten_paths <- function() {
+  group <- rep(c("A", "B"), each = 30)
+  score <- rexp(60, rate = 1 / 10)
+  covariate <- rnorm(60)
+  z <- abs(as.numeric(scale(score)))
+  keep_top <- rank(-score) > 5
+  keep_bottom <- rank(score) > 5
+  c(t_test         = t.test(score ~ group)$p.value,
+    rank_test      = wilcox.test(score ~ group)$p.value,
+    log_scale      = t.test(log(score) ~ group)$p.value,
+    no_outliers    = t.test(score[z < 2] ~ group[z < 2])$p.value,
+    with_covariate = summary(lm(score ~ group + covariate))$coefficients[2, 4],
+    sqrt_scale     = t.test(sqrt(score) ~ group)$p.value,
+    outliers_2_5   = t.test(score[z < 2.5] ~ group[z < 2.5])$p.value,
+    no_top_five    = t.test(score[keep_top] ~ group[keep_top])$p.value,
+    no_bottom_five = t.test(score[keep_bottom] ~ group[keep_bottom])$p.value,
+    equal_variance = t.test(score ~ group, var.equal = TRUE)$p.value)
 }
-
-# Ask for the theme name as text, and check each reply against the list of themes
-code_answers <- function(chat, answers) {
-  replies <- parallel_chat_text(chat, as.list(answers))
-  themes[match(tolower(gsub("[^A-Za-z]", "", replies)), tolower(themes))]
-}
-sample20 <- open_responses_coded |> slice(1:20)
-
-# Code the 20 answers with code_answers(make_chat(codebook), ...).
-# How many agree with Elaf's theme?
+set.seed(17)
+p_values <- replicate(2000, ten_paths())
+tried <- c(1, 2, 5, 10)
+rate <- sapply(tried, function(k)
+  mean(apply(p_values[1:k, , drop = FALSE], 2, function(p) any(p < ______))))
+rbind(analyses_tried = tried, false_positive_rate = round(rate, 3),
+      if_independent = round(1 - 0.95^tried, 3))
 
 
-# Exercise 6 (needs Ollama or an API key): change the codebook
-# Change the rule for answers with two challenges (for example, "choose the
-# challenge the student describes in most detail") and code the 20 answers
-# again. How many answers change theme?
+# Exercise 8: see exercises.txt
+
+
+# Exercise 9: Grouping instead of removing
+grouped <- students |>
+  mutate(faculty_group = if_else(faculty %in% c("Natural Sciences", "Health Sciences"),
+                                 "Sciences", "Humanities and social sciences")) |>
+  count(faculty_group, study_mode, gender, has_children) |>
+  arrange(n)
+head(grouped, 4)
+sum(grouped$n < ______)
+
+
+# Exercise 10: Recording the software
+r_version <- paste(R.version$major, R.version$minor, sep = ".")
+dplyr_version <- as.character(______("dplyr"))
+paste0("Analyses were carried out in R version ", r_version,
+       " (R Core Team), with data preparation in dplyr version ", dplyr_version, ".")
+sessionInfo()
+
+
+# ==============================================================================
+# C. CHECK YOUR UNDERSTANDING
+# Answer in your own words, then compare with the answers in solutions.R.
+# ==============================================================================
+
+# 1. What is the difference between a reproducible result and a replicable one?
+# 2. Why should numbers in the text of a thesis not be typed by hand?
+# 3. What does renv record, and why does it matter?
+# 4. Why is removing names and student numbers not enough to anonymise data?
+# 5. What does preregistration protect against?
+
+
+# ==============================================================================
+# D. DO IT YOURSELF
+# Open tasks: no starter code, no hints, and no answers.
+# ==============================================================================
+
+# Task 1: Write a reporting sentence as code, with every number (means,
+# difference, test statistic, p-value, sample sizes) calculated and inserted by
+# paste0() or sprintf(), rounded as a journal would print them.
+
+
+
+# Task 2: see exercises.txt (a Quarto report and a second dashboard input).
+
+# Task 3: Write a preregistration for a study of your own with the AsPredicted
+# headings: hypotheses, dependent variable, conditions, analyses, exclusions,
+# sample size, and anything else.

@@ -1,31 +1,38 @@
 # From Data to Thesis: Research Data Analysis with R
 # Playground, Chapter 3: Solutions
 #
-# One possible solution for each exercise. Other answers can be right too.
+# One possible solution for each exercise in parts A and B, and model answers
+# for part C. Part D has no solutions: the tasks are open, and there are many
+# good ways to answer them.
 
 library(dplyr)
 library(tidyr)
 library(stringr)
 library(readr)
 
-students    <- read.csv("students.csv")
-semesters   <- read.csv("semesters.csv")
-supervisors <- read.csv("supervisors.csv")
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+supervisors   <- read.csv("supervisors.csv")
+questionnaire <- read.csv("questionnaire.csv")
 
 
-# Exercise 1
-c(6.5, 7, 5.5, 8, 6) |> mean() |> round(1)
+# ==============================================================================
+# A. PRACTISE THE CHAPTER
+# ==============================================================================
 
-
-# Exercise 2
+# Exercise 1: Natural Sciences oldest (30.7), Humanities youngest (29.2)
 students |>
-  summarise(mean_age = mean(age, na.rm = TRUE), .by = faculty) |>
+  group_by(faculty) |>
+  summarise(mean_age = mean(age, na.rm = TRUE)) |>
   arrange(desc(mean_age))
 
 
-# Exercise 3
+# Exercise 2: .default also catches the 21 records with no sleep value, which
+# would be counted as "Moderate" (882). Keeping them missing: Short 682,
+# Recommended 762, Moderate 861, NA 21.
 semesters |>
   mutate(sleep_group = case_when(
+    is.na(sleep_hours) ~ NA,
     sleep_hours < 6 ~ "Short",
     sleep_hours >= 7 ~ "Recommended",
     .default = "Moderate"
@@ -33,130 +40,112 @@ semesters |>
   count(sleep_group)
 
 
-# Exercise 4
+# Exercise 3: one row per student, columns S1 to S4; students who left have NA
+# in the later semesters
 semesters |>
   select(student_id, semester, gpa) |>
-  pivot_wider(names_from = semester, values_from = gpa) |>
+  pivot_wider(names_from = semester, values_from = gpa, names_prefix = "S") |>
   head()
 
 
-# Exercise 5
+# Exercise 4: full-time 3.09, part-time 3.10
 semesters |>
   left_join(students, join_by(student_id)) |>
-  summarise(mean_gpa = mean(gpa, na.rm = TRUE), .by = study_mode)
+  group_by(study_mode) |>
+  summarise(mean_gpa = mean(gpa, na.rm = TRUE))
 
 
-# Exercise 6
-students |>
-  anti_join(semesters |> filter(semester == 4), join_by(student_id)) |>
-  nrow()
+# Exercise 5 (model answer): stress_4 ("I feel confident handling problems in
+# my studies") is worded so that agreeing means less stress, the opposite of the
+# other five items. Unreversed, it pulls every score towards the middle: a
+# student answering 5, 5, 5, 1, 5, 5 scores 4.33 instead of 5. Scores spread
+# less, are less reliable, and relate more weakly to other variables.
+# Reverse with 6 - stress_4 on a 1-to-5 scale.
 
 
-# Exercise 7
+# Exercise 6 (model answer), from health research:
+# Valid: a blood pressure of 1,200 mmHg; set to missing and report the count.
+# Accurate: "below detection limit" stored as 0; decide on 0, missing, or half
+#   the limit, and state the choice.
+# Complete: values missing after a missed visit; mark as NA, not 0 or -9.
+# Consistent: weight in kilograms at one site and pounds at another; convert.
+# Unique: a patient registered twice; match on date of birth and hospital
+#   number, and keep one record.
+
+
+# ==============================================================================
+# B. GO FURTHER
+# ==============================================================================
+
+# Exercise 7: with the codes, mean 30.4 (impossible) and median 4; without, both
+# are 3. The median is less affected, but still wrong, and it looks plausible.
+answers <- c(4, 3, 5, 99, 2, 99, 1)
+mean(answers)
+median(answers)
+mean(na_if(answers, 99), na.rm = TRUE)
+median(na_if(answers, 99), na.rm = TRUE)
+
+
+# Exercise 8: no disagreements; all 120 supervisors match, with 1 to 12
+# students each
+check <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id)) |>
+  group_by(supervisor_id) |>
+  summarise(n_counted = n(),
+            mean_wellbeing = mean(wellbeing, na.rm = TRUE)) |>
+  left_join(supervisors, join_by(supervisor_id))
+head(check)
+check |> filter(n_counted != n_students)
+
+
+# Exercise 9: 13,200 rows (600 students x 22 items); stress_4 has the lowest
+# stress average (2.90), because it is the reversed item
+long <- questionnaire |>
+  pivot_longer(-student_id, names_to = "item", values_to = "answer")
+dim(long)
+long |>
+  group_by(item) |>
+  summarise(mean_answer = mean(answer, na.rm = TRUE)) |>
+  print(n = 22)
+
+
+# Exercise 10: 3 Education, 2 Health Sciences; average sleep 6.9 hours.
+# Without the comma fix, 6,5 becomes 65 and the average 32.1.
 messy <- tibble(
-  gender = c("F", "female", "Male", "m", "Female"),
-  stress = c("3", "99", "4", "2", "5")
+  faculty = c("Education", "education ", "EDUCATION", "Health Sciences", "health sci."),
+  sleep   = c("6,5", "7 hrs", "8", "5.5", "7,5")
 )
 clean <- messy |>
   mutate(
-    gender = if_else(str_starts(str_to_lower(gender), "f"), "Female", "Male"),
-    stress = as.integer(na_if(stress, "99"))
+    faculty = if_else(str_detect(str_to_lower(faculty), "educ"), "Education", "Health Sciences"),
+    sleep   = parse_number(str_replace(sleep, ",", "."))
   )
 clean
-mean(clean$stress, na.rm = TRUE)   # 3.5 (with the 99 left in, it would be 22.6)
+count(clean, faculty)
+mean(clean$sleep)
 
 
-# Exercise 8: Clean Elaf's full survey export -----------------------------------
+# ==============================================================================
+# C. CHECK YOUR UNDERSTANDING: model answers
+# ==============================================================================
 
-library(readxl)
-raw <- read_excel("wellbeing_raw.xlsx")
+# 1. Valid: impossible values. Accurate: values that do not mean what they seem,
+#    such as codes read as answers. Complete: missing values hidden behind codes.
+#    Consistent: one answer recorded in several ways. Unique: cases counted
+#    more than once.
+# 2. Hand edits leave no record. With an untouched raw file and cleaning by
+#    code, every decision can be seen, checked, changed, and rerun.
+# 3. Each variable forms a column, each observation a row, and each value a
+#    cell.
+# 4. left_join() keeps every row of the first table and adds matching columns;
+#    anti_join() keeps only the rows of the first table with no match.
+# 5. 99 is not always a code: in a 0-100 wellbeing score it is a real value.
+#    Replace codes only in the columns where the codebook says they are codes.
 
-# 2. Remove test responses and duplicates
-responses <- raw |>
-  filter(!str_detect(str_to_upper(`Q1_Student ID`), "^TEST")) |>
-  select(-`Response ID`) |>
-  distinct()
 
-# 3. Rename the variables
-item_names <- c(paste0("stress_", 1:6), paste0("burnout_", 1:6),
-                paste0("support_", 1:6), paste0("satisfaction_", 1:4))
-responses <- responses |>
-  rename(
-    student_id          = `Q1_Student ID`,
-    age                 = Q2_Age,
-    gender              = Q3_Gender,
-    faculty             = Q4_Faculty,
-    programme           = Q5_Programme,
-    study_mode          = `Q6_Study mode`,
-    employment          = `Q7_Paid work`,
-    has_children        = Q8_Children,
-    lives_away          = `Q9_Moved away from family`,
-    financial_worry     = `Q10_How worried are you about money? (1-5)`,
-    workshop            = `Workshop group`,
-    workshop_sessions   = `Workshop sessions attended`,
-    considering_dropout = `Y1_Considered leaving?`
-  ) |>
-  rename_with(~ item_names, .cols = Q11_1:Q11_22)
-
-# 4. Fix the inconsistent categories
-responses <- responses |>
-  mutate(
-    gender = if_else(str_starts(str_to_lower(str_trim(gender)), "f"), "Female", "Male"),
-    faculty = case_when(
-      str_detect(str_to_lower(faculty), "educ")    ~ "Education",
-      str_detect(str_to_lower(faculty), "health")  ~ "Health Sciences",
-      str_detect(str_to_lower(faculty), "humanit") ~ "Humanities",
-      str_detect(str_to_lower(faculty), "social")  ~ "Social Sciences",
-      str_detect(str_to_lower(faculty), "natural|^sciences$") ~ "Natural Sciences"
-    ),
-    programme  = if_else(str_detect(str_to_lower(programme), "ph"), "PhD", "Master's"),
-    study_mode = if_else(str_detect(str_to_lower(study_mode), "part"), "Part-time", "Full-time"),
-    employment = if_else(str_to_lower(employment) %in% c("none", "no job"), "None", employment),
-    across(c(has_children, lives_away, considering_dropout),
-           ~ if_else(str_starts(str_to_lower(.x), "y"), "Yes", "No"))
-  )
-
-# 5. Missing codes and text to numbers; 6. impossible values
-responses <- responses |>
-  mutate(
-    financial_worry = financial_worry |> na_if("99") |> na_if("-9") |> as.integer(),
-    across(all_of(item_names), ~ as.integer(na_if(.x, "99"))),
-    workshop_sessions = as.integer(workshop_sessions),
-    age = parse_number(age),
-    age = if_else(age > 100, NA, age)
-  )
-
-# 7. Scale scores (reverse stress_4 first)
-scores <- responses |>
-  select(student_id, all_of(item_names)) |>
-  mutate(
-    stress_4           = 6 - stress_4,
-    stress_score       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
-    burnout_score      = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
-    support_score      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
-    satisfaction_score = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
-  ) |>
-  select(student_id, ends_with("_score"))
-
-# 8. Semester measurements from wide to long
-semesters_clean <- responses |>
-  select(student_id, matches("_S[1-4]$")) |>
-  pivot_longer(cols = -student_id, names_to = c(".value", "semester"), names_sep = "_S") |>
-  rename(gpa = GPA, sleep_hours = Sleep, study_hours = Study,
-         exercise_days = Exercise, caffeine_mg = Caffeine,
-         supervisor_meetings = Meetings, wellbeing = Wellbeing) |>
-  mutate(
-    semester    = as.integer(semester),
-    sleep_hours = parse_number(str_replace(sleep_hours, ",", ".")),
-    across(c(gpa, study_hours, exercise_days, caffeine_mg, supervisor_meetings, wellbeing),
-           parse_number),
-    sleep_hours = if_else(sleep_hours > 24, NA, sleep_hours),
-    study_hours = if_else(study_hours > 168, NA, study_hours),
-    gpa         = if_else(gpa > 4, NA, gpa)
-  ) |>
-  filter(!if_all(gpa:wellbeing, is.na))
-
-# Checks
-nrow(responses)        # 600 students
-nrow(semesters_clean)  # 2,326 semester records
-head(scores)
+# ==============================================================================
+# D. DO IT YOURSELF
+# No solutions: these tasks are open. Compare your approach with the methods of
+# Chapter 3, and discuss your choices with a fellow student or your supervisor.
+# ==============================================================================

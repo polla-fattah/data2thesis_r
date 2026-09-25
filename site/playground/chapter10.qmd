@@ -1,206 +1,468 @@
 ---
 title: "Playground: Chapter 10"
-subtitle: Introduction to Machine Learning in R
+subtitle: Mixed-Effects Models
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
   - students.csv
   - semesters.csv
-  - questionnaire.csv
   - chapter10.zip
 webr:
   packages:
     - dplyr
-    - rpart
+    - lme4
   resources:
     - students.csv
     - semesters.csv
-    - questionnaire.csv
 ---
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-tidymodels is too large to run in a browser, so these exercises practise the *ideas* of Chapter 10 with functions that come with R: splitting the data yourself, fitting with `glm()`, and measuring accuracy and AUC. The downloadable project at the bottom uses tidymodels, exactly as in the chapter. Where you see `______`, replace it with your own code.
+This page practises the ideas of Chapter 10 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with new questions and some of R's built-in datasets. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with an empty code space and no answers: you choose and check the models yourself, as you will in your own thesis.
+
+The exercises use the lme4 package, which is large, so **the first run on this page can take a minute** while your browser downloads it. The data frame `panel` is prepared as in the chapter: one row per student per semester, with the background variables and `time` counted from 0 (semester 1) to 3 (semester 4). In the exercises, replace each `______` with your own code and press **Run Code**.
 
 ```{webr}
 #| setup: true
-#| exercise: [ex1, ex2, ex3, ex4, ex5]
+#| exercise: [ex1, ex2, ex3, ex4, gf1, gf2]
 library(dplyr)
-library(rpart)
-students      <- read.csv("students.csv")
-semesters     <- read.csv("semesters.csv")
-questionnaire <- read.csv("questionnaire.csv")
-scores <- questionnaire |>
-  mutate(
-    stress_4 = 6 - stress_4,
-    stress   = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
-    support  = rowMeans(pick(support_1:support_6), na.rm = TRUE)
-  ) |>
-  select(student_id, stress, support)
-dropout_data <- students |>
-  left_join(scores, join_by(student_id)) |>
-  left_join(semesters |> filter(semester == 1), join_by(student_id)) |>
-  mutate(dropout = as.integer(considering_dropout == "Yes")) |>
-  select(dropout, stress, support, financial_worry, sleep_hours, study_hours,
-         caffeine_mg, wellbeing, gpa) |>
-  na.omit()
-
-# The AUC: how often an at-risk student gets a higher predicted probability
-# than a student not at risk
-auc <- function(prob, truth) {
-  r <- rank(prob); n1 <- sum(truth == 1); n0 <- sum(truth == 0)
-  (sum(r[truth == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
-}
-
-set.seed(10)
-train_rows <- sample(nrow(dropout_data), round(0.75 * nrow(dropout_data)))
-train <- dropout_data[train_rows, ]
-test  <- dropout_data[-train_rows, ]
+library(lme4)
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+panel <- semesters |>
+  left_join(students, join_by(student_id)) |>
+  mutate(time = semester - 1)
 ```
 
-## Splitting and fitting
+```{webr}
+#| include: false
+library(dplyr)
+library(lme4)
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+panel <- semesters |>
+  left_join(students, join_by(student_id)) |>
+  mutate(time = semester - 1)
+```
 
-### Exercise 1: Split the data yourself
+## Practise the chapter
 
-The setup code has already split the data: 75% of the rows, chosen at random, for training, and the rest for testing. Check the sizes, and the share of students considering dropout in each set.
+These are the exercises at the end of Chapter 10, with the same numbers.
+
+### Exercise 1: Sleep over the semesters
+
+Fit a random intercept model for `sleep_hours` over time. Calculate the ICC, and describe whether sleep changes over the semesters.
 
 ```{webr}
 #| exercise: ex1
-nrow(train)
-nrow(______)
-mean(train$dropout)
-mean(test$______)
+sleep_ri <- ______(sleep_hours ~ time + (1 | student_id), data = panel)
+vc <- as.data.frame(VarCorr(sleep_ri))
+vc$vcov[1] / ______(vc$vcov)
+confint(sleep_ri, parm = "beta_", method = "Wald")
 ```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+lme4's function for a linear mixed-effects model adds "mer" (mixed-effects regression) to the name of `lm()`. The ICC is the between-student variance, the first in `vc$vcov`, as a share of the total variance.
+:::
+:::
 
 ::: { .solution exercise="ex1" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-nrow(train)
-nrow(test)
-mean(train$dropout)
-mean(test$dropout)
+sleep_ri <- lmer(sleep_hours ~ time + (1 | student_id), data = panel)
+vc <- as.data.frame(VarCorr(sleep_ri))
+vc$vcov[1] / sum(vc$vcov)
+confint(sleep_ri, parm = "beta_", method = "Wald")
 ```
 
-About 15% in the training set and 13% in the test set. A simple random split does not guarantee the same share in both; tidymodels' `strata` argument does, which is why the chapter uses it.
+The ICC is 0.83: 83% of the variation in sleep is between students, so students differ a great deal in how much they sleep, but each sleeps about the same from one semester to the next. The slope of `time` is almost exactly zero (0.0005 hours per semester), and its confidence interval, from −0.015 to 0.016, is narrow and centred on zero: sleep does not change over the two years, and the interval rules out any change larger than about a minute per semester.
 :::
 :::
 
-### Exercise 2: Fit on training, predict on test
+### Exercise 2: Is a random slope worth keeping?
 
-Fit a logistic regression of `dropout` on stress, support, and financial worry, using the training data only. Then predict the probability of dropout for the test students.
+Add a random slope of `time` to the model in Exercise 1, and compare the two models with `anova()`. Decide whether the random slope is worth keeping.
 
 ```{webr}
 #| exercise: ex2
-model <- glm(dropout ~ stress + support + financial_worry, data = ______, family = binomial)
-prob <- predict(model, newdata = ______, type = "response")
-head(round(prob, 2))
+sleep_ri <- lmer(sleep_hours ~ time + (1 | student_id), data = panel)
+sleep_rs <- lmer(sleep_hours ~ time + (______ | student_id), data = panel)
+anova(sleep_ri, sleep_rs)
+VarCorr(sleep_rs)
 ```
+
+::: { .hint exercise="ex2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The term before the bar lists what varies between students: `1` is the intercept only, and adding a variable lets its slope vary too (the intercept is then included automatically).
+:::
+:::
 
 ::: { .solution exercise="ex2" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-model <- glm(dropout ~ stress + support + financial_worry, data = train, family = binomial)
-prob <- predict(model, newdata = test, type = "response")
-head(round(prob, 2))
+sleep_rs <- lmer(sleep_hours ~ time + (time | student_id), data = panel)
+anova(sleep_ri, sleep_rs)
+VarCorr(sleep_rs)
 ```
+
+The likelihood ratio test favours the random slope ($\chi^2$ = 7.8, 2 df, p = 0.02), and its AIC is slightly lower. But `VarCorr()` shows that the slopes hardly vary: their standard deviation is 0.05 hours (3 minutes) per semester, against 0.95 hours between students' overall levels. Statistically detectable, practically unimportant. Either model is defensible; for a thesis, the simpler random intercept model with a sentence noting the test would be a reasonable choice.
 :::
 :::
 
-## Evaluating
+### Exercise 3: Do part-time students change differently?
 
-### Exercise 3: Accuracy and the "always No" model
-
-Classify a test student as at risk if their predicted probability is above 0.5. What share are classified correctly? Compare with a "model" that says "No" for everyone.
+Fit a model of wellbeing over time with study mode and their interaction, with random intercepts and slopes, and describe whether part-time students' wellbeing changes at a different rate.
 
 ```{webr}
 #| exercise: ex3
-model <- glm(dropout ~ stress + support + financial_worry, data = train, family = binomial)
-prob <- predict(model, newdata = test, type = "response")
-mean((prob > 0.5) == test$dropout)   # the model
-mean(test$dropout == ______)          # always "No"
+wb_mode <- lmer(wellbeing ~ time ______ study_mode + (time | student_id), data = panel)
+round(summary(wb_mode)$coefficients, 2)
+confint(wb_mode, parm = "beta_", method = "Wald")
 ```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The operator that includes both main effects and their interaction is the multiplication sign. `study_modePart-time` is the difference in level at time 0; `time:study_modePart-time` is the difference in slope.
+:::
+:::
 
 ::: { .solution exercise="ex3" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-mean((prob > 0.5) == test$dropout)
-mean(test$dropout == 0)
+wb_mode <- lmer(wellbeing ~ time * study_mode + (time | student_id), data = panel)
 ```
 
-The model is right about 88% of the time, but "always No" is right about 87% of the time without finding a single student at risk. Accuracy barely separates a useful model from a useless one.
+Full-time students start at 62.8 and decline by 0.47 points per semester. Part-time students start 3.9 points lower (95% CI −5.9 to −1.9), but their slope differs by only 0.14 points per semester, with an interval from −0.34 to 0.61 that includes zero. Part-time students' wellbeing is lower from the start, and the gap stays about the same over the two years: there is no evidence that it changes at a different rate.
 :::
 :::
 
-### Exercise 4: The AUC
+### Exercise 4: Supervisors and study hours
 
-Use the `auc()` function from the setup to calculate the model's AUC on the test data.
+Fit a model with random intercepts for supervisors and students for `study_hours`, and calculate how much of its variation lies between supervisors.
 
 ```{webr}
 #| exercise: ex4
-model <- glm(dropout ~ stress + support + financial_worry, data = train, family = binomial)
-prob <- predict(model, newdata = test, type = "response")
-auc(prob, test$______)
+study_levels <- lmer(study_hours ~ time + (______ | supervisor_id) + (1 | student_id),
+                     data = panel)
+vc <- as.data.frame(VarCorr(study_levels))
+data.frame(level = vc$grp, share = round(vc$vcov / sum(vc$vcov), 3))
 ```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+A random intercept for each supervisor is written in the same way as the one for each student.
+:::
+:::
 
 ::: { .solution exercise="ex4" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-auc(prob, test$dropout)
+study_levels <- lmer(study_hours ~ time + (1 | supervisor_id) + (1 | student_id),
+                     data = panel)
 ```
 
-About 0.88: the model ranks an at-risk student above a not-at-risk student about 88% of the time. Unlike accuracy, the AUC clearly shows that the model is useful. (With a small test set, the exact value depends on the random split; the chapter's value differs a little.)
+The share between supervisors is 0, and R reports a singular fit: the model found no differences between supervisors at all, beyond what differences between their students explain. About 91% of the variation lies between students and 9% within students from semester to semester. Supervisors matter for wellbeing, as the chapter showed, but not for how much students study. The singular fit is the model's way of saying that the supervisor level can be dropped.
 :::
 :::
 
-## Overfitting
+### Exercise 5: Supervisors who differ more
 
-### Exercise 5: A tree that memorises
-
-Grow a decision tree with no limits (`cp = 0` and `minsplit = 2` let it grow until every leaf is pure), then compare its AUC on the training data with its AUC on the test data.
+Change the simulation at the start of the chapter so that supervisors differ more (`sd = 10` for `style`), and describe what happens to the false alarm rate of the ordinary regression. The page repeats the study 200 times rather than 500, to keep the time in the browser reasonable; it still takes a minute.
 
 ```{webr}
 #| exercise: ex5
-train$y <- factor(train$dropout)
-deep_tree <- rpart(y ~ stress + support + financial_worry + sleep_hours + study_hours +
-                     caffeine_mg + wellbeing + gpa,
-                   data = train, method = "class",
-                   control = rpart.control(cp = 0, minsplit = 2, minbucket = 1))
-auc(predict(deep_tree, train)[, "1"], train$dropout)   # on the training data
-auc(predict(deep_tree, ______)[, "1"], test$dropout)   # on new students
+simulate_clustered <- function(style_sd) {
+  supervisor <- rep(1:20, each = 10)
+  trained    <- rep(rep(c(0, 1), 10), each = 10)
+  style      <- rnorm(20, sd = style_sd)[supervisor]
+  wellbeing  <- 60 + style + rnorm(200, sd = 10)
+
+  p_ordinary <- summary(lm(wellbeing ~ trained))$coefficients["trained", 4]
+  mixed      <- suppressMessages(lmer(wellbeing ~ trained + (1 | supervisor)))
+  t_mixed    <- coef(summary(mixed))["trained", "t value"]
+  c(ordinary = p_ordinary < 0.05, mixed = 2 * pnorm(-abs(t_mixed)) < 0.05)
+}
+
+set.seed(12)
+rowMeans(replicate(200, simulate_clustered(style_sd = ______)))
 ```
+
+::: { .hint exercise="ex5" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The chapter's value was 5. The larger the supervisors' standard deviation, the more their students resemble each other.
+:::
+:::
 
 ::: { .solution exercise="ex5" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-auc(predict(deep_tree, train)[, "1"], train$dropout)
-auc(predict(deep_tree, test)[, "1"], test$dropout)
+set.seed(12)
+rowMeans(replicate(200, simulate_clustered(style_sd = 10)))
 ```
 
-A perfect 1.0 on the training data, and only about 0.6 on new students, barely better than chance. The tree memorised the training students instead of learning a pattern that carries over. This is overfitting, and it is why a model must always be tested on data it has not seen.
+The ordinary regression now declares the useless course significant in about 46% of the studies, against about 27% in the chapter; the mixed model stays near 8%. When supervisors differ more, students of the same supervisor resemble each other more (the ICC rises), so the 200 students carry even less independent information: the study is really about 20 supervisors. The ordinary regression still counts 200 independent students, so its standard error is too small by more, and the difference between two sets of 10 supervisors looks like an effect of the course nearly half the time.
 :::
 :::
+
+### Exercise 6: Explaining it to a fellow student
+
+In your own words, explain to a fellow student why an ordinary regression of all the semester records would be wrong. Write your answer first, then open the model answer.
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
+
+*"Each student appears up to four times, and a student's four records are much more alike than records of four different students: someone who sleeps little in semester 1 usually sleeps little in semester 4 too. An ordinary regression treats the 2,326 records as 2,326 independent pieces of evidence, but they are really about 600 people, and together they carry only about as much information as 700 or so independent records. So the ordinary regression thinks it knows more than it does: its standard errors are too small, and its p-values too small, and it will find 'effects' that are just differences between a few students. A mixed model knows which records belong to the same student and gets the uncertainty right."*
+:::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 7: How much information is in the records?
+
+The chapter calculated the design effect for wellbeing. Calculate it for GPA and for sleep, and the number of independent records each set of records is worth.
+
+```{webr}
+#| exercise: gf1
+records_per_student <- nrow(panel) / length(unique(panel$student_id))
+
+gpa_null <- lmer(gpa ~ 1 + (1 | student_id), data = panel)
+vc  <- as.data.frame(VarCorr(gpa_null))
+icc <- vc$vcov[1] / sum(vc$vcov)
+design_effect <- 1 + (records_per_student - 1) * ______
+c(icc = icc, design_effect = design_effect,
+  worth = sum(!is.na(panel$gpa)) / design_effect)
+```
+
+::: { .hint exercise="gf1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The design effect is $1 + (m - 1) \times \text{ICC}$, where $m$ is the number of records per student. For sleep, change `gpa` to `sleep_hours` in the two places it appears.
+:::
+:::
+
+::: { .solution exercise="gf1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+design_effect <- 1 + (records_per_student - 1) * icc
+```
+
+With 3.9 records per student, GPA has an ICC of 0.71 and a design effect of 3.0: its 2,325 records are worth about 767 independent observations. Sleep has an ICC of 0.83 and a design effect of 3.4, so its records are worth only about 679. The more stable a variable is within each student, the more its repeated records repeat each other, and the less each new semester adds. For sleep, which barely changes, measuring four times gives little more information than measuring once.
+:::
+:::
+
+### Exercise 8: Averaging first, or a mixed model
+
+One simple way to avoid repeated records is to average each student's records and run an ordinary regression on the 600 averages. Compare this with a mixed model, and with the wrong analysis of all records, for the difference in wellbeing between part-time and full-time students.
+
+```{webr}
+#| exercise: gf2
+averages <- panel |>
+  summarise(wellbeing = ______(wellbeing), .by = c(student_id, study_mode))
+
+summary(lm(wellbeing ~ study_mode, data = averages))$coefficients
+summary(lmer(wellbeing ~ study_mode + (1 | student_id), data = panel))$coefficients
+summary(lm(wellbeing ~ study_mode, data = panel))$coefficients
+```
+
+::: { .hint exercise="gf2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Each student's records are reduced to one value, their average, by grouping on the student (and study mode, which is the same in every record of a student).
+:::
+:::
+
+::: { .solution exercise="gf2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+averages <- panel |>
+  summarise(wellbeing = mean(wellbeing), .by = c(student_id, study_mode))
+```
+
+The averages and the mixed model agree almost perfectly: part-time students are 3.7 points lower, with a standard error of 0.98 in both. The ordinary regression of all 2,326 records gives a similar estimate (3.8) but a standard error of only 0.54, far too small, because it counts every record as independent. For a variable that does not change within a student, such as study mode, averaging is a perfectly good solution. It cannot answer questions about change over time, though, and it gives students with one record the same weight as students with four; that is where the mixed model is needed.
+:::
+:::
+
+### Exercise 9: How long a study needs to run
+
+lme4's `sleepstudy` data follows 18 people over 10 days of sleep restriction. Fit the random slope model to the first five days only (days 0 to 4) and compare it with the model for all ten days.
+
+```{webr}
+#| exercise: gf3
+library(dplyr)
+library(lme4)
+full  <- lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
+early <- lmer(Reaction ~ Days + (Days | Subject),
+              data = sleepstudy |> filter(Days ______ 4))
+summary(full)$coefficients
+summary(early)$coefficients
+VarCorr(full)
+VarCorr(early)
+```
+
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Days 0 to 4 are the days less than or equal to 4.
+:::
+:::
+
+::: { .solution exercise="gf3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+early <- lmer(Reaction ~ Days + (Days | Subject),
+              data = sleepstudy |> filter(Days <= 4))
+```
+
+With five days, the average slope is 8.2 ms per day (SE 2.4), against 10.5 (SE 1.5) with ten days: a smaller and much less precise estimate from half the data. The residual standard deviation also shrinks, from 25.6 to 14.9 ms, which suggests that reaction times become more erratic in the later days. A short study would have described a milder effect and missed how people deteriorate as sleep loss accumulates. A slope describes only the period observed, and extrapolating it beyond that period is risky.
+:::
+:::
+
+### Exercise 10: Growth curves for chicks
+
+R's built-in `ChickWeight` data records the weight of 50 chicks, measured every few days from birth to day 21. Fit a model in which every chick has its own starting weight and growth rate, and describe how much the chicks differ in growth.
+
+```{webr}
+#| exercise: gf4
+library(lme4)
+chick_model <- lmer(weight ~ Time + (______ | Chick), data = ChickWeight)
+summary(chick_model)$coefficients
+VarCorr(chick_model)
+```
+
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Each chick's own growth rate is a random slope of the time variable.
+:::
+:::
+
+::: { .solution exercise="gf4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+chick_model <- lmer(weight ~ Time + (Time | Chick), data = ChickWeight)
+```
+
+The average chick gains 8.5 grams a day, and the standard deviation of the growth rates is 3.8 grams a day: a typical chick grows about 45% faster or slower than average, so chicks differ enormously in growth. The model's average intercept, 29 grams, is below the real birth weight of about 41 grams, and the intercepts and slopes correlate at −0.95. Both are signs that a straight line is too simple: chicks grow faster as they get bigger, so the line starts too low. A curved growth model, with a squared term for time, would describe them better.
+:::
+:::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** Why are repeated records of the same student not independent?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because each student brings stable characteristics to every record: their habits, circumstances, personality, and the way they answer questions. Two records of the same student are therefore more alike than records of two different students, and the second record partly repeats the information in the first.
+:::
+
+**2.** What does the intraclass correlation (ICC) measure?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+The share of all the variation that lies between groups, such as students or supervisors, rather than within them. An ICC of 0 means that the grouping does not matter; an ICC near 1 means that members of a group are almost identical. The higher the ICC, the more wrong an analysis that ignores the grouping would be.
+:::
+
+**3.** What is the difference between a fixed effect and a random effect?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+A fixed effect is a quantity of direct interest, estimated as one number: the average effect of time, or the difference between study modes. A random effect describes how groups vary around the average, estimated as a standard deviation: how much students' starting levels or growth rates differ. The individual students are not of interest in themselves; they are a sample from a population whose variation the random effect describes.
+:::
+
+**4.** What does a singular fit mean, and what should you do about it?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+That the model's random effects are more complex than the data can support: typically, a variance estimated as zero, or a correlation of exactly ±1. It does not mean that the model is wrong in its fixed effects. The usual response is to simplify the random effects, for example by dropping a random slope or a level that shows no variation, and to report the simplification.
+:::
+
+**5.** In the chapter's simulation, why did the ordinary regression produce so many false alarms?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+The course was given to supervisors, and there were only 20 of them. Students of the same supervisor shared the supervisor's style, so the 200 students were far from 200 independent pieces of evidence. The ordinary regression counted them as independent, underestimated the standard error, and mistook chance differences between two small groups of supervisors for an effect of the course.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. Each code space below is empty and ready to run: write your own code, as you would for a thesis. The data (`students`, `semesters`, and `panel`) and the dplyr and lme4 packages are already loaded, and R's built-in datasets are always available.
+
+**1.** Model the change in `exercise_days` over the four semesters. Choose the random effects with a likelihood ratio test, calculate the ICC, and write two sentences reporting the result.
+
+```{webr}
+# Your code here
+```
+
+**2.** Test whether the effect of the workshop invitation on wellbeing over time differs between Master's and PhD students, with a three-way interaction of time, workshop, and programme. Describe the result with predicted wellbeing for the four groups in semester 2.
+
+```{webr}
+# Your code here
+```
+
+**3.** Write the paragraph reporting a mixed model for GPA over the semesters, like the chapter's reporting paragraph for wellbeing, including the random effects and the number of observations and students, with every number calculated by code.
+
+```{webr}
+# Your code here
+```
+
+**4.** R's built-in `Orange` data records the circumference of five orange trees at seven ages. Fit a model in which every tree has its own growth rate, and explain why estimating the spread of the trees' intercepts and slopes from only five trees is uncertain.
+
+```{webr}
+# Your code here
+```
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 10 project
 
-The project uses tidymodels, as in the chapter: a stratified split, a recipe, workflows, cross-validation, and tuning, with exercises from the chapter (including tuning k-nearest neighbours) and solutions.
+The project contains the data and all four parts of this page as an R script: the exercises with blanks, the questions to check your understanding (answers in `solutions.R`), and the open tasks, each with space to write your code. On your own computer, the simulation in Exercise 5 can use the chapter's 500 repetitions.
 
 - [Download chapter10.zip](chapter10.zip), unzip it, and double-click `chapter10.Rproj`.
 - Or type this one line in RStudio's Console:

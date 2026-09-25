@@ -1,11 +1,11 @@
 ---
 title: "Playground: Chapter 14"
-subtitle: Neural Networks
+subtitle: Advanced Clustering
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
@@ -16,7 +16,6 @@ resources:
 webr:
   packages:
     - dplyr
-    - nnet
   resources:
     - students.csv
     - semesters.csv
@@ -25,225 +24,549 @@ webr:
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-tidymodels is too large to run in a browser, so these exercises practise the ideas of Chapter 14 with base R and the **nnet** package, which is the engine behind the chapter's `mlp()` models. The downloadable project at the bottom uses tidymodels, exactly as in the chapter. Where you see `______`, replace it with your own code.
+This page practises the ideas of Chapter 14 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with simulations and some of R's built-in datasets. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with an empty code space and no answers: you decide what counts as a group, as you will in your own thesis.
+
+The chapter's mclust package is not available in the browser, so this page works with functions that come with R and two short functions defined in the setup. `dbscan_by_hand()` runs DBSCAN exactly as the dbscan package does (it gives identical clusters and noise points on this data), and `ari()` calculates the adjusted Rand index, as mclust's `adjustedRandIndex()` does. Exercises that need the mixture model are marked as tasks for the download project, which uses mclust and dbscan exactly as the chapter does; where a mixture model's profiles are needed on this page, k-means stands in for it.
 
 ```{webr}
 #| setup: true
-#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+#| exercise: [ex3, ex6, ex7, gf1, gf2, gf3, gf4]
 library(dplyr)
-library(nnet)
 students      <- read.csv("students.csv")
 semesters     <- read.csv("semesters.csv")
 questionnaire <- read.csv("questionnaire.csv")
-scores <- questionnaire |>
+
+q <- questionnaire
+q$stress_4 <- 6 - q$stress_4
+scores <- q |>
   mutate(
-    stress_4 = 6 - stress_4,
-    stress   = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
-    burnout  = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
-    support  = rowMeans(pick(support_1:support_6), na.rm = TRUE)
+    stress       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
   ) |>
-  select(student_id, stress, burnout, support)
-dropout_data <- students |>
+  select(student_id, stress, support, satisfaction)
+profiles <- semesters |>
+  summarise(across(c(sleep_hours, study_hours, caffeine_mg, exercise_days),
+                   ~ mean(.x, na.rm = TRUE)), .by = student_id) |>
   left_join(scores, join_by(student_id)) |>
-  left_join(semesters |> filter(semester == 1), join_by(student_id)) |>
-  mutate(dropout = as.integer(considering_dropout == "Yes")) |>
-  select(dropout, stress, burnout, support, financial_worry, sleep_hours,
-         study_hours, caffeine_mg, wellbeing, gpa) |>
   na.omit()
+profile_data <- scale(profiles |> select(-student_id))
 
-set.seed(10)
-train_rows <- sample(nrow(dropout_data), round(0.75 * nrow(dropout_data)))
-train <- dropout_data[train_rows, ]
-test  <- dropout_data[-train_rows, ]
-
-# Normalise the predictors with the training means and SDs
-predictors <- setdiff(names(train), "dropout")
-centres <- sapply(train[predictors], mean)
-spreads <- sapply(train[predictors], sd)
-train[predictors] <- scale(train[predictors], centres, spreads)
-test[predictors]  <- scale(test[predictors], centres, spreads)
-
-auc <- function(prob, truth) {
-  r <- rank(prob); n1 <- sum(truth == 1); n0 <- sum(truth == 0)
-  (sum(r[truth == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
+# DBSCAN: core points have at least minPts points within eps (counting
+# themselves); core points within eps of each other form one cluster; points
+# near a core point join its cluster; everything else is noise (cluster 0)
+dbscan_by_hand <- function(x, eps, minPts) {
+  d <- as.matrix(dist(x))
+  core <- rowSums(d <= eps) >= minPts
+  cluster <- integer(nrow(d))
+  current <- 0
+  for (i in which(core)) {
+    if (cluster[i] != 0) next
+    current <- current + 1
+    queue <- i
+    cluster[i] <- current
+    while (length(queue) > 0) {
+      p <- queue[1]
+      queue <- queue[-1]
+      if (!core[p]) next
+      for (nb in which(d[p, ] <= eps & cluster == 0)) {
+        cluster[nb] <- current
+        queue <- c(queue, nb)
+      }
+    }
+  }
+  cluster
 }
-sigmoid <- function(z) 1 / (1 + exp(-z))
+
+# The adjusted Rand index: agreement of two clusterings, 1 = identical, 0 = chance
+ari <- function(a, b) {
+  t  <- table(a, b)
+  s  <- sum(choose(t, 2))
+  sa <- sum(choose(rowSums(t), 2))
+  sb <- sum(choose(colSums(t), 2))
+  e  <- sa * sb / choose(sum(t), 2)
+  (s - e) / ((sa + sb) / 2 - e)
+}
 ```
-
-## Neurons
-
-### Exercise 1: A neuron by hand
-
-The chapter's neuron has a bias of −4 and weights 1.2 for stress and −0.8 for support. Change the support weight to −1.6, so that support matters twice as much, and calculate the output for a student with stress 4 and support 2.
 
 ```{webr}
-#| exercise: ex1
-neuron <- function(stress, support) {
-  sigmoid(-4 + 1.2 * stress + ______ * support)
+#| include: false
+library(dplyr)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+q <- questionnaire
+q$stress_4 <- 6 - q$stress_4
+scores <- q |>
+  mutate(
+    stress       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  ) |>
+  select(student_id, stress, support, satisfaction)
+profiles <- semesters |>
+  summarise(across(c(sleep_hours, study_hours, caffeine_mg, exercise_days),
+                   ~ mean(.x, na.rm = TRUE)), .by = student_id) |>
+  left_join(scores, join_by(student_id)) |>
+  na.omit()
+profile_data <- scale(profiles |> select(-student_id))
+dbscan_by_hand <- function(x, eps, minPts) {
+  d <- as.matrix(dist(x))
+  core <- rowSums(d <= eps) >= minPts
+  cluster <- integer(nrow(d))
+  current <- 0
+  for (i in which(core)) {
+    if (cluster[i] != 0) next
+    current <- current + 1
+    queue <- i
+    cluster[i] <- current
+    while (length(queue) > 0) {
+      p <- queue[1]
+      queue <- queue[-1]
+      if (!core[p]) next
+      for (nb in which(d[p, ] <= eps & cluster == 0)) {
+        cluster[nb] <- current
+        queue <- c(queue, nb)
+      }
+    }
+  }
+  cluster
 }
-neuron(stress = 4, support = 2)
-neuron(stress = 4, support = 4)
+ari <- function(a, b) {
+  t  <- table(a, b)
+  s  <- sum(choose(t, 2))
+  sa <- sum(choose(rowSums(t), 2))
+  sb <- sum(choose(colSums(t), 2))
+  e  <- sa * sb / choose(sum(t), 2)
+  (s - e) / ((sa + sb) / 2 - e)
+}
 ```
 
-::: { .solution exercise="ex1" }
-::: { .callout-tip collapse="false"}
+## Practise the chapter
+
+These are the exercises at the end of Chapter 14, with the same numbers. In the setup, `profiles` holds each student's averages and scale scores and `profile_data` the same values as z-scores, exactly as in the chapter.
+
+### Exercise 1: Four mixture profiles
+
+Fit `Mclust(profile_data, G = 4)` and describe the four profiles. Identify which of the three-cluster profiles has been split, and compare the new solution with Chapter 9's k-means.
+
+This exercise needs mclust, so it is done in the [download project](#work-on-your-own-computer).
+
+::: {.callout-tip collapse="true" appearance="simple"}
 ## Solution
 
 ```r
-neuron <- function(stress, support) {
-  sigmoid(-4 + 1.2 * stress - 1.6 * support)
-}
+set.seed(123)
+gmm4 <- Mclust(profile_data, G = 4, verbose = FALSE)
+profiles |>
+  mutate(cluster = gmm4$classification) |>
+  summarise(students = n(), across(sleep_hours:satisfaction, ~ round(mean(.x), 1)),
+            .by = cluster)
+table(three = profile_gmm$classification, four = gmm4$classification)
 ```
 
-The output falls from 0.31 (with the chapter's weights) to about 0.08, and to about 0.004 for a student with support 4. A negative weight means that the input *lowers* the output: the more support, the lower the predicted risk.
+The four profiles are the **disengaged** students (201: few study hours, low support and satisfaction), the **balanced** (200), the **overloaded** (166: 41 hours of study, 5.7 hours of sleep), and a small **extreme** group (32) who study 43 hours, sleep 4.9 hours, and take over 560 mg of caffeine a day. The cross-table shows that the extreme group was split off the three-cluster overloaded profile (31 of its 32 students came from it). This is close to Chapter 9's four k-means clusters, which also separated a very-high-caffeine group; the two four-cluster solutions agree well (adjusted Rand index 0.73).
 :::
-:::
 
-### Exercise 2: A neuron is a logistic regression
+### Exercise 2: Clear members
 
-Fit a logistic regression of dropout on stress and support with `glm()`. Use its coefficients as the bias and weights of a neuron, and check that the neuron gives the same predictions as `predict()`.
+Count the students with a membership probability above 0.95 for their profile, and report the share of the sample.
 
-```{webr}
-#| exercise: ex2
-model <- glm(dropout ~ stress + support, data = train, family = binomial)
-b <- coef(model)
-b
-neuron_output <- sigmoid(b[1] + b[2] * test$stress + b[3] * test$______)
-glm_output <- predict(model, newdata = test, type = "response")
-head(cbind(neuron_output, glm_output))
-```
+This exercise needs mclust, so it is done in the download project.
 
-::: { .solution exercise="ex2" }
-::: { .callout-tip collapse="false"}
+::: {.callout-tip collapse="true" appearance="simple"}
 ## Solution
 
 ```r
-neuron_output <- sigmoid(b[1] + b[2] * test$stress + b[3] * test$support)
+certainty <- apply(profile_gmm$z, 1, max)
+sum(certainty > 0.95)
+mean(certainty > 0.95)
 ```
 
-The two columns are identical. A single neuron with a sigmoid activation *is* a logistic regression: the intercept is the bias, and the coefficients are the weights.
-:::
+432 of the 599 students (72%) belong to their profile with a probability above 0.95; the other 28% sit between profiles, including 79 whose most likely profile has less than an 80% probability. A thesis can report exactly this: *"72% of students clearly matched one profile; the rest combined features of two."* That is more honest than a table that assigns every student to a profile with equal confidence.
 :::
 
-### Exercise 3: The ReLU
+### Exercise 3: DBSCAN with different eps
 
-Write the ReLU activation function, which returns 0 for negative inputs and the input itself otherwise, and plot it next to the sigmoid.
+Run DBSCAN on the profile data with `eps` of 1.2, 1.6, and 2.4 (and `minPts = 8`), describe how the number of clusters and noise points change, and explain why a small `eps` labels so many students as noise.
 
 ```{webr}
 #| exercise: ex3
-relu <- function(z) pmax(______, z)
-z <- seq(-5, 5, length.out = 100)
-par(mfrow = c(1, 2))
-plot(z, sigmoid(z), type = "l", main = "Sigmoid")
-plot(z, relu(z), type = "l", main = "ReLU")
+for (eps in c(1.2, 1.6, 2, 2.4)) {
+  clusters <- dbscan_by_hand(profile_data, eps = eps, minPts = ______)
+  print(c(eps = eps, clusters = max(clusters), noise = sum(clusters == 0)))
+}
 ```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`minPts` is the number of students a neighbourhood must hold for its centre to be a core point; the chapter used 8. Noise points are labelled 0.
+:::
+:::
 
 ::: { .solution exercise="ex3" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-relu <- function(z) pmax(0, z)
+clusters <- dbscan_by_hand(profile_data, eps = eps, minPts = 8)
 ```
 
-`pmax()` takes the larger of 0 and each value of `z`. Simple as it is, the ReLU is the standard activation in deep networks: it is fast to compute, and it helps very deep networks train.
+With `eps = 1.2`, DBSCAN finds 4 small clusters and labels 290 students, almost half, as noise. With 1.6, one cluster and 49 noise points; with 2, one cluster and 13; with 2.4, one cluster and 9. In seven dimensions, points are far apart: a radius of 1.2 standard deviations holds few neighbours, so most students fail to be core points, and only the densest pockets form clusters. As `eps` grows, the pockets join into the one continuous cloud the chapter described. There is no `eps` at which the profiles appear as separate dense regions, which is itself the finding: the profiles overlap without gaps.
 :::
 :::
 
-## Networks
+### Exercise 4: The profiles without the noise students
 
-### Exercise 4: A network that memorises
+Leave out the DBSCAN noise students, fit the mixture model again, and describe whether the profiles change.
 
-Fit a network with 20 hidden neurons (`size = 20`) and no weight decay (`decay = 0`) to the training data, and compare its AUC on the training and test data.
+This exercise needs mclust, so it is done in the download project.
 
-```{webr}
-#| exercise: ex4
-set.seed(1)
-big_net <- nnet(dropout ~ ., data = train, size = ______, decay = 0,
-                maxit = 1000, entropy = TRUE, trace = FALSE)
-auc(predict(big_net, train), train$dropout)
-auc(predict(big_net, test), test$dropout)
-```
-
-::: { .hint exercise="ex4" }
-::: { .callout-note collapse="false"}
-## Hint
-
-`entropy = TRUE` tells nnet that the outcome is a 0/1 variable, so the output is a probability; `maxit` is the number of training iterations (epochs); `trace = FALSE` hides the training log.
-:::
-:::
-
-::: { .solution exercise="ex4" }
-::: { .callout-tip collapse="false"}
+::: {.callout-tip collapse="true" appearance="simple"}
 ## Solution
 
 ```r
-big_net <- nnet(dropout ~ ., data = train, size = 20, decay = 0,
-                maxit = 1000, entropy = TRUE, trace = FALSE)
+keep <- dbscan(profile_data, eps = 2, minPts = 8)$cluster != 0
+gmm_kept <- Mclust(profile_data[keep, ], G = 3, verbose = FALSE)
+profiles[keep, ] |>
+  mutate(cluster = gmm_kept$classification) |>
+  summarise(students = n(), across(sleep_hours:satisfaction, ~ round(mean(.x), 1)),
+            .by = cluster)
 ```
 
-A perfect AUC of 1 on the training data, and a much lower one on the test data: the network has memorised the training students. With 9 predictors and 20 hidden neurons it has 221 weights, for about 400 training students.
+Without the 13 noise students, the three profiles are almost unchanged: the same balanced, disengaged, and overloaded groups, with averages that differ by a few tenths at most. The overloaded profile's average caffeine falls from 284 to 268 mg, because the most extreme caffeine users were among the noise students. The two solutions agree closely on the students they share (adjusted Rand index 0.85). The profiles are robust: they do not depend on a handful of unusual students.
 :::
-:::
 
-### Exercise 5: Weight decay
+### Exercise 5: Mixture model against hierarchical clustering
 
-Fit the same network with a weight decay of 1. What happens to the training and test AUCs?
+Use `adjustedRandIndex()` to compare the three-cluster mixture model with hierarchical clustering (Ward's method, cut into three clusters) from Chapter 9.
 
-```{webr}
-#| exercise: ex5
-set.seed(1)
-decayed_net <- nnet(dropout ~ ., data = train, size = 20, decay = ______,
-                    maxit = 1000, entropy = TRUE, trace = FALSE)
-auc(predict(decayed_net, train), train$dropout)
-auc(predict(decayed_net, test), test$dropout)
-```
+This exercise needs the mixture model, so it is done in the download project. Go further compares clusterings with `ari()` in the browser.
 
-::: { .solution exercise="ex5" }
-::: { .callout-tip collapse="false"}
+::: {.callout-tip collapse="true" appearance="simple"}
 ## Solution
 
 ```r
-decayed_net <- nnet(dropout ~ ., data = train, size = 20, decay = 1,
-                    maxit = 1000, entropy = TRUE, trace = FALSE)
+hierarchical <- cutree(hclust(dist(profile_data), method = "ward.D2"), k = 3)
+adjustedRandIndex(profile_gmm$classification, hierarchical)
+table(profile_gmm$classification, hierarchical)
 ```
 
-The training AUC falls below 1, because the penalty stops the network from memorising, and the test AUC rises a lot. Weight decay does for neural networks what the ridge penalty did for regression in Chapter 12.
-:::
+The adjusted Rand index is 0.63: clear agreement, far above chance, but far from identical. The cross-table shows where they differ: most disagreements are students whom the mixture model calls disengaged and Ward's method places with the balanced students (72 of them). k-means agrees with each of the other two about as well (0.70 and 0.64). The three methods find the same broad structure, and disagree about students at the boundaries, which is where the membership probabilities were lowest.
 :::
 
-### Exercise 6: Network or logistic regression?
+### Exercise 6: Profiles and final GPA
 
-Compare the test AUC of the weight-decayed network with a logistic regression using all the predictors.
+Compare the three profiles on final GPA, and say whether the pattern is what their descriptions would lead you to expect. On this page, k-means with three clusters stands in for the mixture model.
 
 ```{webr}
 #| exercise: ex6
-set.seed(1)
-decayed_net <- nnet(dropout ~ ., data = train, size = 20, decay = 1,
-                    maxit = 1000, entropy = TRUE, trace = FALSE)
-logistic <- glm(dropout ~ ., data = ______, family = binomial)
-auc(predict(decayed_net, test), test$dropout)
-auc(predict(logistic, newdata = test, type = "response"), test$dropout)
+final_gpa <- semesters |>
+  filter(semester == 4) |>
+  select(student_id, final_gpa = gpa)
+
+set.seed(123)
+km3 <- kmeans(profile_data, centers = 3, nstart = 25)
+profiles |>
+  mutate(profile = km3$cluster) |>
+  left_join(final_gpa, join_by(student_id)) |>
+  summarise(students  = n(),
+            with_gpa  = sum(!is.na(final_gpa)),
+            final_gpa = round(______(final_gpa, na.rm = TRUE), 2),
+            study     = round(mean(study_hours), 1),
+            stress    = round(mean(stress), 1),
+            support   = round(mean(support), 1),
+            .by = profile)
 ```
+
+::: { .hint exercise="ex6" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The profiles are compared by their average final GPA; students who left before semester 4 have none, hence `na.rm = TRUE`.
+:::
+:::
 
 ::: { .solution exercise="ex6" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-logistic <- glm(dropout ~ ., data = train, family = binomial)
+final_gpa = round(mean(final_gpa, na.rm = TRUE), 2)
 ```
 
-The two AUCs are very close. For Elaf's data, with its smooth pattern, a neural network has nothing extra to find, and the logistic regression has the advantage of interpretable coefficients.
+The balanced profile has the highest final GPA (3.25), the overloaded profile comes next (3.08), and the disengaged profile is lowest (2.95); the mixture model's profiles in the download project give almost the same (3.27, 3.07, 2.99). Mostly as expected, with one instructive twist: the overloaded students study far more than anyone (42 hours a week) yet finish below the balanced students, who study 24 hours. Chapter 8 found that grades level off beyond about 32 hours of study, and the overloaded students also sleep least and are most stressed. Final GPA was not used to form the profiles, so these differences are evidence that the profiles capture something real. Note that the comparison covers only students who stayed: 36 of the 599 had no final GPA.
 :::
 :::
+
+### Exercise 7: A gap between the groups
+
+In the simulation at the start of the chapter, move the long group upwards (a mean of 3 for `y`) so that a gap separates it from the round group. Describe how each method's result changes, and explain why DBSCAN now behaves differently. On this page, k-means and DBSCAN run; the mixture model's results come from the download project.
+
+```{webr}
+#| exercise: ex7
+for (long_y in c(1.4, ______)) {
+  set.seed(8)
+  shapes <- data.frame(
+    x = c(rnorm(100, 0, 0.4), rnorm(100, 3, 2), runif(15, -2, 7)),
+    y = c(rnorm(100, 0, 0.4), rnorm(100, long_y, 0.2), runif(15, -2, 4)),
+    truth = rep(c("Round group", "Long group", "Scattered"), c(100, 100, 15))
+  )
+  real <- shapes$truth != "Scattered"
+  km <- kmeans(shapes[, c("x", "y")], 2, nstart = 25)$cluster
+  db <- dbscan_by_hand(shapes[, c("x", "y")], eps = 0.5, minPts = 5)
+  print(round(c(long_group_y = long_y,
+                kmeans_ari = ari(shapes$truth[real], km[real]),
+                dbscan_ari = ari(shapes$truth[real], db[real]),
+                dbscan_clusters = max(db),
+                scattered_as_noise = sum(db[!real] == 0)), 2))
+}
+plot(shapes$x, shapes$y, col = db + 1, pch = 19, xlab = "x", ylab = "y")
+```
+
+::: { .hint exercise="ex7" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The loop runs the simulation twice: with the chapter's value of 1.4, and with the new mean for the long group.
+:::
+:::
+
+::: { .solution exercise="ex7" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+for (long_y in c(1.4, 3)) {
+```
+
+With the chapter's layout, k-means scores 0.53 and DBSCAN 0.00: the end of the long group touches the round group, so DBSCAN sees one dense region. With a gap, DBSCAN jumps to 0.98: it finds exactly two clusters, and labels 9 of the 15 scattered points as noise. k-means improves only to 0.79, because it still draws a straight boundary halfway between two centres, cutting off part of the long group. The mixture model scores 0.98 and 1.00 (download project). DBSCAN's definition of a group, a dense region separated by sparse space, fits data with gaps perfectly and fails completely without them; the moved group changed nothing about the groups themselves, only whether a gap separates them.
+:::
+:::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 8: Membership probabilities by hand
+
+The chapter's mixture model for Old Faithful found two groups of waiting times: short waits (36% of eruptions, mean 54.6 minutes) and long waits (64%, mean 80.1 minutes), both with a standard deviation of 5.9 minutes. The probability that a wait belongs to the short group is the short group's share of the total height of the two weighted curves at that wait. Calculate it for waits of 50, 67, and 85 minutes.
+
+```{webr}
+#| exercise: gf1
+wait  <- c(50, 67, 85)
+short <- 0.36 * dnorm(wait, mean = 54.6, sd = 5.9)
+long  <- 0.64 * dnorm(wait, mean = ______, sd = 5.9)
+round(short / (short + ______), 3)
+```
+
+::: { .hint exercise="gf1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`dnorm()` gives the height of a normal curve; multiplying by each group's share makes the larger group's curve taller. The denominator is the total of the two weighted heights.
+:::
+:::
+
+::: { .solution exercise="gf1" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+long <- 0.64 * dnorm(wait, mean = 80.1, sd = 5.9)
+round(short / (short + long), 3)
+```
+
+A 50-minute wait belongs to the short group with a probability of 1.000, an 85-minute wait with 0.000, and a 67-minute wait with 0.42, exactly what mclust reports in the chapter. The 67-minute wait lies nearer the short group's mean (12.4 minutes away, against 13.1 for the long group), yet it is slightly more likely to be long, because long waits are nearly twice as common. That is the whole of a mixture model's soft assignment: the height of each group's curve, weighted by its size.
+:::
+:::
+
+### Exercise 9: Groups of different sizes and densities
+
+Simulate three groups: a large, spread-out group of 300, a small, tight group of 30 close to it, and a medium group of 60 further away. Compare k-means and DBSCAN with the true groups.
+
+```{webr}
+#| exercise: gf2
+set.seed(4)
+groups <- data.frame(
+  x = c(rnorm(300, 0, 1.2), rnorm(30, 3, 0.3), rnorm(60, 0, 0.5)),
+  y = c(rnorm(300, 0, 1.2), rnorm(30, 0, 0.3), rnorm(60, 4.5, 0.5)),
+  truth = rep(c("large", "small", "medium"), c(300, 30, 60))
+)
+km <- kmeans(groups[, c("x", "y")], centers = 3, nstart = 25)$cluster
+table(truth = groups$truth, kmeans = km)
+ari(groups$truth, km)
+
+for (eps in c(0.3, 0.4, 0.5, 0.6)) {
+  db <- dbscan_by_hand(groups[, c("x", "y")], eps = ______, minPts = 5)
+  print(round(c(eps = eps, clusters = max(db), noise = sum(db == 0),
+                ari = ari(groups$truth, db)), 2))
+}
+```
+
+::: { .hint exercise="gf2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Inside the loop, `eps` takes each value in turn; pass it on to `dbscan_by_hand()`.
+:::
+:::
+
+::: { .solution exercise="gf2" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+db <- dbscan_by_hand(groups[, c("x", "y")], eps = eps, minPts = 5)
+```
+
+k-means scores only 0.38: it gives 106 members of the large group to the small group's cluster, because it places its boundaries halfway between centres and so tends to make clusters of similar size and spread. DBSCAN does not do much better, at best 0.66: with a small `eps`, the large group's thin outskirts break into fragments and noise; with a larger `eps`, the small group merges with the large group it touches. A single density threshold cannot suit groups of different densities. A mixture model, which lets each group have its own size and spread, scores 0.94 on the same data (download project). Groups of unequal size and spread are common in real data, and they are where the choice of method matters most.
+:::
+:::
+
+### Exercise 10: DBSCAN on Old Faithful
+
+Run DBSCAN on both variables of the built-in `faithful` data (eruption length and waiting time, scaled) with several values of `eps`, and describe the clusters it finds.
+
+```{webr}
+#| exercise: gf3
+geyser <- scale(faithful)
+for (eps in c(0.1, 0.2, 0.3, 0.5)) {
+  db <- dbscan_by_hand(geyser, eps = eps, minPts = 5)
+  print(c(eps = eps, clusters = max(db), noise = sum(db == 0)))
+}
+db <- dbscan_by_hand(geyser, eps = 0.3, minPts = 5)
+tapply(faithful$waiting, db, ______)
+plot(faithful$eruptions, faithful$waiting, col = db + 1, pch = 19,
+     xlab = "Eruption length (minutes)", ylab = "Waiting time (minutes)")
+```
+
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`tapply(x, group, f)` applies `f` to the values of `x` in each group; describe each cluster by its average waiting time.
+:::
+:::
+
+::: { .solution exercise="gf3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+tapply(faithful$waiting, db, mean)
+```
+
+With `eps = 0.1`, DBSCAN breaks the data into 8 fragments and 126 noise points; with 0.2 and 0.3, it finds the two kinds of eruption, short eruptions after short waits (about 54 minutes) and long eruptions after long waits (about 80 minutes), with 25 and then only 8 points as noise; with 0.5, the two groups merge into one. Unlike the student profiles, the geyser's two groups are separated by a sparse gap, so there is a wide range of `eps` over which DBSCAN finds them clearly. Where the range of good values is wide, the clusters are a feature of the data; where every value gives a different answer, they are a feature of the setting.
+:::
+:::
+
+### Exercise 11: Earthquakes near Fiji
+
+R's built-in `quakes` data gives the location of 1,000 earthquakes near Fiji since 1964. Cluster their positions (longitude and latitude, scaled) with k-means into two groups and with DBSCAN, and compare the two.
+
+```{webr}
+#| exercise: gf4
+positions <- scale(quakes[, c("long", "lat")])
+set.seed(1)
+km <- kmeans(positions, centers = 2, nstart = 25)$cluster
+db <- dbscan_by_hand(positions, eps = 0.3, minPts = 10)
+table(kmeans = km, dbscan = db)
+ari(km, ______)
+plot(quakes$long, quakes$lat, col = db + 1, pch = 19, cex = 0.6,
+     xlab = "Longitude", ylab = "Latitude")
+```
+
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+`ari()` compares any two clusterings of the same cases: here the k-means clusters and the DBSCAN clusters.
+:::
+:::
+
+::: { .solution exercise="gf4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+ari(km, db)
+```
+
+The two methods largely agree (adjusted Rand index 0.94): both separate the long band of earthquakes to the east, along the Tonga trench (785 earthquakes), from the smaller group to the west (about 190). DBSCAN adds two things k-means cannot: it labels 15 isolated earthquakes as noise, and it finds a third, tiny cluster of 12 earthquakes at the northern end of the western group, which k-means had to merge into a larger cluster. The plot shows that the eastern cluster is a long, curved band, a shape DBSCAN follows easily; k-means gets it right here only because the two groups are far apart. Geography, not the method, decides what the clusters mean: the bands trace where tectonic plates meet.
+:::
+:::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** What are the three definitions of a group used by k-means, mixture models, and DBSCAN?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+k-means defines a group as the cases nearest to a centre, which gives round groups of similar size, with every case in exactly one group. A mixture model defines a group as a probability distribution with its own centre, spread, shape, and size, and gives each case a probability of belonging to each group. DBSCAN defines a group as a dense region separated from others by sparse space, of any shape, and allows cases in sparse regions to belong to no group at all.
+:::
+
+**2.** What is the difference between hard and soft membership?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Hard membership assigns each case to exactly one cluster, with complete certainty, as k-means does. Soft membership gives each case a probability of belonging to each cluster, as a mixture model does, so a case halfway between two clusters is shown as uncertain rather than forced into one. Soft membership lets a thesis report how many cases clearly fit a profile.
+:::
+
+**3.** What does BIC compare when choosing the number of clusters in a mixture model?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+It balances how well each model fits the data against how many parameters it uses. More clusters, or more flexible cluster shapes, always fit better, so BIC adds a penalty for every extra parameter, and the model with the best balance wins. It is a guide, not a verdict: models with nearly the same BIC are nearly equally supported, and interpretability should help to choose between them.
+:::
+
+**4.** Why did DBSCAN find only one cluster of students in the chapter?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because the students form one continuous cloud, with no sparse gaps between the profiles. DBSCAN looks for dense regions separated by sparser space; where the profiles meet, students are as densely packed as anywhere else, so the regions join into one. The result is informative: the profiles describe where students sit within one cloud, not separate islands of students.
+:::
+
+**5.** How can a clustering be judged when there is no answer key?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+By several kinds of evidence together: whether the clusters are clearly separated (for example, the silhouette or the membership probabilities); whether they are stable, appearing again in bootstrap samples and with other reasonable methods (the adjusted Rand index measures agreement); whether they are interpretable and useful; and whether they differ on outcomes they were not built from, such as final GPA. No single measure decides; a convincing clustering passes several of these checks.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. Each code space below is empty and ready to run: write your own code, as you would for a thesis. The data (`profiles` and `profile_data`), the functions `dbscan_by_hand()` and `ari()`, and the dplyr package are already loaded, and R's built-in datasets are always available.
+
+**1.** Choose a different set of variables for student profiles (for example, first-semester sleep, caffeine, wellbeing, and support). Cluster the students with k-means and with DBSCAN, choose the number of clusters and `eps` with a reason for each, describe the clusters, and say how many students fit no cluster. (In the download project, fit a mixture model too, and report the share of clear members.)
+
+```{webr}
+# Your code here
+```
+
+**2.** Check the stability of three k-means profiles: draw 20 bootstrap samples of the students, cluster each, and use `ari()` to compare each bootstrap clustering with the clustering of the full data on the students they share. Report how stable the profiles are. (In the download project, do the same for the mixture model.)
+
+```{webr}
+# Your code here
+```
+
+**3.** Write the clustering paragraph of a methods section for your analysis in Task 1, reporting every choice: the variables and their scaling, the method or methods, how the number of clusters and any settings were chosen, and how the clusters were validated. No code is needed; write it on paper or in a document.
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 14 project
 
-The project uses tidymodels, as in the chapter: `mlp()` with the nnet engine, tuning the number of hidden neurons and the weight decay, a fair comparison with logistic regression, and a regression network for the concrete data, with exercises and solutions.
+The project contains the data and all four parts of this page as an R script. Its Practise part uses mclust and dbscan exactly as the chapter does, including the exercises that cannot run in a browser; the other parts use base R, as on this page. Answers to the questions are in `solutions.R`, and the open tasks have space to write your code.
 
 - [Download chapter14.zip](chapter14.zip), unzip it, and double-click `chapter14.Rproj`.
 - Or type this one line in RStudio's Console:

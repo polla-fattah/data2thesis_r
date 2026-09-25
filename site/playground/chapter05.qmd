@@ -1,11 +1,11 @@
 ---
 title: "Playground: Chapter 5"
-subtitle: Descriptive Statistics and Exploratory Data Analysis
+subtitle: From Research Question to Data
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
@@ -24,161 +24,185 @@ webr:
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-These exercises practise the ideas from Chapter 5: centre, spread, shape, unusual values, missing data, and correlation. Where you see `______`, replace it with your own code.
+This page practises the ideas of Chapter 5 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with new questions and simulations. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with no answers: you plan the research yourself, as you will for your own thesis.
+
+Much of this chapter is about thinking before coding, so several exercises ask for a written answer. Write it first, on paper or as a comment (a line starting with `#`) in a code space, then open the model answer. In the code exercises, replace each `______` with your own code and press **Run Code**.
 
 ```{webr}
 #| setup: true
-#| exercise: [ex1, ex2, ex3, ex4, ex5, ex6]
+#| exercise: [ex2, ex3, ex4, ex5, ex6, gf3, gf4, gf5]
 library(dplyr)
-students  <- read.csv("students.csv")
-semesters <- read.csv("semesters.csv")
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
 questionnaire <- read.csv("questionnaire.csv")
 first_sem <- semesters |>
   filter(semester == 1) |>
   left_join(students, join_by(student_id))
 ```
 
-## Centre, spread, and shape
-
-### Exercise 1: Four summaries
-
-Calculate the mean, median, SD, and IQR of first-semester `study_hours`. Are the mean and median close? Which pair of summaries would you report?
-
 ```{webr}
-#| exercise: ex1
-first_sem |>
-  summarise(
-    mean   = mean(study_hours, na.rm = TRUE),
-    median = ______(study_hours, na.rm = TRUE),
-    sd     = ______(study_hours, na.rm = TRUE),
-    iqr    = ______(study_hours, na.rm = TRUE)
-  )
+#| include: false
+library(dplyr)
+students      <- read.csv("students.csv")
+semesters     <- read.csv("semesters.csv")
+questionnaire <- read.csv("questionnaire.csv")
+first_sem <- semesters |>
+  filter(semester == 1) |>
+  left_join(students, join_by(student_id))
 ```
 
-::: { .solution exercise="ex1" }
-::: { .callout-tip collapse="false"}
-## Solution
+## Practise the chapter
 
-```r
-first_sem |>
-  summarise(
-    mean   = mean(study_hours, na.rm = TRUE),
-    median = median(study_hours, na.rm = TRUE),
-    sd     = sd(study_hours, na.rm = TRUE),
-    iqr    = IQR(study_hours, na.rm = TRUE)
-  )
-```
+These are the exercises at the end of Chapter 5, with the same numbers.
 
-The mean (about 28 hours) is a little above the median (26 hours): study hours are only mildly skewed. The mean and SD are acceptable here; the median and IQR would also be fine.
-:::
+### Exercise 1: Better research questions
+
+Improve these research questions so that data could answer them: (a) "Is exercise good for students?" (b) "What makes supervisors effective?" For each, say whether your version is descriptive, relational, or causal.
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
+
+(a) *"Do graduate students who exercise on more days per week report higher wellbeing?"* is relational. *"Does a programme of three weekly exercise sessions raise graduate students' wellbeing after one semester?"* is causal, and needs random assignment to answer. (b) *"Is the number of supervisor meetings per semester associated with students' satisfaction with their progress?"* is relational. Each version names who is studied and what is measured; the vague words "good" and "effective" are replaced by things that can be measured, and the kind of question now tells you which claim the answer can support.
 :::
 
-### Exercise 2: Is wellbeing normal?
+### Exercise 2: A falsifiable hypothesis
 
-Draw a Q-Q plot of first-semester `wellbeing` with base R's `qqnorm()`, and add the reference line with `qqline()`. Do the points follow the line?
+Write a falsifiable hypothesis, its null hypothesis, and the result that would count against it, for the question: "Do students with children study fewer hours per week?" Then run the comparison of first-semester study hours below.
 
 ```{webr}
 #| exercise: ex2
-qqnorm(first_sem$______)
-qqline(first_sem$______)
+# H1:
+# H0:
+# Against H1:
+first_sem |>
+  group_by(has_children) |>
+  summarise(students = ______(), study_hours = mean(study_hours, na.rm = TRUE))
 ```
+
+::: { .hint exercise="ex2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+A falsifiable hypothesis names the result that would contradict it. Inside `summarise()`, the function that counts the rows of each group takes no argument.
+:::
+:::
 
 ::: { .solution exercise="ex2" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-qqnorm(first_sem$wellbeing)
-qqline(first_sem$wellbeing)
+# H1: students with children study fewer hours per week than students without
+# H0: the two groups study the same number of hours on average
+# Against H1: an equal or higher average for students with children
+first_sem |>
+  group_by(has_children) |>
+  summarise(students = n(), study_hours = mean(study_hours, na.rm = TRUE))
 ```
 
-The points follow the line closely: wellbeing is approximately normal.
+Both groups study about 27.6 hours a week (153 students with children, 447 without), so this data gives no support to the hypothesis. Because the hypothesis and the result that would count against it were stated first, this is a finding, not a failure: the study looked, and found no difference where one was expected.
 :::
 :::
 
-## Unusual values and missing data
+### Exercise 3: Levels of measurement
 
-### Exercise 3: The box plot rule
-
-How many students have unusually high first-semester `study_hours` by the box plot rule (above $Q_3 + 1.5 \times IQR$)?
+For each variable in `students`, give its level of measurement. Then convert `financial_worry` into an ordered factor with the labels "Not at all", "A little", "Moderately", "Very", and "Extremely", and make a table of it.
 
 ```{webr}
 #| exercise: ex3
-x  <- first_sem$study_hours
-q3 <- quantile(x, 0.75, na.rm = TRUE)
-fence <- q3 + 1.5 * ______(x, na.rm = TRUE)
-fence
-sum(x > ______, na.rm = TRUE)
+students <- students |>
+  mutate(financial_worry = factor(financial_worry,
+                                  levels = 1:5,
+                                  labels = c(______),
+                                  ordered = ______))
+table(students$financial_worry, useNA = "ifany")
 ```
+
+::: { .hint exercise="ex3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The five labels go in quotation marks, separated by commas, in the order of the codes 1 to 5. The last argument tells R that the categories have an order.
+:::
+:::
 
 ::: { .solution exercise="ex3" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-x  <- first_sem$study_hours
-q3 <- quantile(x, 0.75, na.rm = TRUE)
-fence <- q3 + 1.5 * IQR(x, na.rm = TRUE)
-fence
-sum(x > fence, na.rm = TRUE)
+students <- students |>
+  mutate(financial_worry = factor(financial_worry,
+                                  levels = 1:5,
+                                  labels = c("Not at all", "A little", "Moderately",
+                                             "Very", "Extremely"),
+                                  ordered = TRUE))
+table(students$financial_worry, useNA = "ifany")
 ```
 
-Just one: the upper fence is 65.5 hours, and one student studies 67 hours a week. Study hours have almost no outliers, unlike caffeine.
+The table lists the answers in their natural order, with words instead of codes; the 38 missing answers (`NA`) are students who skipped this sensitive question. The levels of measurement: `student_id` and `supervisor_id` are nominal identifiers; `gender`, `faculty`, `programme`, `study_mode`, `has_children`, `lives_away`, `workshop`, and `considering_dropout` are nominal; `employment` and `financial_worry` are ordinal; `age` and `workshop_sessions` are ratio (a true zero, and "twice as many" makes sense).
 :::
 :::
 
-### Exercise 4: Who left the study?
+### Exercise 4: The null world with small groups
 
-Compare the first-semester sleep of students who later left the study with those who stayed. Is there a difference?
+Change the chapter's null-world simulation to groups of 30 students instead of 150. Between which values do 95% of the chance differences now lie? What does this mean for a small study of the workshop?
 
 ```{webr}
 #| exercise: ex4
-left_ids <- setdiff(students$student_id,
-                    semesters$student_id[semesters$semester == 3])
-first_sem |>
-  mutate(left_study = student_id %in% ______) |>
-  summarise(mean_sleep = mean(sleep_hours, na.rm = TRUE), students = n(),
-            .by = ______)
+set.seed(2026)
+chance_differences <- replicate(5000, {
+  wellbeing <- rnorm(______, mean = 60, sd = 11)
+  group     <- sample(rep(c("Invited", "Not invited"), ______))
+  mean(wellbeing[group == "Invited"]) - mean(wellbeing[group == "Not invited"])
+})
+quantile(chance_differences, c(0.025, 0.975))
 ```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Two groups of 30 make 60 students in all. `rep()` repeats each label the given number of times.
+:::
+:::
 
 ::: { .solution exercise="ex4" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-left_ids <- setdiff(students$student_id,
-                    semesters$student_id[semesters$semester == 3])
-first_sem |>
-  mutate(left_study = student_id %in% left_ids) |>
-  summarise(mean_sleep = mean(sleep_hours, na.rm = TRUE), students = n(),
-            .by = left_study)
+set.seed(2026)
+chance_differences <- replicate(5000, {
+  wellbeing <- rnorm(60, mean = 60, sd = 11)
+  group     <- sample(rep(c("Invited", "Not invited"), 30))
+  mean(wellbeing[group == "Invited"]) - mean(wellbeing[group == "Not invited"])
+})
+quantile(chance_differences, c(0.025, 0.975))
 ```
 
-Almost no difference: about 6.4 hours for those who left and 6.5 for those who stayed. The students who left differed in wellbeing and in thoughts of dropping out (as the chapter showed), but not in sleep. Missing data can be related to some variables and not others, so check each one you use.
+95% of the chance differences lie between about −5.5 and +5.5 points, more than twice as wide as with 150 students per group. A real 5-point effect of the workshop would sit inside the range that chance alone produces, so a study this small could not tell it apart from luck.
 :::
 :::
 
-## Relationships
+### Exercise 5: Did the randomisation work?
 
-### Exercise 5: Support and satisfaction
-
-Calculate each student's support and satisfaction scores, then the correlation between them. Using Cohen's guidelines (0.1 small, 0.3 medium, 0.5 large), how strong is it?
+Check the balance of the random workshop invitation on three other baseline variables: `study_mode`, `has_children`, and `lives_away`.
 
 ```{webr}
 #| exercise: ex5
-scores <- questionnaire |>
-  mutate(
-    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
-    satisfaction = rowMeans(pick(______), na.rm = TRUE)
-  )
-cor(scores$support, scores$______, use = "complete.obs")
+students |>
+  group_by(workshop) |>
+  summarise(part_time = 100 * ______(study_mode == "Part-time"),
+            children  = 100 * ______(has_children == "Yes"),
+            away      = 100 * ______(lives_away == "Yes"))
 ```
 
 ::: { .hint exercise="ex5" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-The satisfaction items are `satisfaction_1` to `satisfaction_4`: `pick(satisfaction_1:satisfaction_4)`.
+A condition gives `TRUE` (1) or `FALSE` (0) for each student, so the *average* of the condition is the share of students for whom it is true.
 :::
 :::
 
@@ -187,55 +211,292 @@ The satisfaction items are `satisfaction_1` to `satisfaction_4`: `pick(satisfact
 ## Solution
 
 ```r
-scores <- questionnaire |>
-  mutate(
-    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
-    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
-  )
-cor(scores$support, scores$satisfaction, use = "complete.obs")
+students |>
+  group_by(workshop) |>
+  summarise(part_time = 100 * mean(study_mode == "Part-time"),
+            children  = 100 * mean(has_children == "Yes"),
+            away      = 100 * mean(lives_away == "Yes"))
 ```
 
-About 0.4: a medium-to-large correlation. Students who feel supported by their supervisor are more satisfied with their programme. But this does not show that support *causes* satisfaction: satisfied students might also see their supervisors more positively, or something else might affect both.
+The groups are similar: 28% and 31% part-time, 23% and 28% with children. The largest gap, living away from family (39% against 46%), is the kind of difference chance produces now and then: randomisation balances groups on average, not exactly. Report such differences in the balance table; there is no need to test them, since any difference is known to be due to chance.
 :::
 :::
 
-### Exercise 6: Describe the sample
+### Exercise 6: How many students?
 
-Complete the summary of Elaf's sample: the number of students, the percentage who study part-time, and the mean and SD of age.
+Use `power.t.test()` to find how many students per group a study needs to detect a difference of 0.3 standard deviations with 80% power, and with 90% power.
 
 ```{webr}
 #| exercise: ex6
-first_sem |>
-  summarise(
-    students      = n(),
-    part_time_pct = 100 * mean(study_mode == ______),
-    age_mean      = mean(age, na.rm = TRUE),
-    age_sd        = ______
-  )
+power.t.test(delta = ______, sd = 1, power = 0.80)
+power.t.test(delta = ______, sd = 1, power = ______)
 ```
+
+::: { .hint exercise="ex6" }
+::: { .callout-note collapse="false"}
+## Hint
+
+With `sd = 1`, the difference is written in standard deviations. Power is a proportion, so 90% is written as 0.90.
+:::
+:::
 
 ::: { .solution exercise="ex6" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-first_sem |>
-  summarise(
-    students      = n(),
-    part_time_pct = 100 * mean(study_mode == "Part-time"),
-    age_mean      = mean(age, na.rm = TRUE),
-    age_sd        = sd(age, na.rm = TRUE)
-  )
+power.t.test(delta = 0.3, sd = 1, power = 0.80)
+power.t.test(delta = 0.3, sd = 1, power = 0.90)
 ```
+
+R gives n = 175.4 and 234.5, so the study needs 176 students per group for 80% power and 235 for 90% (always round up). Going from 80% to 90% power costs a third more participants.
 :::
 :::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 7: Kinds of questions
+
+Classify each question as descriptive, relational, or causal, then open the model answer.
+
+1. What share of graduate students work in a paid job?
+2. Is financial worry associated with considering dropping out?
+3. Does a random invitation to a mindfulness course reduce stress?
+4. How does average sleep change over four semesters?
+5. Do students who meet their supervisor more often have higher GPAs?
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
+
+1 is descriptive: it asks for one number about one variable. 2 and 5 are relational: each asks whether two variables go together. 3 is causal, and the random invitation is what allows a causal answer. 4 is descriptive, although it involves time: it describes how one variable changes, without asking why. Question 5 is often answered in causal words ("meetings improve grades"), but the data can only show an association: students who are doing well may simply seek more meetings.
+:::
+
+### Exercise 8: Hypotheses that could be wrong
+
+Each hypothesis below cannot be contradicted by any result. Rewrite each so that it could be wrong, and name the result that would count against your version.
+
+1. "Stress affects students in various ways."
+2. "The workshop works for students who engage with it properly."
+3. "Social media use may be related to wellbeing."
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
+
+1. *"Students with higher stress scores report lower wellbeing"*; against it: a correlation of zero or above. 2. *"Students who attended at least four of the six sessions have higher wellbeing in semester 2 than students who were not invited"*, with "engage" defined as a number of sessions before the data is seen; against it: an equal or lower average. (This comparison is not randomised, since students chose how many sessions to attend, so it needs careful interpretation.) 3. *"Students who spend more hours a day on social media report lower wellbeing"*; against it: no association, or a positive one. "May be related" can never be wrong, because it allows any result.
+:::
+
+### Exercise 9: Stratified and simple random samples
+
+Treat the 600 students as a population, and draw 2,000 samples of 50 in two ways: simple random samples, and samples stratified by study mode, with the same share of part-time students as the population. Compare how many part-time students each kind of sample contains, and how much the samples' average wellbeing varies.
+
+```{webr}
+#| exercise: gf3
+full_time <- first_sem |> filter(study_mode == "Full-time")
+part_time <- first_sem |> filter(study_mode == "Part-time")
+
+set.seed(5)
+simple <- replicate(2000, {
+  s <- slice_sample(first_sem, n = 50)
+  c(n_part = sum(s$study_mode == "Part-time"), mean_wb = mean(s$wellbeing))
+})
+stratified <- replicate(2000, {
+  s <- bind_rows(slice_sample(full_time, n = 35), slice_sample(part_time, n = ______))
+  c(n_part = sum(s$study_mode == "Part-time"), mean_wb = mean(s$wellbeing))
+})
+
+range(simple["n_part", ])
+range(stratified["n_part", ])
+sd(simple["mean_wb", ])
+sd(stratified["mean_wb", ])
+```
+
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+177 of the 600 students (29.5%) are part-time, so a proportional sample of 50 has about 50 × 0.295 part-time students; with 35 full-time students already chosen, the rest make up the 50.
+:::
+:::
+
+::: { .solution exercise="gf3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+stratified <- replicate(2000, {
+  s <- bind_rows(slice_sample(full_time, n = 35), slice_sample(part_time, n = 15))
+  c(n_part = sum(s$study_mode == "Part-time"), mean_wb = mean(s$wellbeing))
+})
+```
+
+The simple random samples contain anywhere from 5 to 25 part-time students (95% of them between 9 and 21); every stratified sample contains exactly 15. Stratification guarantees that each group is represented as it is in the population, which matters most for small groups. The average wellbeing, however, varies almost equally in both (standard deviations of 1.63 and 1.62). Stratification makes estimates more precise only when the strata differ a lot on the outcome, and part-time and full-time students differ by less than 4 points on a scale where students within each group differ by about 12. Its main benefit here is representation, not precision.
+:::
+:::
+
+### Exercise 10: Power for a correlation
+
+How many students does a study need to detect a correlation of 0.2 with 80% power? `power.t.test()` covers only differences between means, but simulation works for any analysis: generate data in which the true correlation is 0.2, test it, repeat 1,000 times, and count how often the test finds it.
+
+```{webr}
+#| exercise: gf4
+set.seed(6)
+power_r <- function(n, r = 0.2) {
+  mean(replicate(1000, {
+    x <- rnorm(n)
+    y <- r * x + sqrt(1 - r^2) * rnorm(n)
+    ______(x, y)$p.value < 0.05
+  }))
+}
+sapply(c(100, 150, 200, 250), power_r)
+```
+
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The test for a correlation adds `.test` to the name of the correlation function. The line before it builds `y` so that its true correlation with `x` is exactly `r`.
+:::
+:::
+
+::: { .solution exercise="gf4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+set.seed(6)
+power_r <- function(n, r = 0.2) {
+  mean(replicate(1000, {
+    x <- rnorm(n)
+    y <- r * x + sqrt(1 - r^2) * rnorm(n)
+    cor.test(x, y)$p.value < 0.05
+  }))
+}
+sapply(c(100, 150, 200, 250), power_r)
+```
+
+The power is about 0.51 with 100 students, 0.71 with 150, 0.83 with 200, and 0.87 with 250: a study needs roughly 190 to 200 students to detect a correlation of 0.2 with 80% power. (The exact formula gives 194.) A correlation of 0.2 is modest but common in social research, and many thesis studies with 50 or 80 participants have little chance of detecting it. The same simulation recipe gives the power of any analysis in this book.
+:::
+:::
+
+### Exercise 11: A bigger biased sample
+
+The chapter simulated a voluntary survey, in which students with higher wellbeing are more likely to answer, with samples of 50 and 200. Repeat it with samples of 400 of the 600 students. Is the average estimate now close to the true value?
+
+```{webr}
+#| exercise: gf5
+population <- first_sem$wellbeing
+true_mean  <- mean(population)
+chance_to_answer <- plogis((population - true_mean) / 10)
+
+set.seed(5)
+voluntary_400 <- replicate(2000, {
+  chosen <- sample(length(population), ______, prob = chance_to_answer)
+  mean(population[chosen])
+})
+c(true = true_mean, voluntary = mean(voluntary_400), spread = sd(voluntary_400))
+```
+
+::: { .hint exercise="gf5" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The second argument of `sample()` is the number of students to choose; `prob` gives each student their chance of answering.
+:::
+:::
+
+::: { .solution exercise="gf5" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+set.seed(5)
+voluntary_400 <- replicate(2000, {
+  chosen <- sample(length(population), 400, prob = chance_to_answer)
+  mean(population[chosen])
+})
+c(true = true_mean, voluntary = mean(voluntary_400), spread = sd(voluntary_400))
+```
+
+The true average is 60.5, and the voluntary samples of 400 estimate it at 63.9, still more than 3 points too high, with a spread of only 0.3. (Samples of 50 miss by 5.5 points, with a spread of 1.4.) The bias shrinks a little only because 400 of 600 students is two-thirds of the population, so the sample cannot avoid including many students with low wellbeing. The estimates are now very consistent and consistently wrong: a larger biased sample gives the wrong answer with more confidence.
+:::
+:::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** Why must a hypothesis be stated before the data is analysed?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because a hypothesis written after seeing the data is a description of that data, not a test of it. With enough data, some pattern can always be found, and a hypothesis fitted to it will always "succeed". Stating the hypothesis, and the result that would count against it, in advance is what gives the test a real chance to fail.
+:::
+
+**2.** A test rejects the null hypothesis. What has it *not* shown?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+It has not shown that the research hypothesis is true, that the effect is large or important, or, in an observational study, that one variable causes the other. It has shown only that the data would be unusual if the null hypothesis were true. Other explanations, such as confounding or a biased sample, remain to be ruled out.
+:::
+
+**3.** What is the difference between reliability and validity?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+A reliable measure gives consistent results; a valid measure measures the right thing. A bathroom scale that always shows two kilograms too much is reliable but not valid. Reliability is necessary for validity, because random errors hide whatever a measure measures, but it is not enough.
+:::
+
+**4.** Why is a larger biased sample still biased?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because a larger sample reduces random error, not systematic error. If an online survey reaches mainly students who are interested in wellbeing, 5,000 of them describe that kind of student more precisely, not all students. The estimate becomes narrower around the wrong value, which can make a biased result look more convincing than a small one.
+:::
+
+**5.** What does random assignment balance that measuring and adjusting for variables cannot?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+The variables that were never measured: motivation, family support, health, personality, and everything else. Adjustment can only allow for the confounders a researcher thought of and recorded. Random assignment makes the groups alike on average in every respect, measured or not, which is why a randomised experiment can support a causal claim.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. The code spaces are empty and ready to run; the data (`students`, `semesters`, `questionnaire`, and `first_sem`) and the dplyr package are already loaded, and R's built-in datasets are always available.
+
+**1.** Choose a topic from your own field. Write, in order: the topic, a research problem, a research question (and whether it is descriptive, relational, or causal), a falsifiable hypothesis, its null hypothesis, and the result that would count against it. Write it on paper or in a document; no code is needed.
+
+**2.** Write an analysis plan for two hypotheses of your own, like the chapter's analysis plan, as a data frame in R with the columns hypothesis, outcome, predictor, method, and what would support it. Print it as a table.
+
+```{webr}
+# Your code here
+```
+
+**3.** Check the balance of the workshop invitation on every baseline variable in `students` (age, gender, faculty, programme, study mode, employment, children, living away, financial worry), in one table, and write the sentence about it for the methods section of a thesis.
+
+```{webr}
+# Your code here
+```
+
+**4.** R's built-in `ToothGrowth` data comes from an experiment with 10 guinea pigs per combination of vitamin C method and dose. Use `power.t.test()` to find the smallest difference, in standard deviations, that a comparison of two groups of 10 could detect with 80% power, and write the limitation this implies for a report of the study.
+
+```{webr}
+# Your code here
+```
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 5 project
 
-The project contains the data, these exercises, an extra exercise building a full descriptive table for a thesis, and the solutions.
+The project contains the data and all four parts of this page as an R script: the exercises with blanks, the questions to check your understanding (answers in `solutions.R`), and the open tasks, each with space to write your code.
 
 - [Download chapter05.zip](chapter05.zip), unzip it, and double-click `chapter05.Rproj`.
 - Or type this one line in RStudio's Console:

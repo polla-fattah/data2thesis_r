@@ -2,7 +2,7 @@
 # run_ai_coding.R
 #
 # Codes every open-ended answer in the Graduate Wellbeing Study with a language
-# model, for Chapter 17. Run it once, by hand; the book reads the saved results,
+# model, for Chapter 18. Run it once, by hand; the book reads the saved results,
 # so rendering the book never calls a model.
 #
 # The book's results use a LOCAL model through Ollama (ollama.com): free, no
@@ -16,11 +16,11 @@
 # chat_anthropic(model = "claude-sonnet-5") or chat_openai(), after storing the
 # provider's API key in .Renviron (usethis::edit_r_environ()).
 #
-# Output (read by book/17-ai.qmd):
+# Output (read by book/18-ai.qmd):
 #   data-raw/ai_coding_results.csv   student_id, ai_theme, ai_theme_rerun
 #   data-raw/ai_coding_meta.csv      provider, model, date, versions, timing
-# Afterwards, delete the folder book/_freeze/17-ai and run:
-#   quarto render book/17-ai.qmd
+# Afterwards, delete the folder book/_freeze/18-ai and run:
+#   quarto render book/18-ai.qmd
 # ------------------------------------------------------------------------------
 
 library(ellmer)
@@ -103,4 +103,4 @@ write.csv(meta, file.path("data-raw", "ai_coding_meta.csv"), row.names = FALSE)
 
 print(meta)
 cat("Saved data-raw/ai_coding_results.csv and data-raw/ai_coding_meta.csv\n",
-    "Now delete book/_freeze/17-ai and run: quarto render book/17-ai.qmd\n")
+    "Now delete book/_freeze/18-ai and run: quarto render book/18-ai.qmd\n")

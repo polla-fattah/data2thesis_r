@@ -7,13 +7,13 @@ This book is a starting point. This appendix suggests where to go next: books, c
 ### Getting started and data skills
 
 - *R for Data Science* [@wickham2023], free at [r4ds.hadley.nz](https://r4ds.hadley.nz): the standard introduction to importing, cleaning, transforming, and visualising data with the tidyverse. The natural next book after Part 1 of this one.
-- *R for Researchers: An Introduction* by Tyson Barrett, free at [tysonbarrett.com/Rstats](https://tysonbarrett.com/Rstats/): a short, friendly introduction written for researchers in the social and health sciences, and a good companion to Chapters 1 to 7.
+- *R for Researchers: An Introduction* by Tyson Barrett, free at [tysonbarrett.com/Rstats](https://tysonbarrett.com/Rstats/): a short, friendly introduction written for researchers in the social and health sciences, and a good companion to Chapters 1 to 8.
 - *ggplot2: Elegant Graphics for Data Analysis* [@wickham2016ggplot2], free at [ggplot2-book.org](https://ggplot2-book.org): everything about ggplot2, for when Chapter 4 leaves you wanting more.
-- *Happy Git and GitHub for the useR* by Jenny Bryan, free at [happygitwithr.com](https://happygitwithr.com): a gentle, practical guide to git and GitHub with RStudio (Chapter 16).
+- *Happy Git and GitHub for the useR* by Jenny Bryan, free at [happygitwithr.com](https://happygitwithr.com): a gentle, practical guide to git and GitHub with RStudio (Chapter 17).
 
 ### Statistics
 
-- *Introduction to Modern Statistics* [@cetinkaya2024ims], free at [openintro-ims.netlify.app](https://openintro-ims.netlify.app): a modern introductory statistics textbook built around simulation and real data, like Chapters 5 and 6.
+- *Introduction to Modern Statistics* [@cetinkaya2024ims], free at [openintro-ims.netlify.app](https://openintro-ims.netlify.app): a modern introductory statistics textbook built around simulation and real data, like Chapters 6 and 7.
 - *Learning Statistics with R* by Danielle Navarro, free at [learningstatisticswithr.com](https://learningstatisticswithr.com): a thorough, readable introduction to statistics for psychology and the social sciences, using R.
 - *Statistical Inference via Data Science (ModernDive)* by Chester Ismay and Albert Kim, free at [moderndive.com](https://moderndive.com): regression and inference with the tidyverse.
 - *Regression and Other Stories* [@gelman2020]: an excellent guide to building, checking, and interpreting regression models in real research, with a free PDF from the authors.
@@ -21,15 +21,15 @@ This book is a starting point. This appendix suggests where to go next: books, c
 
 ### Mixed models, machine learning, and forecasting
 
-- *Data Analysis Using Regression and Multilevel/Hierarchical Models* [@gelman2007]: multilevel models from the ground up (Chapter 9).
-- *An Introduction to Statistical Learning* [@james2021islr], free at [statlearning.com](https://www.statlearning.com): the clearest introduction to the ideas of machine learning (Chapters 10 to 14).
+- *Data Analysis Using Regression and Multilevel/Hierarchical Models* [@gelman2007]: multilevel models from the ground up (Chapter 10).
+- *An Introduction to Statistical Learning* [@james2021islr], free at [statlearning.com](https://www.statlearning.com): the clearest introduction to the ideas of machine learning (Chapters 11 to 15).
 - *Tidy Modeling with R* [@kuhn2022], free at [tmwr.org](https://www.tmwr.org): the tidymodels framework in depth.
-- *Forecasting: Principles and Practice* [@hyndman2021], free at [otexts.com/fpp3](https://otexts.com/fpp3/): the standard introduction to forecasting with fable (Chapter 15).
-- *Deep Learning with R* [@chollet2022]: for readers who want to go further with neural networks (Chapter 14).
+- *Forecasting: Principles and Practice* [@hyndman2021], free at [otexts.com/fpp3](https://otexts.com/fpp3/): the standard introduction to forecasting with fable (Chapter 16).
+- *Deep Learning with R* [@chollet2022]: for readers who want to go further with neural networks (Chapter 15).
 
 ### Reporting and dashboards
 
-- The Quarto guide at [quarto.org](https://quarto.org): documentation and examples for every kind of document (Chapter 16).
+- The Quarto guide at [quarto.org](https://quarto.org): documentation and examples for every kind of document (Chapter 17).
 - *Mastering Shiny* [@wickham2021shiny], free at [mastering-shiny.org](https://mastering-shiny.org): the definitive guide to Shiny apps.
 
 The **Big Book of R** ([bigbookofr.com](https://www.bigbookofr.com)) indexes hundreds of free R books by topic, from psychology and ecology to economics and text analysis: a good way to find a book for your own field.

@@ -4,8 +4,8 @@ subtitle: Getting Started with R
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/theme.scss]
-      dark: [darkly, ../styles/theme.scss]
+      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
+      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
@@ -20,49 +20,73 @@ webr:
 
 {{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
 
-These exercises practise the ideas from Chapter 1: using R as a calculator, storing values in objects, calling functions, and taking a first look at Elaf's data.
+This page practises the ideas of Chapter 1 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with new questions and some of R's built-in datasets. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with an empty code space and no answers: you decide how to write the code, as you will in your own thesis.
 
-Edit the code in any box and press **Run Code**. R runs in your browser, so the first run can take a few seconds while R starts. Where you see `______`, replace it with your own code.
+R runs in your browser, so the first run can take a few seconds while R starts. In the exercises, replace each `______` with your own code and press **Run Code**.
 
-## Warming up with a few numbers
+```{webr}
+#| setup: true
+#| exercise: [ex4, ex5, gf2]
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+```
 
-### Exercise 1: R as a calculator
+```{webr}
+#| include: false
+students  <- read.csv("students.csv")
+semesters <- read.csv("semesters.csv")
+```
 
-Elaf kept a note of how long she slept on three nights: 6.5, 7, and 5.5 hours. Use R to work out her average sleep. Then try changing the numbers.
+## Practise the chapter
+
+These are the exercises at the end of Chapter 1, with the same numbers.
+
+### Exercise 1: A supervisor's sleep
+
+A supervisor sleeps 8, 7.5, 6, and 7 hours on four nights. Store the numbers in an object called `supervisor_sleep` and find the average, rounded to one decimal place.
 
 ```{webr}
 #| exercise: ex1
-(6.5 + 7 + 5.5) / 3
+supervisor_sleep <- ______(8, 7.5, 6, 7)
+round(mean(supervisor_sleep), ______)
 ```
+
+::: { .hint exercise="ex1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+Several values become one object with the function that *combines* them. The second argument of `round()` is the number of decimal places.
+:::
+:::
 
 ::: { .solution exercise="ex1" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-(6.5 + 7 + 5.5) / 3
+supervisor_sleep <- c(8, 7.5, 6, 7)
+round(mean(supervisor_sleep), 1)
 ```
 
-R follows the usual order of operations, so the brackets matter. Without them, R divides only 5.5 by 3: try `6.5 + 7 + 5.5 / 3`.
+The average is 7.125 hours, which rounds to 7.1. The object keeps all four values, so you can calculate anything else from it later without typing the numbers again.
 :::
 :::
 
-### Exercise 2: Storing values in an object
+### Exercise 2: Text and numbers
 
-Store the numbers in an object called `sleep` with `c()`, which combines values, then use `mean()`. Add a fourth night of 8 hours. What happens to the average?
+Check the types of `"600"` and `600` with `class()`, and explain the difference.
 
 ```{webr}
 #| exercise: ex2
-sleep <- c(6.5, 7, 5.5)
-sleep
-mean(sleep)
+class("600")
+class(______)
 ```
 
 ::: { .hint exercise="ex2" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-Add the new value inside `c()`, separated by a comma: `c(6.5, 7, 5.5, ______)`.
+The only difference between the two values is the quotation marks.
 :::
 :::
 
@@ -71,33 +95,29 @@ Add the new value inside `c()`, separated by a comma: `c(6.5, 7, 5.5, ______)`.
 ## Solution
 
 ```r
-sleep <- c(6.5, 7, 5.5, 8)
-sleep
-mean(sleep)
+class("600")
+class(600)
 ```
 
-The average rises from 6.33 to 6.75 hours.
+`"600"` is `character`: text that happens to contain digits. `600` is `numeric`: a number R can calculate with. Try `"600" + 1` to see the difference: R refuses to add a number to text. A column of numbers read in as text, often because of one stray word such as "missing", is one of the most common problems in real data (Chapter 3).
 :::
 :::
 
-### Exercise 3: More functions
+### Exercise 3: A missing value
 
-Find the shortest and longest night and the number of nights, then round the average to one decimal place.
+Explain in your own words why `mean(c(4, NA, 6))` returns `NA`, and show how to get the average of the two known values.
 
 ```{webr}
 #| exercise: ex3
-sleep <- c(6.5, 7, 5.5, 8)
-min(sleep)
-______(sleep)
-______(sleep)
-round(mean(sleep), ______)
+mean(c(4, NA, 6))
+mean(c(4, NA, 6), ______ = TRUE)
 ```
 
 ::: { .hint exercise="ex3" }
 ::: { .callout-note collapse="false"}
 ## Hint
 
-The functions you need are `max()` and `length()`. The second argument of `round()` is the number of decimal places.
+The argument's name is short for "NA remove".
 :::
 :::
 
@@ -106,74 +126,59 @@ The functions you need are `max()` and `length()`. The second argument of `round
 ## Solution
 
 ```r
-sleep <- c(6.5, 7, 5.5, 8)
-min(sleep)
-max(sleep)
-length(sleep)
-round(mean(sleep), 1)
+mean(c(4, NA, 6))
+mean(c(4, NA, 6), na.rm = TRUE)
 ```
+
+`NA` means "not available": the value exists but is unknown. The average of 4, an unknown number, and 6 is itself unknown, so R answers `NA` rather than guess. With `na.rm = TRUE`, R removes the missing value and averages the other two, giving 5. The choice to remove it is yours, and a thesis should say how many values were missing.
 :::
 :::
 
-## Elaf's data
+### Exercise 4: The youngest and the oldest student
 
-Now the same ideas on the real case study. The file `students.csv` has one row for each of the 600 students in Elaf's study.
-
-### Exercise 4: Opening the data
-
-Read the file into an object called `students`. How many students (rows) and variables (columns) are there? Use `head()` to see the first six rows.
+Using `students`, find the youngest and the oldest student.
 
 ```{webr}
 #| exercise: ex4
-students <- read.csv("students.csv")
-nrow(students)
-ncol(students)
-head(students)
+______(students$age, na.rm = TRUE)
+______(students$age, na.rm = TRUE)
 ```
+
+::: { .hint exercise="ex4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The two functions are named after the smallest and the largest value. Like `mean()`, they return `NA` if a value is missing, which is why `na.rm = TRUE` is already there.
+:::
+:::
 
 ::: { .solution exercise="ex4" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-students <- read.csv("students.csv")
-nrow(students)   # 600 students
-ncol(students)   # 14 variables
-head(students)
-names(students)  # the names of all the variables
+min(students$age, na.rm = TRUE)
+max(students$age, na.rm = TRUE)
 ```
+
+The youngest student is 23 and the oldest 52. Checking the smallest and largest values is also a quick test of data quality: an age of 2 or 200 would reveal a typing error at once.
 :::
 :::
 
-### Exercise 5: A first question, and a first surprise
+### Exercise 5: Part-time students
 
-What is the average age of the students? The `$` sign picks one column from the data. Run the code first as it is: the answer is `NA`, which means "not available". One student's age is missing, and R will not guess. Fill in the blank so that R ignores the missing value.
-
-```{webr}
-#| setup: true
-#| exercise: [ex5, ex6]
-students <- read.csv("students.csv")
-```
+Using `table()`, find out how many students are studying part-time (the variable is `study_mode`).
 
 ```{webr}
 #| exercise: ex5
-mean(students$age)
-mean(students$age, ______)
+______(students$study_mode)
 ```
 
 ::: { .hint exercise="ex5" }
 ::: { .callout-note collapse="false"}
-## Hint 1
+## Hint
 
-`mean()` has an argument called `na.rm`, short for "NA remove".
-:::
-:::
-
-::: { .hint exercise="ex5" }
-::: { .callout-note collapse="false"}
-## Hint 2
-
-Set it to `TRUE`: `mean(students$age, na.rm = ______)`.
+The function that counts how many times each value appears is named in the exercise.
 :::
 :::
 
@@ -182,66 +187,241 @@ Set it to `TRUE`: `mean(students$age, na.rm = ______)`.
 ## Solution
 
 ```r
-mean(students$age, na.rm = TRUE)
-sum(is.na(students$age))   # how many ages are missing
+table(students$study_mode)
 ```
 
-`na.rm = TRUE` tells R to remove missing values before calculating.
+177 of the 600 students study part-time, and 423 full-time.
 :::
 :::
 
-### Exercise 6: Counting
+### Exercise 6: Decisions without a record
 
-`table()` counts how many times each value appears. How many students come from each faculty? Then find out how many were invited to the wellbeing workshop (the variable is called `workshop`).
+Think of an analysis you have done, or read about, with a point-and-click program. List three decisions in it that a reader could not check without a written record. Write your answer first, then open the model answer.
+
+::: {.callout-tip collapse="true" appearance="simple"}
+## Model answer
+
+Any three of these, or similar ones from your own experience: which cases were removed, and why (for example, participants who did not finish the questionnaire); how missing values were handled; which questionnaire items were reversed before adding them up; how a continuous variable was grouped into categories, and where the cut-offs were; which test was chosen, with which options; and which of several analyses tried is the one reported. Each decision can change the result, and none of them is visible in a table of results. A script records all of them, in order.
+:::
+
+## Go further
+
+These exercises go beyond the book.
+
+### Exercise 7: Calculating with a whole week
+
+Arithmetic in R works on every value of an object at once. A student slept 6.5, 7, 5.5, 8, 7.5, 6, and 9 hours over a week. Convert the week to minutes, find the difference between the longest and the shortest night in minutes, and count the nights under 7 hours.
 
 ```{webr}
-#| exercise: ex6
-table(students$faculty)
-table(students$______)
+#| exercise: gf1
+week <- c(6.5, 7, 5.5, 8, 7.5, 6, 9)
+minutes <- week * ______
+minutes
+max(minutes) - min(minutes)
+sum(week ______ 7)
 ```
 
-::: { .solution exercise="ex6" }
+::: { .hint exercise="gf1" }
+::: { .callout-note collapse="false"}
+## Hint
+
+An hour has 60 minutes. A comparison such as `week > 8` gives `TRUE` or `FALSE` for each night, and `sum()` counts the `TRUE` values.
+:::
+:::
+
+::: { .solution exercise="gf1" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-table(students$faculty)
-table(students$workshop)
+week <- c(6.5, 7, 5.5, 8, 7.5, 6, 9)
+minutes <- week * 60
+minutes
+max(minutes) - min(minutes)
+sum(week < 7)
 ```
 
-Exactly half the students, 300, were invited: the invitation was random.
+The longest and the shortest night differ by 210 minutes (three and a half hours), and 3 of the 7 nights are under 7 hours. `week * 60` multiplied all seven values in one step, and `sum(week < 7)` counted by adding up `TRUE` values, each of which counts as 1. Both tricks are used throughout the book.
 :::
 :::
 
-### Challenge: Your first plot
+### Exercise 8: Master's and PhD students
 
-Elaf's semester records are in `semesters.csv`. Draw a histogram of how many hours students sleep with `hist()`. Can you add a title with the `main` argument?
+Find how many students are in each programme, and the share of PhD students.
 
 ```{webr}
-#| exercise: ex7
-semesters <- read.csv("semesters.csv")
-hist(semesters$sleep_hours)
+#| exercise: gf2
+counts <- table(students$programme)
+counts
+counts["PhD"] / ______(counts)
 ```
 
-::: { .solution exercise="ex7" }
+::: { .hint exercise="gf2" }
+::: { .callout-note collapse="false"}
+## Hint
+
+A share is a count divided by the total. The total is the result of adding up all the counts in the table.
+:::
+:::
+
+::: { .solution exercise="gf2" }
 ::: { .callout-tip collapse="false"}
 ## Solution
 
 ```r
-semesters <- read.csv("semesters.csv")
-hist(semesters$sleep_hours,
-     main = "How long do graduate students sleep?",
-     xlab = "Hours of sleep per night")
+counts <- table(students$programme)
+counts
+counts["PhD"] / sum(counts)
 ```
+
+426 students are on a Master's programme and 174 on a PhD, so 29% are PhD students. `nrow(students)` would give the same total here, but `sum(counts)` also works when the table leaves out missing values, as `table()` does by default.
 :::
 :::
+
+### Exercise 9: Reading error messages
+
+Every R user sees error messages every day. Reading them is a skill. The code below has three mistakes. Run it, read the message, fix the mistake it points to, and run it again until all three lines work.
+
+```{webr}
+#| exercise: gf3
+sleep_week <- c(6.5, 7, 5.5, 8)
+round(mean(sleep_week), 1
+mean(sleep_wek)
+toupper(wellbeing)
+```
+
+::: { .hint exercise="gf3" }
+::: { .callout-note collapse="false"}
+## Hint
+
+R reads the whole box before it runs anything, so a missing bracket stops every line, and "unexpected end of input" means that R was still waiting for something when the code ended. "Object not found" means that R does not know the name: either it is misspelled, or it was meant to be text and needs quotation marks.
+:::
+:::
+
+::: { .solution exercise="gf3" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+sleep_week <- c(6.5, 7, 5.5, 8)
+round(mean(sleep_week), 1)
+mean(sleep_week)
+toupper("wellbeing")
+```
+
+The first mistake is a missing closing bracket, which gives *unexpected end of input*. The second is the misspelled object `sleep_wek`, and the third is a word without quotation marks, which R takes for the name of an object; both give *object not found*. Most errors in practice are one of these three, and the message usually says which.
+:::
+:::
+
+### Exercise 10: A built-in dataset
+
+R comes with dozens of small datasets for practice. `PlantGrowth` records the dried weight of plants grown under a control condition and two treatments. Find how many plants there are, their average weight, and the number of plants in each group.
+
+```{webr}
+#| exercise: gf4
+head(PlantGrowth)
+______(PlantGrowth)
+mean(PlantGrowth$weight)
+______(PlantGrowth$group)
+```
+
+::: { .hint exercise="gf4" }
+::: { .callout-note collapse="false"}
+## Hint
+
+The number of plants is the number of rows. Counting the plants in each group is the same job as counting students in each faculty.
+:::
+:::
+
+::: { .solution exercise="gf4" }
+::: { .callout-tip collapse="false"}
+## Solution
+
+```r
+head(PlantGrowth)
+nrow(PlantGrowth)
+mean(PlantGrowth$weight)
+table(PlantGrowth$group)
+```
+
+There are 30 plants, 10 in each group, with an average weight of 5.07. Type `?PlantGrowth` to read where the data came from; every built-in dataset has a help page like this, which is a model of the short description of data that a thesis needs.
+:::
+:::
+
+## Check your understanding
+
+Answer each question in your own words first, then click to see a model answer.
+
+**1.** When R prints a result, it starts the line with `[1]`. What does the `[1]` mean?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+It is the position of the first value on that line. A single result is value number 1. When a result is long enough to take several lines, each line starts with the position of its first value, such as `[1]`, `[13]`, and `[25]`, which helps you find your place.
+:::
+
+**2.** Why does `mean()` return `NA` when one value is missing, instead of averaging the others?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Because the honest answer is unknown: the average of known values and an unknown value is itself unknown. R does not drop the value silently, because removing missing values is a decision that can change the result, and the researcher should make it on purpose, with `na.rm = TRUE`, and report it.
+:::
+
+**3.** What is the difference between typing code in the Console and writing it in a script?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Code typed in the Console runs once and is gone. Code in a script is saved in a file, so it can be read, corrected, run again from the start, and shared. The Console is for quick checks; the analysis itself belongs in a script.
+:::
+
+**4.** What does `library()` do that `install.packages()` does not?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+`install.packages()` downloads a package and stores it on your computer, which you do once. `library()` loads an installed package into the current R session so that its functions can be used, which you do in every session, usually at the top of each script.
+:::
+
+**5.** Why is a script called a record of the decisions in an analysis?
+
+::: {.callout-note collapse="true" appearance="simple"}
+## Answer
+
+Every step of the analysis is written in it, in order: which file was read, which cases were removed, how variables were changed, and which tests were run with which options. Anyone, including you six months later, can read the decisions, check them, and repeat the analysis exactly. A point-and-click analysis leaves only the result.
+:::
+
+## Do it yourself
+
+These tasks have no starter code and no answers. Each code space below is empty and ready to run: write your own code, as you would for a thesis. The data (`students` and `semesters`) is already loaded, and R's built-in datasets are always available.
+
+**1.** Write a short script, with a comment above each step, that stores your own hours of sleep for the last seven nights and reports the average, the shortest night, and the number of nights under 7 hours.
+
+```{webr}
+# Your code here
+```
+
+**2.** Using `students`, report three facts about the sample, each from one line of code: for example, the number of faculties, the share of women, and the median age.
+
+```{webr}
+# Your code here
+```
+
+**3.** R's built-in `women` data gives the average height (in inches) and weight (in pounds) of American women aged 30 to 39. Find how many rows it has, convert both variables to centimetres and kilograms (1 inch = 2.54 cm, 1 pound = 0.4536 kg), and report the average height and weight in the new units.
+
+```{webr}
+# Your code here
+```
+
+**4.** This task is for your own computer. Set up an RStudio Project for your thesis, with a `data/` folder for raw data and a first script that reads a file and prints its number of rows and columns. Use any data file you have, or `students.csv` from the download below.
 
 ## Work on your own computer
 
 ::: {.callout-note appearance="simple"}
 ## Download the Chapter 1 project
 
-The project contains the data, these exercises, and their solutions, ready to open in RStudio.
+The project contains the data and all four parts of this page as an R script: the exercises with blanks, the questions to check your understanding (answers in `solutions.R`), and the open tasks, each with space to write your code.
 
 - [Download chapter01.zip](chapter01.zip), unzip it, and double-click `chapter01.Rproj`.
 - Or type this one line in RStudio's Console to download, unzip, and open it:

@@ -1,0 +1,52 @@
+From Data to Thesis: Research Data Analysis with R
+Playground, Chapter 17: Reproducible Research - Quarto and Shiny tasks
+
+These tasks use the files in this project. The numbers match the exercises on
+the playground page. The R parts of the page (Exercises 1, 5, 6, 7, 9, and 10,
+the questions, and the open tasks) are in exercises.R, with answers in
+solutions.R. Finished versions of the Quarto and Shiny files are in the
+solutions folder.
+
+Exercise 1: A sentence that writes itself
+   Render results.qmd. The average wellbeing in the first sentence has many
+   decimal places. Change the inline code so that it is rounded to one decimal
+   place, and render again. Then change one value in the data and render once
+   more: the sentence follows the data.
+
+Exercise 2: A Quarto report
+   a. Change the format in the YAML header of results.qmd to produce both a web
+      page and a Word document:
+        format:
+          html: default
+          docx: default
+      Render, and open the Word file.
+   b. Add a figure to results.qmd: a line chart of average wellbeing by
+      semester. Give the chunk a label starting with fig- and a caption
+      (fig-cap), and refer to it in the text with @fig-... so that Quarto
+      numbers it.
+
+Exercise 3: References and a citation style
+   Cite the two references in references.bib in the text of results.qmd, using
+   their keys (for example [@cohen1988]). Render, and look at the reference
+   list. Then download a citation style (a .csl file, for example apa.csl from
+   the Zotero Style Repository), add  csl: apa.csl  to the YAML header, and
+   render again.
+
+Exercise 4: A slider in the dashboard
+   Open app.R and click Run App. Then add a slider (sliderInput) that chooses
+   the range of semesters shown in the plot and the table.
+
+Exercise 8: A report for each programme
+   Render faculty-report.qmd for another faculty from the Terminal:
+     quarto render faculty-report.qmd -P faculty:"Health Sciences"
+   Then save a copy as programme-report.qmd with a programme parameter
+   ("Master's" or "PhD") instead of a faculty, and render it once for each
+   programme. Add a sentence with the programme's average sleep in the first
+   semester, written with inline code.
+
+Do it yourself, Task 2
+   Turn one analysis from Chapters 6 to 10 into a Quarto report with a numbered
+   table, a figure, inline numbers, and one citation, and render it to Word.
+   Then add a second input to the dashboard (study mode or programme) and
+   explain in comments how the inputs, the reactive data, and the outputs are
+   linked. No solution is given: the task is open.

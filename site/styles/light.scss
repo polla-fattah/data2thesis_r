@@ -1,0 +1,23 @@
+/*-- scss:defaults --*/
+// Light palette, borrowed from the author's front-end book (WebApp/new-lectures):
+// a pale blue-grey canvas, navy ink and links, copper as the second accent.
+@import url("https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+$body-bg: #f1f4f8;
+$body-color: #16222e;
+$primary: #2f6793;
+$secondary: #5d7189;
+$link-color: #245f94;
+$code-color: #b02a37;
+$border-color: rgba(48, 74, 105, 0.14);
+
+$font-family-sans-serif: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+$font-family-monospace: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+$headings-font-weight: 700;
+$line-height-base: 1.7;
+
+$navbar-bg: rgba(241, 244, 248, 0.85);
+$navbar-fg: #3d4e61;
+$navbar-hl: #0d161f;
+$sidebar-bg: #eceff3;
+$footer-bg: #f1f4f8;
