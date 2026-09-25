@@ -1,0 +1,938 @@
+---
+title: "Framing Research Questions and Building an Analysis Plan"
+subtitle: "Methodological Foundations, Operationalisation, and Study Design"
+author: "Dr. Polla Fattah"
+institute: "From Data to Thesis: Research Data Analysis with R"
+format:
+  revealjs:
+    theme: [default, ../../styles/theme.scss]
+    slide-number: true
+    preview-links: auto
+    chalkboard: true
+    transition: slide
+    highlight-style: github
+    code-line-numbers: false
+    width: 1200
+    height: 750
+execute:
+  freeze: auto
+---
+
+# From Research Question to Data
+
+### Conceptual Rigour & Analysis Planning
+
+**Chapter 5 · From Data to Thesis**
+
+Dr. Polla Fattah
+
+---
+
+## The Root Cause of Thesis Failures
+
+Most problems that examiners identify in a dissertation do **not** originate in statistical code:
+
+- A research question too vague or expansive to test.
+- A hypothesis that no observable data could possibly contradict.
+- An instrument measuring something different from what the chapter title promises.
+- An observational design claiming causal victory ("sleep *causes* higher GPA").
+- A biased sample where increasing sample size simply amplified confidence in an error.
+
+> **No statistical test, p-value, or machine learning model can rescue flawed methodological foundations.**
+
+---
+
+## What We Will Master Today
+
+By the end of this lecture deck, you will be able to:
+
+- Distinguish between **describing**, **explaining**, and **predicting**.
+- Narrow a broad research topic into a focused, answerable research question.
+- Construct **falsifiable hypotheses** and articulate their exact null counterparts ($H_0$).
+- Operationalise abstract psychological/educational **constructs** into valid variables.
+- Classify variables by **level of measurement** and configure ordered factors in R.
+- Identify the five variable roles: **outcome, predictor, confounder, moderator, mediator**.
+- Contrast **reliability** and **validity** using simulated target distributions.
+- Explain why **random assignment** creates exchangeability and supports causal claims.
+- Demonstrate by simulation why **large samples cannot fix selection bias**.
+- Conduct prospective **statistical power calculations** using `power.t.test()`.
+
+---
+
+# The Three Aims of Data Analysis
+
+### Describing, Explaining, and Predicting
+
+---
+
+## Data Analysis Confronts Claims with Evidence
+
+In one sentence: **Data analysis tests claims about the world against empirical evidence.**
+
+Empirical scientific inquiry performs three distinct kinds of work:
+
+| Aim | Core Question | Standard of Judgment | Primary Methods |
+|---|---|---|---|
+| **Describe** | What does the world look like? | Accuracy of summary; representativeness | Summaries, plots, confidence intervals |
+| **Explain** | Why does it look like that? Does X cause Y? | Ruling out rival explanations (confounders) | Experiments, regression, mixed models |
+| **Predict** | What will happen in new, unseen cases? | Generalisation accuracy on test data | Cross-validation, machine learning |
+
+---
+
+## Same Numbers, Different Scientific Aims
+
+Consider a regression equation relating GPA to sleep, stress, and study hours:
+
+```r
+gpa ~ sleep_hours + stress_score + study_hours
+```
+
+### Explanatory Perspective (Chapters 7–10)
+- *Focus:* Which structural factors drive student success? What is the partial regression coefficient of sleep holding stress constant?
+- *Key Concern:* Ruling out omitted variable bias and endogeneity.
+
+### Predictive Perspective (Chapters 11–16)
+- *Focus:* Can we accurately identify which incoming students are at risk of academic probation next semester?
+- *Key Concern:* Minimising out-of-sample mean squared error ($RMSE$).
+
+---
+
+# From Topic to Research Question
+
+### The Funnel of Scientific Narrowing
+
+---
+
+## The Narrowing Funnel
+
+Nobody starts an investigation with a calibrated research question. Research begins with a broad **topic**:
+
+```
++-------------------------------------------------------------+
+| TOPIC:       Graduate student wellbeing                     |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+| PROBLEM:     Many graduate students suffer severe burnout   |
+|              and prematurely leave their degree programmes. |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+| FOCUS:       Can a structured institutional intervention    |
+|              mitigate this psychological distress?          |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+| RESEARCH     Does a six-week wellbeing workshop improve     |
+| QUESTION:    master's and PhD students' wellbeing at the    |
+|              end of the subsequent semester?                |
++-------------------------------------------------------------+
+```
+
+---
+
+## Evaluating Research Question Quality
+
+A strong research question satisfies five criteria (**FINER** framework):
+
+1. **Feasible:** Answerable within available time, sample access, budget, and computing resources.
+2. **Interesting:** Provides intellectual value to the discipline and community.
+3. **Novel:** Confirms, refutes, or extends existing literature in an unstudied population or setting.
+4. **Ethical:** Approved by an institutional review board (IRB); protects vulnerable participants.
+5. **Relevant:** Stakeholders would make different decisions depending on the findings.
+
+---
+
+## Weak vs. Improved Research Questions
+
+| Weak Question | Fatal Weakness | Improved Empirical Question |
+|---|---|---|
+| *Are graduate students stressed?* | Stressed compared to whom? How is stress quantified? | *Do part-time graduate students report higher baseline stress than full-time students?* |
+| *What affects academic success?* | "Success" is undefined; scope is infinitely vast. | *Is average semester sleep associated with GPA after controlling for study hours?* |
+| *Is the wellbeing workshop good?* | "Good" is an unmeasurable value judgment. | *Does the workshop raise standardized wellbeing scores at the end of semester 2?* |
+| *Why do students drop out?* | Demands tracking ex-students over a decade. | *Which baseline characteristics are associated with considering dropout in Year 1?* |
+
+---
+
+## Three Kinds of Research Questions
+
+The phrasing of your question dictates the permissible scope of your conclusions:
+
+### 1. Descriptive Questions (*What is?*)
+- *"How many hours per night do graduate students sleep during semester 1?"*
+- Requires representative sampling; establishes population benchmarks.
+
+### 2. Relational Questions (*What goes with what?*)
+- *"Is caffeine consumption correlated with semester GPA?"*
+- Measures covariance; **cannot establish causal direction**.
+
+### 3. Causal Questions (*What leads to what?*)
+- *"Does attending the workshop cause an increase in student wellbeing?"*
+- Demands experimental control or rigorous counterfactual designs.
+
+---
+
+# Hypotheses & Karl Popper's Falsifiability
+
+### A Hypothesis is a Prediction Precise Enough to Be Wrong
+
+---
+
+## What Separates Science from Pseudoscience?
+
+The philosopher Karl Popper (1959) established that a scientific claim is not defined by whether it can be "proven", but whether it can be **empirically refuted**:
+
+```
++---------------------------------------------------------------+
+|                      FALSIFIABILITY AUDIT                     |
++---------------------------------------------------------------+
+| Hypothesis: "The workshop affects students in some way."      |
+| Verdict:    UNFALSIFIABLE. Whatever happens, an effect on     |
+|             someone can always be found after the fact.       |
++---------------------------------------------------------------+
+| Hypothesis: "The workshop helps students who are ready."      |
+| Verdict:    UNFALSIFIABLE. Unsuccessful participants are      |
+|             dismissed post-hoc as simply 'not ready'.         |
++---------------------------------------------------------------+
+| Hypothesis: "Invited students will exhibit higher average     |
+|             wellbeing at semester 2 than non-invited peers."  |
+| Verdict:    FALSIFIABLE. Equal or lower wellbeing in the      |
+|             invited group directly refutes the claim.         |
++---------------------------------------------------------------+
+```
+
+---
+
+## The Acid Test for Your Own Hypothesis
+
+Before collecting a single observation or running a script, write down:
+
+> **"What specific, numerical result in my dataset would convince me that my hypothesis is wrong?"**
+
+- If you cannot answer this question, your hypothesis is not ready.
+- If you can answer it, you immunize your thesis against **HARKing** (*Hypothesizing After Results are Known*).
+
+---
+
+## Directional vs. Non-Directional Hypotheses
+
+### Directional (One-Sided Conceptualization)
+- Predicts a specific sign or vector of difference:
+- *"Invited students will report **higher** wellbeing than uninvited students ($H_1: \mu_1 > \mu_0$)."*
+- Justified only when established theory or prior literature provides a definitive precedent.
+
+### Non-Directional (Two-Sided Conceptualization)
+- Predicts divergence without presupposing direction:
+- *"Wellbeing scores will **differ** across academic faculties ($H_1: \mu_{\text{Edu}} \neq \mu_{\text{Eng}}$)."*
+- The standard, conservative scientific default.
+
+---
+
+## The Null Hypothesis ($H_0$)
+
+Statistical engines cannot compute probabilities for vague assertions like "the workshop works".
+
+We test the **Null Hypothesis ($H_0$)**: the precise mathematical assertion that **no effect, difference, or association exists**:
+
+$$H_0: \mu_{\text{Invited}} - \mu_{\text{Control}} = 0$$
+
+$$H_1: \mu_{\text{Invited}} - \mu_{\text{Control}} \neq 0$$
+
+$H_0$ provides a concrete benchmark: **any observed sample difference is purely the artifact of random sampling noise.**
+
+---
+
+## Simulation: Experiencing the "Null World" in R
+
+What does a world look like where the workshop has **zero effect**?
+
+```r
+set.seed(2026)
+
+# Simulate 5,000 randomized trials where the true treatment effect is exactly 0:
+chance_differences <- replicate(5000, {
+  wellbeing <- rnorm(300, mean = 60, sd = 11)
+  # Randomly assign 150 to Invited and 150 to Control:
+  group     <- sample(rep(c("Invited", "Control"), each = 150))
+  mean(wellbeing[group == "Invited"]) - mean(wellbeing[group == "Control"])
+})
+
+summary(chance_differences)
+```
+
+```
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+-4.2120 -0.8655 -0.0121 -0.0132  0.8610  4.0210 
+```
+
+---
+
+## Visualizing the World of Pure Chance
+
+```r
+library(ggplot2)
+
+ggplot(data.frame(diff = chance_differences), aes(x = diff)) +
+  geom_histogram(binwidth = 0.5, fill = "grey75", colour = "white") +
+  geom_vline(xintercept = quantile(chance_differences, c(0.025, 0.975)),
+             linetype = "dashed", colour = "firebrick", linewidth = 1) +
+  labs(
+    title    = "The Null World: 5,000 Trials with Zero True Effect",
+    subtitle = "Dashed red lines mark the 95% chance boundaries [-2.5, +2.5]",
+    x        = "Difference in Sample Means (Invited - Control)",
+    y        = "Simulated Replications"
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+**Two Core Inferences:**
+1. In 95% of studies where *nothing happens*, chance produces differences between $-2.5$ and $+2.5$ points!
+2. A real observed difference of $+5.2$ points is extremely unlikely under chance ($p < .001$).
+
+---
+
+## Two Cardinal Rules of Statistical Inference
+
+```
+1. REJECTING H0 IS NOT "PROVING" H1
+   Rejecting the null demonstrates only that "pure random chance"
+   is a highly improbable explanation for the data. Systematic
+   confounders or measurement biases may still explain the result.
+
+2. FAILING TO REJECT H0 IS NOT "PROVING" H0
+   "Absence of evidence is not evidence of absence."
+   A small, underpowered study will fail to reject H0 even when
+   a substantial, clinically meaningful effect truly exists.
+```
+
+---
+
+## Mapping Research Questions to Hypotheses
+
+| ID | Research Question | Operational Hypothesis ($H_1$) | Null Hypothesis ($H_0$) | Chapter |
+|---|---|---|---|---|
+| **RQ1** | Graduate student life? | *Descriptive (no hypothesis)* | *None* | 4, 6 |
+| **RQ2** | Do students sleep $< 7$ hrs? | $\mu_{\text{sleep}} < 7.0$ hrs | $\mu_{\text{sleep}} = 7.0$ hrs | 7 |
+| **RQ3** | Does workshop raise wellbeing? | $\mu_{\text{Invited}} > \mu_{\text{Control}}$ | $\mu_{\text{Invited}} = \mu_{\text{Control}}$ | 7, 10 |
+| **RQ4** | Stress differences by faculty? | Faculty means differ | All faculty means equal | 7, 8 |
+| **RQ5** | What explains semester GPA? | Sleep positively predicts GPA | $\beta_{\text{sleep}} = 0$ | 8 |
+| **RQ8** | Longitudinal wellbeing change? | Wellbeing declines over time | Slope across semesters $= 0$ | 10 |
+| **RQ9** | Who considers dropping out? | Stress increases dropout odds | Odds Ratio $= 1.0$ | 8, 12 |
+
+---
+
+# Variables and Operationalisation
+
+### Turning Abstract Psychological Constructs into Numbers
+
+---
+
+## The Four Questions Before Running Any Code
+
+From this chapter onward, answer these four questions in writing before touching R:
+
+1. **What is the substantive question?** (Descriptive, relational, or causal?)
+2. **What is the exact unit of analysis?** (Individual student, semester event, or supervisor?)
+3. **Which variables are involved?** (What are their roles and levels of measurement?)
+4. **What exact empirical result would support the hypothesis, and what would refute it?**
+
+---
+
+## Constructs vs. Operationalised Variables
+
+Many phenomena central to social and biological sciences cannot be weighed on a physical scale:
+
+- **Construct:** The underlying theoretical concept (*Stress, Burnout, Academic Satisfaction*).
+- **Operationalisation:** The explicit procedural rule defining how the construct is quantified.
+
+```
+Theoretical Construct:       Operational Measurement:
+======================       ========================
+[ Psychological Stress ] ===> Mean of 6 Likert items (1–5 scale),
+                              with reverse-coded items inverted.
+[ Academic Mastery ]     ===> Cumulative Registrar Grade Point Average.
+[ Sleep Deprivation ]    ===> Self-reported nocturnal sleep duration (hrs).
+```
+
+---
+
+## Construct Operationalisation Table
+
+```r
+library(data2thesis)
+library(dplyr)
+
+questionnaire |>
+  select(student_id, stress_1:stress_6) |>
+  head(3)
+```
+
+```
+# A tibble: 3 x 7
+  student_id stress_1 stress_2 stress_3 stress_4 stress_5 stress_6
+  <chr>         <int>    <int>    <int>    <int>    <int>    <int>
+1 S001              4        3        4        2        3        4
+2 S002              2        2        3        4        2        1
+3 S003              5        4        5        1        4        5
+```
+
+- Item `stress_4`: *"I feel confident handling problems in my studies."*
+- Negatively keyed! Agreeing ($5$) denotes *low* stress.
+- Inverting via $6 - \text{item}$ is essential prior to index averaging.
+
+---
+
+## Stevens' Four Levels of Measurement (1946)
+
+```
+LEVEL       PROPERTIES                PERMISSIBLE STATS       R CLASS
+-------------------------------------------------------------------------
+NOMINAL     Unordered categories      Mode, frequencies,      factor
+            (e.g., Faculty, Gender)   chi-square test
+-------------------------------------------------------------------------
+ORDINAL     Ordered categories;       Median, percentiles,    factor(...,
+            distances unknown         rank correlations       ordered=TRUE)
+-------------------------------------------------------------------------
+INTERVAL    Equal scale intervals;    Mean, standard dev,     numeric
+            no true zero (Wellbeing)  t-test, ANOVA, Pearson
+-------------------------------------------------------------------------
+RATIO       Equal intervals +         Geometric mean,         numeric
+            absolute zero (Sleep, Age) ratios ("twice as much")
+```
+
+---
+
+## Setting Ordered Factors in R
+
+By default, R sorts text variables alphabetically, confusing ordinal analysis:
+
+```r
+# Default alphabetical ordering:
+table(students$employment)
+#> Full-time job          None Part-time job 
+#>           142           318           140 
+
+# Transforming to an explicit ordered factor:
+students <- students |>
+  mutate(employment = factor(
+    employment,
+    levels  = c("None", "Part-time job", "Full-time job"),
+    ordered = TRUE
+  ))
+
+table(students$employment)
+#>          None Part-time job Full-time job 
+#>           318           140           142 
+```
+
+Now ordinal operations like `employment > "None"` execute reliably.
+
+---
+
+# The Roles of Variables
+
+### Outcomes, Predictors, Confounders, Moderators, and Mediators
+
+---
+
+## Variable Roles Defined
+
+Variable roles are **not** intrinsic properties of variables; they are assigned by your research question:
+
+```
++-------------------------------------------------------------+
+| OUTCOME (DV)   | What you aim to explain or predict         |
+| PREDICTOR (IV) | What is hypothesised to influence outcome  |
+| CONFOUNDER     | Common cause of BOTH predictor & outcome   |
+| MODERATOR      | Changes the strength/direction of link     |
+| MEDIATOR       | Transmits the effect (the causal pathway)  |
++-------------------------------------------------------------+
+```
+
+*Example:* Stress is an **outcome** when evaluating the workshop, but a **predictor** when modeling student dropout.
+
+---
+
+## Directed Acyclic Graphs (DAGs) of Variable Roles
+
+```
+1. CONFOUNDER (Common Cause)
+       [ Sleep Deprivation ]
+             /        \
+            v          v
+     [ Caffeine ] ...> [ GPA ]  <-- Apparent link is spurious!
+
+2. MODERATOR (Effect Modifier / Interaction)
+     [ Supervisor Support ] ------------> [ GPA ]
+                                ^
+                                |
+                    [ Degree: PhD vs Master's ]
+
+3. MEDIATOR (Causal Mechanism)
+     [ Workshop ] ----> [ Reduced Stress ] ----> [ Improved Wellbeing ]
+```
+
+---
+
+## Confounding in Action: The Caffeine Paradox
+
+In the wellbeing cohort, caffeine intake exhibits a negative correlation with GPA:
+
+```r
+first_sem <- semesters |> filter(semester == 1)
+
+first_sem |>
+  select(caffeine_mg, sleep_hours, gpa) |>
+  cor(use = "complete.obs") |>
+  round(2)
+```
+
+```
+             caffeine_mg sleep_hours   gpa
+caffeine_mg         1.00       -0.58 -0.22
+sleep_hours        -0.58        1.00  0.31
+gpa                -0.22        0.31  1.00
+```
+
+- Does caffeine poison academic performance ($r = -0.22$)?
+- **No:** Exhausted students sleep less ($-0.58$) and drink more coffee to stay awake.
+- Sleep is the **confounder**. Multiple regression (Chapter 8) controls for this.
+
+---
+
+# Measurement Quality: Reliability & Validity
+
+### Hitting the Bullseye of Truth
+
+---
+
+## The Target Metaphor
+
+```
++---------------------------------------------------------------+
+| RELIABILITY: Consistency, repeatability, absence of noise     |
+| VALIDITY:    Measuring the intended target construct          |
++---------------------------------------------------------------+
+
+  Reliable & Valid      Reliable, NOT Valid    Unreliable, Unbiased
+     +-------+               +-------+               +-------+     
+     |  ( )  |               |  ( ) *|               | * ( ) |     
+     |  (*)  |               |   **  |               |  * *  |     
+     |  ( )  |               |  ( )  |               |   *   |     
+     +-------+               +-------+               +-------+     
+  Tight clustering        Tight clustering        Scattered wide,  
+  on the bullseye.        OFF target.             centered on avg. 
+```
+
+> **A scale can be highly reliable without being valid (e.g., a scale consistently calibrated 3kg too heavy). But a measure CANNOT be valid without being reliable.**
+
+---
+
+## Types of Reliability & Validity
+
+### Reliability Dimensions
+- **Internal Consistency:** Do items on a scale agree? (Cronbach's $\alpha$, Chapter 9).
+- **Test-Retest:** Do participants achieve equivalent scores across two stable weeks?
+- **Inter-Rater:** Do two independent human/AI coders agree? (Cohen's $\kappa$, Chapter 18).
+
+### Validity Dimensions
+- **Content Validity:** Does the instrument cover the full conceptual domain?
+- **Construct Validity:** Does the score correlate with related constructs (**convergent**) and decouple from distinct constructs (**discriminant**)?
+- **Internal Validity:** Can rival causal explanations be eliminated?
+- **External Validity:** Can findings generalize to broader target populations?
+
+---
+
+## Empirical Validity Check: The Correlation Matrix
+
+Checking construct validity across the 4 study scales:
+
+```r
+scale_scores <- questionnaire |>
+  mutate(
+    stress_4     = 6 - stress_4,
+    stress       = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+    burnout      = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+    support      = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+    satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)
+  ) |>
+  select(stress, burnout, support, satisfaction)
+
+round(cor(scale_scores), 2)
+```
+
+```
+             stress burnout support satisfaction
+stress         1.00    0.68   -0.34        -0.41
+burnout        0.68    1.00   -0.38        -0.49
+support       -0.34   -0.38    1.00         0.52
+satisfaction  -0.41   -0.49    0.52         1.00
+```
+
+- Strong positive correlation ($r = 0.68$) between stress and burnout (**convergent**).
+- Moderate negative correlations with support and satisfaction (**discriminant**).
+
+---
+
+# Study Designs and Causal Inference
+
+### The Design, Not the Statistics, Decides Causality
+
+---
+
+## Major Empirical Study Designs
+
+| Design | Allocation Mechanism | Causal Power | In Wellbeing Study |
+|---|---|---|---|
+| **Randomized Controlled Trial (RCT)** | Random chance (coin toss / algorithm) | **High** (rules out all confounders) | Workshop invitation assignment |
+| **Quasi-Experiment** | Non-random intervention (policy change, self-choice) | **Moderate** (requires statistical controls) | Comparing students by number of sessions attended |
+| **Cross-Sectional Observational** | Single snapshot in time | **Low** (association only) | Baseline demographic questionnaire |
+| **Longitudinal Observational** | Repeated measurements over time | **Moderate** (establishes temporal ordering) | Semester 1 to 4 academic panels |
+
+---
+
+## Why Random Assignment Works: The Magic of Balance
+
+Suppose attendance was voluntary. Highly motivated, energetic students would attend. Any wellbeing gain would reflect **self-selection**, not the workshop!
+
+### Simulation of Self-Selection vs. Random Allocation
+
+```r
+set.seed(11)
+stress_vals <- scale_scores$stress
+
+# Voluntary enrollment: high stress students are less likely to volunteer
+chance_volunteer <- plogis(-2 * (stress_vals - mean(stress_vals)))
+volunteered      <- runif(600) < chance_volunteer
+
+# Random invitation: 50/50 allocation independent of participant attributes
+randomly_invited <- sample(rep(c(TRUE, FALSE), each = 300))
+
+cat("Baseline Stress Difference (In - Out):\n")
+cat("Voluntary Design: ", round(mean(stress_vals[volunteered]) - mean(stress_vals[!volunteered]), 2), "\n")
+cat("Randomized Trial: ", round(mean(stress_vals[randomly_invited]) - mean(stress_vals[!randomly_invited]), 2), "\n")
+```
+
+```
+Baseline Stress Difference (In - Out):
+Voluntary Design:  -0.54   <-- Volunteers started with massive baseline advantage!
+Randomized Trial:  -0.03   <-- Groups start virtually identical!
+```
+
+---
+
+## Verifying Randomisation: The Baseline Balance Table
+
+Every thesis with an experimental intervention must include a balance table:
+
+```r
+students |>
+  left_join(scale_scores |> select(student_id = 1, stress), join_by(student_id)) |>
+  summarise(
+    n           = n(),
+    mean_age    = mean(age, na.rm = TRUE),
+    pct_female  = 100 * mean(gender == "Female"),
+    pct_phd     = 100 * mean(programme == "PhD"),
+    mean_stress = mean(stress, na.rm = TRUE),
+    .by         = workshop
+  ) |>
+  mutate(across(where(is.numeric), \(x) round(x, 1)))
+```
+
+```
+# A tibble: 2 x 6
+  workshop     n mean_age pct_female pct_phd mean_stress
+  <chr>    <dbl>    <dbl>      <dbl>   <dbl>       <dbl>
+1 Control    300     27.4       52.3    42.7         3.1
+2 Workshop   300     27.6       51.7    43.3         3.1
+```
+
+Near-identical distributions confirm that randomization successfully eliminated selection bias.
+
+---
+
+# Samples and Populations
+
+### Why Big Samples Cannot Cure Selection Bias
+
+---
+
+## Random Error vs. Systematic Bias
+
+```
++-------------------------------------------------------------+
+| RANDOM ERROR:    Chance sampling variation.                 |
+|                  Remedy: INCREASE SAMPLE SIZE (N).          |
++-------------------------------------------------------------+
+| SYSTEMATIC BIAS: Flawed sampling frame or selective response.|
+|                  Remedy: BETTER METHOD (Bigger N won't help)|
++-------------------------------------------------------------+
+```
+
+### The Critical Thesis Principle:
+A convenience sample of 100,000 voluntary Twitter/LinkedIn users is **more biased and dangerously overconfident** than a well-designed probability sample of 400 respondents!
+
+---
+
+## Simulation: Testing Sample Size Against Bias
+
+Treating our 600 students as a known population ($\mu = 60.1$):
+
+```r
+pop <- first_sem$wellbeing
+true_mu <- mean(pop)
+
+# Distressed students are less likely to complete voluntary surveys:
+prob_respond <- plogis((pop - true_mu) / 10)
+
+draw_sim <- function(n, method) {
+  replicate(1000, {
+    idx <- if (method == "Random") sample(length(pop), n)
+           else sample(length(pop), n, prob = prob_respond)
+    mean(pop[idx])
+  })
+}
+```
+
+```
+Sample Size = 50:
+- Random Sampling:    Mean = 60.1, SD = 1.5
+- Voluntary Sampling: Mean = 62.4, SD = 1.5
+
+Sample Size = 200:
+- Random Sampling:    Mean = 60.1, SD = 0.7  <-- Precision doubles!
+- Voluntary Sampling: Mean = 62.4, SD = 0.7  <-- Off-target with ironclad certainty!
+```
+
+---
+
+## Visualizing Bias vs. Sample Size
+
+```
+     Sample Size N = 50                 Sample Size N = 200
+  +----------------------+           +----------------------+
+  |      True (60.1)     |           |      True (60.1)     |
+  |           |          |           |           |          |
+  |     Random| Voluntary|           |     Random| Voluntary|
+  |     [===] |   [===]  |           |       [=] |    [=]   |
+  +-----------+----------+           +-----------+----------+
+   Spread is wide.                    Spread is narrow, but
+                                      Voluntary still misses truth!
+```
+
+Quadrupling the sample size from 50 to 200 narrowed the confidence interval, but **did not move the voluntary estimate one millimeter closer to the truth.**
+
+---
+
+## Attrition: When Non-Response is Non-Random
+
+In longitudinal studies, dropouts alter the analytical sample:
+
+```r
+leavers <- setdiff(students$student_id, semesters$student_id[semesters$semester == 4])
+
+students |>
+  mutate(status = if_else(student_id %in% leavers, "Left Cohort", "Completed")) |>
+  summarise(
+    n           = n(),
+    pct_dropout = round(100 * mean(considering_dropout == "Yes")),
+    .by         = status
+  )
+```
+
+```
+# A tibble: 2 x 3
+  status          n pct_dropout
+  <chr>       <int>       <dbl>
+1 Completed     556          24
+2 Left Cohort    44          82
+```
+
+**Substantive Impact:** 82% of students who left had considered dropping out at baseline. The remaining sample in Year 2 is systematically healthier and more resilient than the starting cohort.
+
+---
+
+# Statistical Power & Sample Size Planning
+
+### How Big Does My Sample Need to Be?
+
+---
+
+## The Four Interlocking Parameters of Statistical Testing
+
+```
+                    +--------------------+
+                    |  SAMPLE SIZE (N)   |
+                    +--------------------+
+                              |
+            +-----------------+-----------------+
+            |                                   |
+            v                                   v
++-----------------------+           +-----------------------+
+|  SIGNIFICANCE (alpha) | <=======> |   EFFECT SIZE (d)     |
++-----------------------+           +-----------------------+
+            |                                   |
+            +-----------------+-----------------+
+                              |
+                              v
+                    +--------------------+
+                    |    POWER (1 - B)   |
+                    +--------------------+
+```
+
+Fixing any three parameters mathematically determines the fourth.
+
+---
+
+## Prospective Power Calculation with `power.t.test()`
+
+Before launching Elaf's wellbeing study, literature suggested a moderate intervention effect ($d = 0.45$).
+
+How many students are required per arm to achieve 80% power at $\alpha = .05$?
+
+```r
+power.t.test(delta = 0.45, sd = 1.0, sig.level = 0.05, power = 0.80)
+```
+
+```
+     Two-sample t test power calculation 
+
+              n = 78.43542
+          delta = 0.45
+             sd = 1
+      sig.level = 0.05
+          power = 0.8
+    alternative = two.sided
+
+NOTE: n is number in *each* group
+```
+
+Approximately 79 students per group are required. Elaf's sample of 300 per group provides exceptional statistical power ($> 99\%$).
+
+---
+
+## Sample Size Escalation for Smaller Effects
+
+```r
+effect_benchmarks <- c(Large = 0.8, Medium = 0.5, Small = 0.2)
+
+sapply(effect_benchmarks, function(d) {
+  ceiling(power.t.test(delta = d, sd = 1, power = 0.80)$n)
+})
+```
+
+```
+ Large Medium  Small 
+    26     64    393 
+```
+
+### The Power Law of Sample Size:
+- Detecting a medium effect ($d = 0.5$) requires ~64 participants per group.
+- Detecting a small effect ($d = 0.2$) requires ~393 participants per group!
+- **Halving the target effect size roughly quadruples the required sample size.**
+
+---
+
+# Preregistration and Thesis Methodology
+
+### Preventing Post-Hoc Data Dredging
+
+---
+
+## The Open Science Framework & Preregistration
+
+What is **preregistration**?
+
+- Depositing your hypotheses, operational definitions, exclusion criteria, and planned tests in a timestamped public registry (e.g., [osf.io](https://osf.io)) **before seeing the data**.
+- Distinguishes **confirmatory tests** (hypothesized a priori) from **exploratory discoveries** (discovered during data interrogation).
+- Prevents $p$-hacking, outcome switching, and subconscious bias.
+
+---
+
+## Writing the Thesis Methodology Section
+
+Structure your Chapter 3 (Methods) into four disciplined subsections:
+
+```
+3.1 STUDY DESIGN
+    - Longitudinal panel (4 semesters) with nested randomized trial.
+    - 50/50 allocation to 6-week wellbeing workshop.
+
+3.2 PARTICIPANT SAMPLING & ATTRITION
+    - N = 600 graduate students across 5 faculties.
+    - 44 students lost to follow-up (attrition audit reported).
+
+3.3 MEASURES & OPERATIONALISATION
+    - Psychometric scales (Stress, Burnout, Support, Satisfaction).
+    - Reverse coding documented; registrar-verified GPA metrics.
+
+3.4 STATISTICAL ANALYSIS PLAN & POWER
+    - Primary hypothesis tests specified with alpha = .05.
+    - Prospective power calculation: N = 300/group exceeds 80% power.
+```
+
+---
+
+## Laboratory Case: `ToothGrowth` Factorial Design
+
+Base R contains a classic 2 $\times$ 3 factorial experiment on vitamin C delivery:
+
+```r
+# 60 guinea pigs assigned to 2 delivery methods (OJ vs Ascorbic Acid) at 3 doses
+ToothGrowth |>
+  summarise(mean_len = round(mean(len), 1), n = n(), .by = c(supp, dose))
+```
+
+```
+# A tibble: 6 x 4
+  supp   dose mean_len     n
+  <fct> <dbl>    <dbl> <int>
+1 VC      0.5      8       10
+2 VC      1       16.8     10
+3 VC      2       26.1     10
+4 OJ      0.5     13.2     10
+5 OJ      1       22.7     10
+6 OJ      2       26.1     10
+```
+
+- **Outcome:** `len` (Ratio continuous odontoblast length).
+- **Factors:** `supp` (Nominal: OJ vs VC) and `dose` (Ordered factor: 0.5, 1.0, 2.0 mg).
+- **Hypothesis:** OJ produces superior cell growth at low doses due to bioflavonoid synergy.
+
+---
+
+## Methodological Pitfalls to Avoid
+
+- **The Meaningless Average:** Calculating the mean of a nominal or ordinal variable.
+- **The Confounder Blindspot:** Inferring causality from observational correlations ($r = -0.22$).
+- **The Big-Data Illusion:** Assuming a massive voluntary survey guarantees accuracy.
+- **The Post-Hoc Hypothesis:** Writing hypotheses after viewing the data outputs.
+- **The Retrospective Power Fallacy:** Computing power using observed $p$-values after a test.
+
+---
+
+## Summary of Key R Planning Tools
+
+| Purpose | Function | Example |
+|---|---|---|
+| Draw normal numbers | `rnorm()` | `rnorm(300, mean = 60, sd = 11)` |
+| Random allocation | `sample()` | `sample(rep(c("T", "C"), each = 150))` |
+| Replicate simulations | `replicate()` | `replicate(5000, { ... })` |
+| Convert to probability | `plogis()` | `plogis((x - mean) / sd)` |
+| Set ordered factor | `factor()` | `factor(x, levels = ..., ordered = TRUE)` |
+| Compute power / N | `power.t.test()` | `power.t.test(delta = 0.45, power = 0.8)` |
+| Identify set difference | `setdiff()` | `setdiff(baseline_ids, follow_up_ids)` |
+| Extract quantiles | `quantile()` | `quantile(sims, c(0.025, 0.975))` |
+
+---
+
+# Questions & Hands-On Practice
+
+Open the Chapter 5 Interactive Playground:
+[playground/chapter05.html](../playground/chapter05.html)
+
+**Next Lecture:**
+*Chapter 6 · Describing Data: Central Tendency, Spread, and Distributions*
