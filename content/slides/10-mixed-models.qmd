@@ -1,872 +1,633 @@
 ---
-title: "Longitudinal & Hierarchical Data: Mixed-Effects Models"
-subtitle: "Repeated Measures, Random Intercepts, Random Slopes, and Multilevel Modeling in R"
-author: "Dr. Polla Fattah"
-institute: "From Data to Thesis: Research Data Analysis with R"
-format:
-  revealjs:
-    theme: [default, ../../styles/theme.scss]
-    slide-number: true
-    preview-links: auto
-    chalkboard: true
-    transition: slide
-    highlight-style: github
-    code-line-numbers: false
-    width: 1200
-    height: 750
+title: "Mixed-Effects Models"
+description: "Chapter 10: repeated measures and nested data, random intercepts and slopes, the intraclass correlation, growth models, persistence of the workshop effect, supervisors, and count outcomes."
+format: deck-html
 execute:
+  echo: false
   freeze: auto
 ---
 
-# Mixed-Effects Models
-
-### Modeling Change Over Time & Clustered Structures
-
-**Chapter 10 · From Data to Thesis**
-
-Dr. Polla Fattah
-
----
-
-## The Illusion of Independent Observations
-
-Every standard statistical test we have used so far ($t$-test, ANOVA, OLS regression) makes one bedrock assumption:
-
-> **The observations are independent.**  
-> Knowing the value of one data point tells you *nothing* about the value of another data point.
-
-In real-world scientific research, this assumption is broken **by design**:
-
-1. **Repeated Measures**: The same student is measured across 4 consecutive semesters.
-2. **Clustered / Nested Data**: 10 students share the same research supervisor; 30 patients share the same physician; 25 pupils share the same classroom.
-
----
-
-## Why Clustered Data Break OLS Regression
-
-When data are clustered:
-- Observations within the same cluster are **more similar to each other** than observations drawn from different clusters.
-- A student who has high wellbeing in Semester 1 is very likely to have high wellbeing in Semester 2.
-- Students sharing an attentive, supportive supervisor all benefit from that shared environment.
-
-```
-       Independent Data (OLS Assumption)         Clustered / Longitudinal Data
-       ┌───────────────────────────────┐        ┌───────────────────────────────┐
-       │   o      o      o      o      │        │   [Group 1]       [Group 2]   │
-       │                               │        │    o  o  o         *  *  *    │
-       │      o      o      o      o   │        │     o  o            *  *      │
-       │                               │        │   (Correlated)    (Correlated)│
-       └───────────────────────────────┘        └───────────────────────────────┘
-          Every point is brand-new                Points within clusters repeat
-             independent evidence!                     each other's information!
-```
-
----
-
-## The Danger: Type I Error Inflation Simulation
-
-What happens if we run standard OLS regression on clustered data?
-
-Let us simulate a study:
-- 20 supervisors, each supervising 10 students ($N = 200$).
-- 10 supervisors attend a training workshop; 10 do not.
-- **The true treatment effect is exactly ZERO.**
-- Each supervisor has an idiosyncratic supervisory "style" ($SD = 5$).
-
-Let us run this study 500 times and record the **False Alarm Rate** ($\alpha = 0.05$):
-
----
-
-## Simulating the False Alarm Rate in R
-
-```r
-library(lme4)
+```{r}
+#| include: false
+library(data2thesis)
 library(dplyr)
+library(ggplot2)
+library(lme4)
+
+navy <- "#1d588c"; copper <- "#b4762e"; soft <- "#46586d"
+theme_set(theme_minimal(base_size = 15) +
+  theme(panel.grid.minor = element_blank(),
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        axis.title = element_text(colour = soft),
+        strip.text = element_text(colour = navy, face = "bold", size = 11)))
+knitr::opts_chunk$set(dev = "svg", dev.args = list(bg = "transparent"),
+                      message = FALSE, warning = FALSE)
+f2 <- function(x) sprintf("%.2f", x)
 
 simulate_clustered <- function() {
   supervisor <- rep(1:20, each = 10)
-  trained    <- rep(rep(c(0, 1), 10), each = 10)  # Assigned at supervisor level (No effect!)
-  style      <- rnorm(20, sd = 5)[supervisor]     # Shared cluster effect
-  wellbeing  <- 60 + style + rnorm(200, sd = 10) # Individual student score
-
-  # 1. Ordinary OLS Regression (Treats 200 students as independent)
+  trained    <- rep(rep(c(0, 1), 10), each = 10)
+  style      <- rnorm(20, sd = 5)[supervisor]
+  wellbeing  <- 60 + style + rnorm(200, sd = 10)
   p_ordinary <- summary(lm(wellbeing ~ trained))$coefficients["trained", 4]
-
-  # 2. Mixed-Effects Model (Knows students cluster within supervisors)
   mixed      <- suppressMessages(lmer(wellbeing ~ trained + (1 | supervisor)))
   t_mixed    <- coef(summary(mixed))["trained", "t value"]
-  p_mixed    <- 2 * pnorm(-abs(t_mixed))
-
-  c(OLS = p_ordinary < 0.05, Mixed = p_mixed < 0.05)
+  c(ordinary = p_ordinary < 0.05, mixed = 2 * pnorm(-abs(t_mixed)) < 0.05)
 }
-
 set.seed(12)
-false_alarms <- replicate(500, simulate_clustered())
-rowMeans(false_alarms)
+false_alarms <- rowMeans(replicate(500, simulate_clustered()))
+
+sleep_ri <- lmer(Reaction ~ Days + (1 | Subject), data = sleepstudy)
+fe_ri <- fixef(sleep_ri); sd_ri <- as.data.frame(VarCorr(sleep_ri))$sdcor
+vc <- as.data.frame(VarCorr(sleep_ri)); icc_sleep <- vc$vcov[1] / sum(vc$vcov)
+sleep_rs <- lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
+fe_rs <- fixef(sleep_rs)
+slope_sd <- attr(VarCorr(sleep_rs)$Subject, "stddev")[["Days"]]
+se_ri <- summary(sleep_ri)$coefficients["Days", "Std. Error"]
+se_rs <- summary(sleep_rs)$coefficients["Days", "Std. Error"]
+
+panel <- semesters |> left_join(students, join_by(student_id)) |> mutate(time = semester - 1)
+wb_null <- lmer(wellbeing ~ 1 + (1 | student_id), data = panel)
+vc_null <- as.data.frame(VarCorr(wb_null)); icc <- vc_null$vcov[1] / sum(vc_null$vcov)
+records_per_student <- nrow(panel) / n_distinct(panel$student_id)
+design_effect <- 1 + (records_per_student - 1) * icc
+lm_time <- summary(lm(wellbeing ~ time, data = panel))$coefficients
+wb_growth <- lmer(wellbeing ~ time + (time | student_id), data = panel)
+se_mixed <- summary(wb_growth)$coefficients["time", "Std. Error"]
+ci <- confint(wb_growth, parm = "beta_", method = "Wald")
+wb_workshop <- lmerTest::lmer(wellbeing ~ factor(semester) * workshop + (time | student_id), data = panel)
+predicted <- expand.grid(semester = 1:4, workshop = c("Invited", "Not invited")) |> mutate(time = semester - 1)
+predicted$wellbeing <- predict(wb_workshop, newdata = predicted, re.form = NA)
+gaps <- predicted |>
+  tidyr::pivot_wider(id_cols = semester, names_from = workshop, values_from = wellbeing) |>
+  mutate(gap = Invited - `Not invited`)
+int_p <- summary(wb_workshop)$coefficients[grep(":", rownames(summary(wb_workshop)$coefficients)), "Pr(>|t|)"]
+gpa_growth <- lmer(gpa ~ time + (1 | student_id), data = panel)
+wb_levels <- lmer(wellbeing ~ time + (1 | supervisor_id) + (1 | student_id), data = panel)
+vc_levels <- as.data.frame(VarCorr(wb_levels))
+shares <- setNames(vc_levels$vcov / sum(vc_levels$vcov), vc_levels$grp)
+support_scores <- questionnaire |>
+  mutate(support = rowMeans(pick(support_1:support_6), na.rm = TRUE)) |> select(student_id, support)
+meetings_model <- glmer(supervisor_meetings ~ support + programme + (1 | supervisor_id) + (1 | student_id),
+                        data = panel |> left_join(support_scores, join_by(student_id)), family = poisson)
+rr <- exp(fixef(meetings_model))
+chick_model <- lmer(weight ~ Time * Diet + (Time | Chick), data = ChickWeight)
+ch <- fixef(chick_model)
 ```
 
-**Results**:
-- **Mixed-Effects Model**: False alarm rate $\approx 5.6\%$ (Valid nominal error rate!)
-- **Standard OLS Regression**: False alarm rate $\approx \mathbf{41.8\%}$!
+# Mixed-Effects Models
+
+When observations are not independent
+
+**Chapter 10**
+
+Polla Fattah
 
 ---
 
-## Why Did OLS Fail So Catastrophically?
+## By the end of today you can
 
-The ordinary regression saw $N = 200$ rows and assumed it had **200 independent pieces of evidence**.
-
-- But the treatment was delivered to **20 supervisors**, not 200 students!
-- The 10 students under Supervisor #3 all shared Supervisor #3's high baseline.
-- OLS mistook random differences between 20 supervisors for a "statistically significant" training effect!
-- It dramatically **underestimated standard errors**, manufacturing fake $p$-values out of thin air.
-
-> **Ignoring data clustering produces false alarms 8 to 10 times higher than intended.**
-
----
-
-## Research Questions for Chapter 10
-
-In our graduate student panel dataset, we track students across 4 semesters within supervisors:
-
-1. **Research Question 8 (Longitudinal Trajectories)**:
-   > How does student psychological wellbeing and academic GPA evolve across two years of graduate study, and do individual students follow distinct growth trajectories?
-
-2. **Intervention Persistence**:
-   > Does the positive wellbeing benefit of the Semester 2 mental health workshop persist across Semesters 3 and 4, or does the effect fade over time?
-
-3. **Multilevel Influence**:
-   > How much of the variance in graduate student wellbeing is attributable to differences between research supervisors?
+- recognise repeated-measures and nested data;
+- explain, with a simulation, why ordinary regression gets their uncertainty wrong;
+- fit random intercept and random slope models with lme4;
+- interpret fixed effects, random effects, and the intraclass correlation;
+- test whether an effect changes over time, and compare models;
+- model a count outcome with a generalised linear mixed model;
+- report a mixed-effects model in a thesis.
 
 ---
 
-# A Classic Case Study: The Sleep Deprivation Experiment
+## Two kinds of structure
+
+| Structure | Example | Grouped within |
+|---|---|---|
+| repeated measures | four semesters per student | people |
+| nested data | students with the same supervisor | groups |
+
+Observations within a group are more alike than observations from different groups.
 
 ---
 
-## The `sleepstudy` Dataset
+## Less information than the rows suggest
 
-To understand the core mechanics of mixed models, we examine the classic Belenky et al. (2003) sleep deprivation study in `lme4`:
+A student who scores high this semester is likely to score high next semester.
+
+Students of one supervisor share that supervisor's style.
+
+Methods that ignore this get the uncertainty wrong, sometimes badly.
+
+---
+
+## A simulated training course with no effect
 
 ```r
-library(lme4)
-library(ggplot2)
-
-data(sleepstudy)
-head(sleepstudy, 4)
+simulate_clustered <- function() {
+  supervisor <- rep(1:20, each = 10)
+  trained    <- rep(rep(c(0, 1), 10), each = 10)   # no real effect
+  style      <- rnorm(20, sd = 5)[supervisor]      # shared by a supervisor's students
+  wellbeing  <- 60 + style + rnorm(200, sd = 10)
+  # ... test "trained" with lm() and with lmer()
+}
 ```
 
-```
-  Reaction Days Subject
-1 249.5600    0     308
-2 258.7364    1     308
-3 257.0323    2     308
-4 288.4751    3     308
-```
-
-- **$N = 18$ subjects** tested over **10 consecutive days** of sleep restriction (3 hours sleep per night).
-- Total observations: $18 \times 10 = 180$ rows.
-- Outcome: Average reaction time (milliseconds) on a psychomotor vigilance task.
+20 supervisors, 10 students each, half the supervisors trained. Repeated 500 times.
 
 ---
 
-## Visualizing Individual Trajectories
+## Ignoring the grouping creates false alarms
+
+| Analysis | Share of studies "significant" |
+|---|---|
+| ordinary regression | `r round(100 * false_alarms["ordinary"])`% |
+| mixed-effects model | `r round(100 * false_alarms["mixed"])`% |
+| a correct test should give | 5% |
+
+The course went to 20 supervisors, not 200 independent students.
+
+The mixed model is slightly above 5% because the quick p-value ignores that there are only 20 supervisors.
+
+---
+
+## A study of sleep deprivation
 
 ```r
+head(sleepstudy)
+```
+
+Reaction times of 18 people over 10 days of sleep restriction, one measurement per person per day.
+
+180 rows, but only 18 people.
+
+---
+
+## Everyone gets slower, but differently
+
+```{r}
+#| fig-width: 9
+#| fig-height: 4.2
 ggplot(sleepstudy, aes(x = Days, y = Reaction)) +
-  geom_point(size = 1.2, alpha = 0.7) +
-  geom_smooth(method = "lm", se = FALSE, color = "#1b365d", linewidth = 0.8) +
-  facet_wrap(~ Subject, ncol = 6) +
-  labs(
-    title = "Reaction Time Over 10 Days of Sleep Deprivation (18 Subjects)",
-    x = "Days of Sleep Restriction",
-    y = "Reaction Time (ms)"
-  ) +
-  theme_minimal(base_size = 10)
+  geom_point(size = 0.8, colour = navy) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 0.8, colour = copper) +
+  facet_wrap(~ Subject, ncol = 9) +
+  scale_x_continuous(breaks = c(0, 9)) +
+  labs(x = "Days of sleep restriction", y = "Reaction (ms)") +
+  theme(axis.text = element_text(size = 9))
 ```
 
-Look at the panel plots:
-1. Almost every subject gets slower as days progress (positive slopes).
-2. **Different Baselines**: Subject 308 starts at 250 ms; Subject 337 starts at 320 ms!
-3. **Different Rates of Decline**: Subject 335 stays relatively flat; Subject 308 shoots up dramatically!
+People start at different levels (**intercepts**) and slow at different rates (**slopes**).
 
 ---
 
-# Random Intercept Models
-
----
-
-## The Random Intercept Equation
-
-An ordinary regression fits a single line:
-$$Y_{ij} = \beta_0 + \beta_1 X_{ij} + \epsilon_{ij}$$
-
-A **Random Intercept Model** allows each subject $j$ to have their own unique starting baseline ($u_{0j}$):
-
-$$Y_{ij} = (\beta_0 + u_{0j}) + \beta_1 X_{ij} + \epsilon_{ij}$$
-
-Where:
-- $\beta_0$ = **Fixed Intercept** (the population average starting level).
-- $\beta_1$ = **Fixed Slope** (the population average daily increase in reaction time).
-- $u_{0j} \sim \mathcal{N}(0, \sigma_{u0}^2)$ = **Random Intercept** (subject $j$'s personal deviation from the average baseline).
-- $\epsilon_{ij} \sim \mathcal{N}(0, \sigma_{\epsilon}^2)$ = **Residual Error** (day-to-day fluctuation within subject $j$).
-
----
-
-## Geometry of Random Intercepts
-
-In a random intercept model, all regression lines are **strictly parallel**:
-- Every individual has the exact same slope ($\beta_1$).
-- But each individual starts at a different vertical height ($\beta_0 + u_{0j}$).
-
-```
-    Reaction (ms)
-         ^                 /  Subject 337 (High Baseline)
-         │                /
-         │               /  Subject 309 (Average Baseline)
-         │              /
-         │             /  Subject 308 (Low Baseline)
-         │            /
-         │           /    <-- All slopes are parallel (Fixed Days effect)!
-         └──────────/─────────> Days
-```
-
----
-
-## Fitting Random Intercepts in R with `lmer()`
-
-In `lme4`, the formula notation for a random intercept is `(1 | GroupingVariable)`:
+## Random intercepts
 
 ```r
 sleep_ri <- lmer(Reaction ~ Days + (1 | Subject), data = sleepstudy)
 summary(sleep_ri)
 ```
 
-Let us dissect the two halves of the `lmer` summary output:
-1. The **Fixed Effects** table.
-2. The **Random Effects** table.
+`(1 | Subject)`: one average line, but a separate starting level for each person.
 
 ---
 
-## Interpreting the `lmer` Summary Output
+## Fixed and random effects
 
-```
-Random effects:
- Groups   Name        Variance Std.Dev.
- Subject  (Intercept) 1378.2   37.12   <-- Between-subject SD (sigma_u0)
- Residual              960.5   30.99   <-- Within-subject residual SD (sigma_e)
-Number of obs: 180, groups:  Subject, 18
-
-Fixed effects:
-            Estimate Std. Error t value
-(Intercept)  251.405      9.746   25.79  <-- Average baseline reaction time (Day 0)
-Days          10.467      0.804   13.02  <-- Average increase per day (+10.5 ms)
-```
-
-- **Fixed Effects**: On Day 0, the average reaction time is **251.4 ms**. Each day of sleep restriction adds **10.5 ms** ($t = 13.02$).
-- **Random Effects**: Subjects' baselines vary around the average with a standard deviation of **37.1 ms**. Day-to-day residual noise within subjects is **31.0 ms**.
+| Part | Describes | Here |
+|---|---|---|
+| fixed intercept | average reaction on day 0 | `r round(fe_ri[1])` ms |
+| fixed slope | average change per day | `r round(fe_ri[2], 1)` ms |
+| SD of intercepts | how much people's starting levels differ | `r round(sd_ri[1])` ms |
+| residual SD | day-to-day variation within a person | `r round(sd_ri[2])` ms |
 
 ---
 
-# The Intraclass Correlation (ICC) & Design Effect
+## The intraclass correlation
 
----
-
-## The Intraclass Correlation (ICC)
-
-The **Intraclass Correlation (ICC)**, denoted $\rho$, quantifies the proportion of total variance attributable to differences between clusters:
-
-$$\text{ICC} = \frac{\sigma_{between}^2}{\sigma_{between}^2 + \sigma_{within}^2} = \frac{\sigma_{u0}^2}{\sigma_{u0}^2 + \sigma_{\epsilon}^2}$$
-
-In our sleep study:
+$$
+\text{ICC} = \frac{\text{variance between groups}}{\text{variance between groups} + \text{variance within groups}}
+$$
 
 ```r
 vc <- as.data.frame(VarCorr(sleep_ri))
-between_var <- vc$vcov[1]  # 1378.2
-residual_var <- vc$vcov[2] #  960.5
-
-icc <- between_var / (between_var + residual_var)
-round(icc, 3)
-# [1] 0.589
+vc$vcov[1] / sum(vc$vcov)
 ```
 
-**Interpretation**:
-- **58.9%** of all variation in reaction times represents stable, persistent differences between people!
-- Two measurements taken from the *same* subject correlate at $r = 0.59$.
-- An ordinary regression that treats these measurements as independent is severely invalid.
+About `r round(100 * icc_sleep)`% of the variation is stable differences between people.
+
+ICC 0: the grouping does not matter. The higher it is, the more wrong an ordinary regression becomes.
 
 ---
 
-## The Design Effect & Effective Sample Size
-
-When data are clustered, how much independent information do we *actually* have?
-
-The **Design Effect (DEFF)** tells us:
-
-$$\text{DEFF} = 1 + (m - 1) \times \text{ICC}$$
-
-Where $m$ is the average number of observations per cluster.
-
-```r
-m <- 10  # 10 days per subject
-deff <- 1 + (m - 1) * icc
-cat("Design Effect:", round(deff, 2), "\n")
-# Design Effect: 6.30
-
-effective_N <- 180 / deff
-cat("Effective Sample Size:", round(effective_N, 1), "\n")
-# Effective Sample Size: 28.6
-```
-
-> **Although our dataset has 180 rows, it contains only as much statistical information as 28.6 independent observations!**
-
----
-
-# Random Slope Models
-
----
-
-## The Random Slope Equation
-
-Does everyone deteriorate at the exact same rate (+10.5 ms/day)?  
-No! As our visualization revealed, some subjects resist sleep loss while others collapse.
-
-A **Random Slope Model** allows each subject to have their own baseline **AND** their own trajectory:
-
-$$Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j}) X_{ij} + \epsilon_{ij}$$
-
-Where:
-- $u_{0j} \sim \mathcal{N}(0, \sigma_{u0}^2)$ = Random Intercept deviation.
-- $u_{1j} \sim \mathcal{N}(0, \sigma_{u1}^2)$ = **Random Slope deviation** (how much subject $j$'s rate of change deviates from $\beta_1$).
-- $\rho_{u0, u1}$ = Correlation between random intercepts and random slopes (e.g., do people who start slower also decline faster?).
-
----
-
-## Geometry of Random Slopes
-
-The regression lines are no longer parallel; they fan out across time:
-
-```
-    Reaction (ms)
-         ^                 /  Subject 308 (Steep deterioration: High slope)
-         │                /
-         │               /___ Subject 335 (Resistant: Flat slope)
-         │              /
-         │             /  Subject 309 (Average slope)
-         │            /
-         └───────────/─────────> Days
-```
-
-In `lme4`, the formula notation for a random intercept and slope is:
-```r
-(Days | Subject)   # Equivalent to (1 + Days | Subject)
-```
-
----
-
-## Fitting Random Slopes with `lmer()`
+## Random slopes
 
 ```r
 sleep_rs <- lmer(Reaction ~ Days + (Days | Subject), data = sleepstudy)
-summary(sleep_rs)
 ```
 
-```
-Random effects:
- Groups   Name        Variance Std.Dev. Corr
- Subject  (Intercept) 612.10   24.741        <-- Intercept SD
-          Days         35.07    5.922   0.07 <-- Slope SD & Correlation
- Residual             654.94   25.592        <-- Residual SD
-Number of obs: 180, groups:  Subject, 18
+`(Days | Subject)`: a separate intercept **and** slope for each person.
 
-Fixed effects:
-            Estimate Std. Error t value
-(Intercept)  251.405      6.825   36.84
-Days          10.467      1.546    6.77
-```
+| | Random intercept | Random slope |
+|---|---|---|
+| average slope | `r round(fe_ri[2], 1)` ms | `r round(fe_rs[2], 1)` ms |
+| its standard error | `r f2(se_ri)` | `r f2(se_rs)` |
 
-Compare the Standard Error of `Days`:
-- In Random Intercept model: $SE = 0.804$
-- In Random Slope model: $SE = \mathbf{1.546}$ (Nearly doubled!)
-- Why? Because individuals vary in their sensitivity ($\sigma_{slope} = 5.92\text{ ms/day}$). The random intercept model had underestimated uncertainty by assuming zero slope variance!
+Slopes vary with SD ≈ `r round(slope_sd, 1)` ms per day. Ignoring it made the average too confident.
 
 ---
 
-## Comparing Models: Likelihood Ratio Test
-
-Should we retain the random slope, or stick with the simpler random intercept model?
-
-We use the **Likelihood Ratio Test (LRT)** via `anova()`:
+## Is the random slope worth it?
 
 ```r
 anova(sleep_ri, sleep_rs)
 ```
 
-```
-         npar    AIC    BIC  logLik deviance  Chisq Df Pr(>Chisq)    
-sleep_ri    4 1794.5 1807.2 -893.23   1786.5                         
-sleep_rs    6 1755.6 1774.8 -871.81   1743.6 42.837  2  4.983e-10 ***
-```
+A **likelihood ratio test** compares the two models. The p-value is tiny: random slopes improve the model clearly.
 
-- **$\chi^2(2) = 42.84, p < .001$**: Adding the random slope produces a massive, statistically significant improvement in model fit.
-- **AIC** drops from $1794.5 \rightarrow 1755.6$ ($\Delta\text{AIC} = -38.9$, decisively favoring the random slope model).
+**AIC** agrees: it balances fit against complexity, and lower is better.
 
 ---
 
-# Analyzing the Longitudinal Student Wellbeing Panel
-
----
-
-## The Graduate Student Panel Dataset
-
-In the study, each student is tracked across up to four consecutive semesters:
+## The wellbeing panel
 
 ```r
-library(data2thesis)
-
-# Construct panel dataset with time variable (0 = Semester 1)
 panel <- semesters |>
   left_join(students, join_by(student_id)) |>
   mutate(time = semester - 1)
-
-cat("Total records:", nrow(panel), "\n")
-cat("Distinct students:", n_distinct(panel$student_id), "\n")
 ```
 
-```
-Total records: 2180
-Distinct students: 600
-```
-
-Notice that $2180 < (600 \times 4 = 2400)$ because some students left the study after Year 1.
+Up to four records per student, `r nrow(panel)` in all. `time` is 0 in semester 1.
 
 ---
 
-## Visualizing Student Trajectories: The Spaghetti Plot
+## Students differ far more than they change
 
-```r
+```{r}
+#| fig-width: 9
+#| fig-height: 3.6
 set.seed(9)
-sampled_students <- sample(unique(panel$student_id), 30)
-
-panel |>
-  filter(student_id %in% sampled_students) |>
+some_students <- sample(unique(panel$student_id), 30)
+panel |> filter(student_id %in% some_students) |>
   ggplot(aes(x = semester, y = wellbeing, group = student_id)) +
-  geom_line(alpha = 0.5, color = "#1b365d", linewidth = 0.7) +
-  geom_point(alpha = 0.6, size = 1.5) +
-  labs(
-    title = "Wellbeing Trajectories Across 4 Semesters (30 Random Students)",
-    x = "Semester",
-    y = "Wellbeing Score (0 to 100)"
-  ) +
-  theme_minimal(base_size = 12)
+  geom_line(alpha = 0.55, colour = navy) +
+  labs(x = "Semester", y = "Wellbeing (0 to 100)")
 ```
 
-What the spaghetti plot reveals:
-- Lines are spread out vertically from 30 to 90 (huge between-student baseline differences).
-- Individual trajectories fluctuate slightly across semesters, but individuals tend to remain within their own distinct band.
+Thirty random students: each stays roughly at their own level.
 
 ---
 
-## Baseline Variance: The Null Model
-
-We fit the "Empty" or "Null" model (no predictors, just random intercepts) to decompose total wellbeing variance:
+## The ICC for wellbeing
 
 ```r
 wb_null <- lmer(wellbeing ~ 1 + (1 | student_id), data = panel)
 vc_null <- as.data.frame(VarCorr(wb_null))
-icc_wb <- vc_null$vcov[1] / sum(vc_null$vcov)
-round(icc_wb, 3)
-# [1] 0.684
+vc_null$vcov[1] / sum(vc_null$vcov)
 ```
 
-- **$\text{ICC} = 68.4\%$**: More than two-thirds of all variation in graduate wellbeing represents stable between-student differences!
-- Only 31.6% is within-student change from semester to semester.
+About `r round(100 * icc)`% of all the variation in wellbeing lies between students.
 
 ---
 
-## How Ordinary Regression Misleads on Change Over Time
+## The design effect
 
-Does student wellbeing decline over the two years?
+$$
+\text{design effect} = 1 + (m - 1) \times \text{ICC}
+$$
 
-Let us compare ordinary regression vs. a mixed-effects growth model:
+| | Value |
+|---|---|
+| records | `r nrow(panel)` |
+| design effect | `r f2(design_effect)` |
+| independent equivalent | about `r round(nrow(panel) / design_effect)` |
+
+`r nrow(panel)` records carry about as much information as `r round(nrow(panel) / design_effect)` independent observations.
+
+---
+
+## Does wellbeing decline? The wrong way
 
 ```r
-# WRONG: Ordinary OLS regression ignoring student clustering
-summary(lm(wellbeing ~ time, data = panel))$coefficients
+lm(wellbeing ~ time, data = panel)
 ```
 
-```
-             Estimate Std. Error   t value  Pr(>|t|)
-(Intercept) 58.214532   0.384210 151.51731 0.0000000
-time        -0.342115   0.241512  -1.41655 0.1567492  <-- Not significant (p = .157)!
-```
-
-OLS claims there is **no significant change** over time ($p = .157$).
-
-Now look at the mixed-effects growth model:
+Slope `r f2(lm_time["time", 1])`, standard error `r f2(lm_time["time", 2])`: not significant.
 
 ---
 
-## The Mixed-Effects Growth Model
+## The right way: a growth model
 
 ```r
 wb_growth <- lmer(wellbeing ~ time + (time | student_id), data = panel)
-summary(wb_growth)$coefficients
 ```
 
-```
-              Estimate Std. Error    t value
-(Intercept) 58.2412512  0.5124018 113.663243
-time        -0.3418521  0.0894125  -3.823315  <-- Highly significant (t = -3.82)!
-```
+| | Ordinary regression | Mixed model |
+|---|---|---|
+| slope per semester | `r f2(lm_time["time", 1])` | `r f2(fixef(wb_growth)["time"])` |
+| standard error | `r f2(lm_time["time", 2])` | `r f2(se_mixed)` |
 
-Look at what happened:
-- The estimated slope is virtually identical ($-0.34$ points per semester).
-- But the **Standard Error** dropped from **$0.242 \rightarrow 0.089$** (reduced by 63%!).
-- OLS lumped the massive between-student differences into its error term, **drowning out** the subtle, consistent within-person decline.
-- The mixed model separated the between-person noise, revealing the real decline with high precision!
+The ordinary regression puts the large differences **between** students into its error, drowning the small change **within** each student.
 
 ---
 
-## P-Values and the `lmerTest` Package
+## The error can go either way
 
-Why does `lme4::summary()` show a $t$-value but no $p$-value?
+| Situation | Ignoring the structure |
+|---|---|
+| training course simulation | made a non-existent effect significant |
+| sleep study slopes | made the average look too certain |
+| wellbeing over time | made a real decline look uncertain |
 
-- In mixed models with unbalanced groups and complex random effects, the exact degrees of freedom cannot be calculated analytically.
-- The standard scientific solution is the **`lmerTest` package**, which implements **Satterthwaite's approximation** for degrees of freedom:
+The direction depends on the data. The error is always there.
+
+---
+
+## lme4 prints no p-values
+
+| Solution | How |
+|---|---|
+| confidence intervals | `confint(wb_growth, parm = "beta_", method = "Wald")` |
+| likelihood ratio test | compare models with `anova()` |
+| lmerTest | adds Satterthwaite p-values to `summary()` |
+
+The `time` interval runs from `r f2(ci["time", 1])` to `r f2(ci["time", 2])`: entirely below zero. Wellbeing declines, as RQ8 predicted.
+
+---
+
+## lmerTest in practice
 
 ```r
 library(lmerTest)
-
-# Refit model with lmerTest loaded
 wb_growth_p <- lmer(wellbeing ~ time + (time | student_id), data = panel)
 summary(wb_growth_p)$coefficients
 ```
 
-```
-              Estimate Std. Error         df    t value     Pr(>|t|)
-(Intercept) 58.2412512  0.5124018 598.241812 113.663243 0.000000e+00
-time        -0.3418521  0.0894125 587.142081  -3.823315 1.458921e-04 ***
-```
+New columns: degrees of freedom and `Pr(>|t|)`.
 
-$p = .000146$: RQ8 is confirmed — student wellbeing declines significantly over time.
+Models fitted after loading lmerTest include a p-value for each fixed effect.
 
 ---
 
-# Modeling Intervention Persistence: The Workshop Over Time
-
----
-
-## Did the Semester 2 Workshop Benefit Last?
-
-In Chapter 7, we found the Semester 2 wellbeing workshop raised scores by $\approx 5$ points.
-
-Did that benefit persist into Year 2 (Semesters 3 & 4), or did it fade away?
-
-We model the **interaction between semester (as a factor) and workshop participation**:
+## Did the workshop effect last?
 
 ```r
-wb_workshop <- lmer(
-  wellbeing ~ factor(semester) * workshop + (time | student_id),
-  data = panel
-)
-round(summary(wb_workshop)$coefficients, 2)
+wb_workshop <- lmer(wellbeing ~ factor(semester) * workshop +
+                      (time | student_id), data = panel)
 ```
 
-The interaction terms test whether the group gap in Semesters 2, 3, and 4 differs from the baseline gap in Semester 1.
+`factor(semester)` gives each semester its own average; the interaction lets the gap differ by semester.
+
+Every record is used, including the first year of students who later left.
 
 ---
 
-## Visualizing Predicted Trajectories
+## The effect fades
 
-We generate population-level marginal predictions using `predict()` with `re.form = NA` (ignoring individual random effects):
+```{r}
+#| fig-width: 8
+#| fig-height: 3.4
+ggplot(predicted, aes(x = semester, y = wellbeing, colour = workshop)) +
+  geom_line(linewidth = 1.2) + geom_point(size = 3) +
+  scale_colour_manual(values = c(copper, navy)) +
+  labs(x = "Semester", y = "Predicted wellbeing", colour = NULL)
+```
+
+| Semester | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|
+| gap (points) | `r round(gaps$gap[1], 1)` | `r round(gaps$gap[2], 1)` | `r round(gaps$gap[3], 1)` | `r round(gaps$gap[4], 1)` |
+
+---
+
+## Predictions for the average student
 
 ```r
-predicted <- expand.grid(
-  semester = 1:4, 
-  workshop = c("Invited", "Not invited")
-) |>
-mutate(time = semester - 1)
-
-# Marginal prediction for average student
-predicted$wellbeing <- predict(wb_workshop, newdata = predicted, re.form = NA)
-
-ggplot(predicted, aes(x = semester, y = wellbeing, color = workshop)) +
-  geom_line(linewidth = 1.2) +
-  geom_point(size = 3) +
-  scale_color_manual(values = c("Invited" = "#1b365d", "Not invited" = "#b8860b")) +
-  labs(
-    title = "Workshop Effect Over Time: Evidence of Fade-Out",
-    x = "Semester",
-    y = "Predicted Wellbeing Score",
-    color = "Workshop Group"
-  ) +
-  theme_minimal(base_size = 13)
+predicted <- expand.grid(semester = 1:4,
+                         workshop = c("Invited", "Not invited")) |>
+  mutate(time = semester - 1)
+predicted$wellbeing <- predict(wb_workshop, newdata = predicted,
+                               re.form = NA)
 ```
+
+`re.form = NA` ignores the random effects.
+
+Every gap after semester 1 differs from the baseline gap (largest *p* = `r sprintf("%.3f", max(int_p))`). A yearly follow-up session might keep the benefit going.
 
 ---
 
-## Quantifying the Fade-Out
-
-```
-Semester 1 (Baseline pre-workshop): Gap = +0.2 points (p = .85, Identical)
-Semester 2 (Immediately post-workshop): Gap = +5.1 points (p < .001, Peak Benefit)
-Semester 3 (One semester later): Gap = +3.2 points (p < .01, Narrowing)
-Semester 4 (One year later): Gap = +1.1 points (p = .28, Faded)
-```
-
-```
-    Wellbeing
-       65 ^                   [Invited]
-          │                 /---------\
-       60 │                /           \---------\
-          │ [Baseline]    /                       \
-       55 │      *-------/                         \--------* [Invited]
-          │      *------------------------------------------* [Control]
-          └──────┴─────────────┴─────────────┴─────────────┴──────> Semester
-              Sem 1         Sem 2         Sem 3         Sem 4
-```
-
-**Policy Recommendation for Thesis**:
-A one-time workshop in Semester 2 provides an immediate boost, but the effect fades within 12 months. Universities should introduce **annual refresher booster sessions** in Year 2!
-
----
-
-# Singular Fits & Principled Model Simplification
-
----
-
-## The "Boundary (Singular) Fit" Warning
-
-What happens if we fit a random slope model to academic GPA?
+## A singular fit
 
 ```r
 gpa_growth <- lmer(gpa ~ time + (time | student_id), data = panel)
-# Warning message:
-# boundary (singular) fit: see help('isSingular')
+#> boundary (singular) fit: see help('isSingular')
 ```
 
-Why did R display this warning?
-- A **singular fit** occurs when the estimated variance of a random effect is zero, or when the correlation between random intercepts and random slopes is $\pm 1.0$.
-- It means your model is **overparameterized**: you asked the algorithm to estimate individual slope variation, but in the actual data, students' GPA trajectories do not vary from each other!
+The model is more complex than the data supports: GPA slopes hardly vary.
+
+Simplify to a random intercept only.
 
 ---
 
-## Resolving a Singular Fit
-
-When you encounter a singular fit:
-1. **Never ignore it!** Singular models have unreliable standard errors and unstable parameter estimates.
-2. **Diagnose**: Inspect `VarCorr(model)` to identify the zero-variance component.
-3. **Simplify**: Remove the unneeded random slope, keeping the random intercept:
+## Grades stay stable
 
 ```r
-# Simplified Model: Retain random intercept only
-gpa_growth_simpler <- lmer(gpa ~ time + (1 | student_id), data = panel)
-summary(gpa_growth_simpler)$coefficients
+gpa_growth <- lmer(gpa ~ time + (1 | student_id), data = panel)
 ```
 
-```
-               Estimate  Std. Error           df     t value   Pr(>|t|)
-(Intercept)  3.41201512 0.018241015 599.1240182 187.0518341 0.00000000
-time        -0.00141205 0.003120145 1579.821045  -0.4525591 0.65092143
-```
+The slope of time is `r sprintf("%.3f", fixef(gpa_growth)["time"])`: almost exactly zero.
 
-- GPA slope over time is virtually zero ($\beta = -0.0014, p = .65$).
-- **Substantive Insight**: Student grades remain rock-solid and stable across 2 years, even while their mental wellbeing undergoes significant decline!
+Wellbeing falls while grades hold. A non-change is a finding too.
 
 ---
 
-# Hierarchical Nesting: Students Within Supervisors
-
----
-
-## Multilevel Nesting Structure
-
-In university administration, students do not float in a vacuum: they are nested within research supervisors.
-
-```
-                     Level 3: Research Supervisors (j = 1...50)
-                                    ┌────────┴────────┐
-                                    ▼                 ▼
-             Level 2: Graduate Students (i = 1...600)
-                     ┌──────────────┼──────────────┐
-                     ▼              ▼              ▼
-  Level 1: Repeated Semesters (t = 1...4)
-```
-
-In `lme4`, multiple levels of random intercepts are specified by simply adding extra grouping bars:
+## Students within supervisors
 
 ```r
-wb_multilevel <- lmer(
-  wellbeing ~ time + (1 | supervisor_id) + (1 | student_id), 
-  data = panel
-)
+wb_levels <- lmer(wellbeing ~ time + (1 | supervisor_id) +
+                    (1 | student_id), data = panel)
 ```
 
-Because every student has a unique ID, R automatically recognizes that students are nested inside supervisors.
+| Level | Share of variation |
+|---|---|
+| between supervisors | `r round(100 * shares["supervisor_id"])`% |
+| between students, same supervisor | `r round(100 * shares["student_id"])`% |
+| within students, over semesters | `r round(100 * shares["Residual"])`% |
+
+Unique student IDs let R see the nesting. Who supervises a student makes a measurable difference.
 
 ---
 
-## Partitioning Variance Across Levels
+## Other outcomes: `glmer()`
+
+| Outcome | Family | Coefficients become |
+|---|---|---|
+| yes or no | `binomial` | odds ratios |
+| counts | `poisson` | rate ratios |
+
+Supervisor meetings per semester are a count.
+
+---
+
+## A count model for meetings
 
 ```r
-vc_multi <- as.data.frame(VarCorr(wb_multilevel))
-total_var <- sum(vc_multi$vcov)
-
-data.frame(
-  Level = vc_multi$grp,
-  Variance = round(vc_multi$vcov, 2),
-  Share = paste0(round(100 * vc_multi$vcov / total_var, 1), "%")
-)
+meetings_model <- glmer(
+  supervisor_meetings ~ support + programme +
+    (1 | supervisor_id) + (1 | student_id),
+  data = panel |> left_join(support_scores, join_by(student_id)),
+  family = poisson)
+exp(fixef(meetings_model))
 ```
 
-```
-          Level Variance  Share
-1 supervisor_id    14.25  11.8%  <-- Between-supervisor differences
-2    student_id    68.50  56.7%  <-- Between-student differences (within supervisor)
-3      Residual    38.05  31.5%  <-- Within-student semester fluctuations
-```
+Each extra point of support: about `r round(100 * (rr["support"] - 1))`% more meetings. PhD students: about `r round(100 * (rr["programmePhD"] - 1))`% more.
 
-**Key Findings**:
-- **11.8%** of student wellbeing variance is directly attributable to the **supervisor**!
-- Who you are assigned to supervise your thesis has a measurable, lasting impact on your mental health.
+The direction is uncertain: more meetings may also make students feel supported.
 
 ---
 
-# Generalized Linear Mixed Models (GLMM)
+## Mixed models and missing data
+
+Students who left after year 1 were not a random group (Chapter 6).
+
+Mixed models use every record each student gave, instead of dropping them.
+
+The results hold as long as leaving depends on things the model can see: **missing at random**.
 
 ---
 
-## Modeling Count Outcomes with `glmer()`
+## Reporting a mixed model
 
-What if our longitudinal outcome is not continuous and normally distributed?
+- the fixed effects, with confidence intervals;
+- the random effects, as SDs or variance shares;
+- the number of observations and of groups;
+- which random effects were included.
 
-- **Binary Outcome** (e.g., Dropout intent: Yes/No) $\rightarrow$ Logistic Mixed Model (`family = binomial`).
-- **Count Outcome** (e.g., Number of supervisory meetings per semester: $0, 1, 2, 3 \dots$) $\rightarrow$ Poisson Mixed Model (`family = poisson`).
+---
+
+## Writing it up
+
+> A linear mixed-effects model with random intercepts and slopes for students (`r nrow(panel)` observations of `r n_distinct(panel$student_id)` students) showed that wellbeing declined by `r f2(-fixef(wb_growth)["time"])` points per semester (95% CI [`r f2(-ci["time", 2])`, `r f2(-ci["time", 1])`]). Students differed considerably in their overall wellbeing (*SD* of intercepts = `r sprintf("%.1f", attr(VarCorr(wb_growth)$student_id, "stddev")[1])`); `r round(100 * icc)`% of the variation was between students.
+
+---
+
+## In your field: agriculture
 
 ```r
-# Link questionnaire supervisor support score
-support_df <- questionnaire |>
-  mutate(support = rowMeans(pick(support_1:support_6), na.rm = TRUE)) |>
-  select(student_id, support)
-
-panel_support <- panel |> left_join(support_df, join_by(student_id))
-
-# Fit Poisson Generalized Linear Mixed Model
-meetings_glmm <- glmer(
-  supervisor_meetings ~ support + programme + (1 | supervisor_id) + (1 | student_id),
-  data = panel_support,
-  family = poisson
-)
+chick_model <- lmer(weight ~ Time * Diet + (Time | Chick),
+                    data = ChickWeight)
 ```
 
----
+50 chicks weighed from birth to 21 days on four diets: repeated measurements in groups.
 
-## Interpreting Poisson Rate Ratios
-
-Poisson regression coefficients are on the natural log scale ($\log(\lambda)$).
-
-To interpret them substantively, we **exponentiate** the fixed effects ($\exp(\beta)$) to obtain **Incidence Rate Ratios (IRR)**:
-
-```r
-exp(fixef(meetings_glmm))
-```
-
-```
-(Intercept)      support programmePhD 
-       1.42         1.24         1.68 
-```
-
-**Interpretation**:
-- **Support ($\text{IRR} = 1.24$)**: For every 1-point increase in perceived supervisor support, students hold **24% more supervisory meetings** per semester ($p < .001$).
-- **Programme ($\text{IRR} = 1.68$)**: PhD students have **68% more supervisory meetings** than Master's students, holding support constant.
+Diet 1: about `r round(ch["Time"], 1)` g a day. Diet 3 adds `r round(ch["Time:Diet3"], 1)` g a day, `r round(100 * ch["Time:Diet3"] / ch["Time"])`% faster.
 
 ---
 
-# Missing Data & Panel Attrition
+## Practical lab: the Chapter 10 playground
+
+Work through the playground exercises in your browser, with hints and solutions.
+
+lme4 runs in the browser; every exercise also runs in RStudio.
 
 ---
 
-## Why Mixed Models Outperform Repeated-Measures ANOVA
+## Practical exercises 1–3: growth models
 
-In longitudinal research, participants inevitably drop out (panel attrition):
-
-| Feature | Repeated-Measures ANOVA | Linear Mixed-Effects Model (`lmer`) |
-| :--- | :--- | :--- |
-| **Missing Waves** | Requires complete data across all waves. | **Uses all available observations** per person. |
-| **Participant Retention** | **Drops the entire subject** if 1 wave is missing (Listwise deletion). | Retains subject; uses their 1, 2, or 3 observed waves. |
-| **Statistical Power** | Massive loss of power ($N$ shrinks drastically). | Maximizes statistical power and sample representation. |
-| **Attrition Bias** | Severely biased under non-random dropout. | Valid and unbiased under **Missing at Random (MAR)**. |
-
-In our thesis dataset, students who dropped out after Year 1 still contribute their Semesters 1 and 2 data to the estimation of fixed and random effects!
+1. A random intercept model for sleep over time: ICC and change.
+2. Add a random slope and compare with `anova()`.
+3. Does part-time students' wellbeing change at a different rate?
 
 ---
 
-# Benchmark Application: Agricultural Growth Curves
+## Practical exercises 4–6: levels and simulation
+
+4. How much of the variation in study hours lies between supervisors?
+5. With supervisors who differ more, what happens to the false alarm rate?
+6. Explain to a fellow student why a regression of all semester records is wrong.
 
 ---
 
-## The `ChickWeight` Experiment
+## Try this yourself
 
-To see the universal applicability of mixed models across disciplines, consider R's built-in `ChickWeight` dataset:
+Look at your own data for structure.
 
-- 50 chicks followed from birth to 21 days on 4 experimental protein diets.
-- Repeated measurements of weight over time.
-
-```r
-data(ChickWeight)
-chick_growth <- lmer(weight ~ Time * Diet + (Time | Chick), data = ChickWeight)
-round(summary(chick_growth)$coefficients, 2)
-```
-
-- Chicks on Diet 1 gain an average of **6.84 grams/day**.
-- The interaction term `Time:Diet3` is $+4.58$ ($p < .001$): Chicks on Diet 3 gain an additional 4.58 g/day, growing **67% faster** than those on Diet 1!
+- is anyone measured more than once?
+- do participants share a group: class, clinic, supervisor, site?
+- estimate the ICC with a null model;
+- calculate the design effect;
+- decide which random effects your model needs.
 
 ---
 
-# Common Misconceptions in Mixed Modeling
+## Troubleshooting guide (Part 1)
+
+| Symptom | Likely cause |
+|---|---|
+| effects significant that should not be | grouping ignored; standard errors too small |
+| a real change not significant | between-person differences left in the error |
+| no p-values in `summary()` | lme4 by design; use lmerTest or intervals |
+| "boundary (singular) fit" | too many random effects for the data |
 
 ---
 
-## Four Costly Traps to Avoid
+## Troubleshooting guide (Part 2)
 
-1. **"More rows in my spreadsheet always means more statistical power."**
-   - 2,000 repeated rows from 50 subjects is NOT equal to 2,000 independent subjects. The Design Effect dictates your true effective sample size!
-2. **"I can just average each person's scores to get rid of the repeated measures."**
-   - Collapsing data into person averages completely erases information about change over time and penalizes individuals with missing waves.
-3. **"A singular fit means my hypothesis is wrong."**
-   - A singular fit simply means your random effects structure is too complex for the variance present in the data. Simplify the random slopes.
-4. **"If the p-value is missing in `summary()`, the package is broken."**
-   - `lme4` avoids arbitrary degrees of freedom calculations. Load `library(lmerTest)` to obtain Satterthwaite approximations.
+| Symptom | Likely cause |
+|---|---|
+| students not seen as nested | IDs repeated across supervisors |
+| predictions differ per student | random effects included; use `re.form = NA` |
+| Poisson coefficients hard to read | log scale; use `exp()` for rate ratios |
+| later semesters look better | attrition; mixed models use all records |
 
 ---
 
-# Thesis Checkpoint: How to Report Mixed Models
+## Completion checklist
+
+- [ ] the grouping structure is identified;
+- [ ] the ICC and design effect are reported;
+- [ ] random intercepts are included for each grouping;
+- [ ] random slopes are tested with `anova()`;
+- [ ] singular fits are simplified;
+- [ ] fixed effects come with confidence intervals;
+- [ ] numbers of observations and groups are reported.
 
 ---
 
-## Writing Up Mixed-Effects Results (APA Style)
+## Misconceptions to leave behind (Part 1)
 
-> *"To test the longitudinal trajectory of student wellbeing over two years (RQ8), a linear mixed-effects model was estimated using the lme4 and lmerTest packages in R. The model included fixed effects of time (semesters elapsed) and random intercepts and slopes for students (2,180 observations across 600 students). Degrees of freedom and p-values were determined using Satterthwaite's approximation.*
->
-> *Results indicated a statistically significant decline in psychological wellbeing across the four semesters ($\beta = -0.34, SE = 0.09, t(587.1) = -3.82, p < .001, 95\% \text{ CI } [-0.52, -0.17]$). The unconditional null model revealed an Intraclass Correlation (ICC) of 0.684, indicating that 68.4% of total variance reflected stable between-student differences ($SD_{\text{intercept}} = 8.28, SD_{\text{residual}} = 6.17$).*
->
-> *A three-level extension incorporating supervisor clusters revealed that research supervisors accounted for 11.8% of total wellbeing variance, demonstrating a meaningful institutional clustering effect."*
-
----
-
-## Chapter 10 Summary: Core Principles
-
-1. **Non-Independence is Everywhere**: Repeated measurements and nested institutional structures violate OLS independence, producing false alarms or obscuring real effects.
-2. **Decomposing Variance**: Mixed models partition variance into fixed effects (population averages) and random effects (group deviations).
-3. **Random Intercepts vs Slopes**: `(1 | group)` allows baselines to differ; `(time | group)` allows trajectories to differ.
-4. **The ICC and Design Effect**: Quantifies cluster homogeneity and explains why effective sample size is smaller than row count.
-5. **Model Comparison**: Use Likelihood Ratio Tests (`anova()`) and AIC to justify adding random slopes.
-6. **Interaction with Time**: Captures intervention fade-out (e.g., Semester 2 workshop gains narrowing over subsequent semesters).
-7. **Principled Simplification**: Singular fit warnings require dropping zero-variance random slopes.
-8. **Generalized LMMs**: Use `glmer()` with `poisson` (rate ratios) or `binomial` (odds ratios) for count and binary panel data.
+| Misconception | Better mental model |
+|---|---|
+| more rows means more evidence | grouped records repeat each other |
+| ignoring grouping costs a little precision | it can multiply false alarms or hide effects |
 
 ---
 
-# Questions & Practical Workshop
+## Misconceptions to leave behind (Part 2)
 
-### Next Step: Open `content/playground/chapter10.qmd` to fit growth curve models and inspect supervisor random effects live in R!
+| Misconception | Better mental model |
+|---|---|
+| averaging each person's records solves it | it discards change and weights people unequally |
+| a singular fit means the model is wrong | simplify the random effects |
+
+---
+
+## The chapter in one sentence
+
+> **When observations share a person or a group, model that structure: mixed models separate differences between groups from change within them and get the uncertainty right.**
+
+---
+
+## Next: Chapter 11
+
+The next chapter turns from explanation to prediction:
+
+- machine learning and generalisation;
+- overfitting;
+- a fair test with training and test data;
+- cross-validation and tuning;
+- the final test, and predictions about people.
+
+---
+
+## Questions
+
+What is the grouping structure in your own data?
+
+How many truly independent units does your study have?

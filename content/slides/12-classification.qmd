@@ -1,799 +1,759 @@
 ---
-title: "Classification Models & Supervised Learning"
-subtitle: "Decision Trees, Random Forests, Support Vector Machines, Threshold Tuning, and Imbalanced Data"
-author: "Dr. Polla Fattah"
-institute: "From Data to Thesis: Research Data Analysis with R"
-format:
-  revealjs:
-    theme: [default, ../../styles/theme.scss]
-    slide-number: true
-    preview-links: auto
-    chalkboard: true
-    transition: slide
-    highlight-style: github
-    code-line-numbers: false
-    width: 1200
-    height: 750
+title: "Classification Models"
+description: "Chapter 12: decision trees, random forests, k-nearest neighbours, support vector machines, fair model comparison, the confusion matrix, choosing a threshold from costs, and imbalanced outcomes."
+format: deck-html
 execute:
+  echo: false
   freeze: auto
 ---
 
-# Supervised Classification
-
-### Turning Predictive Probabilities into Real-World Decisions
-
-**Chapter 12 · From Data to Thesis**
-
-Dr. Polla Fattah
-
----
-
-## From Ranking to Decision-Making
-
-In Chapter 11, we proved our model can rank students by dropout risk ($\text{ROC-AUC} = 0.88$).
-
-Now, the University Student Counseling Service asks a much tougher operational question:
-
-> *"A probability of 0.38 is just a number.  
-> Do we send a counselor to knock on this student's door, or do we leave them alone?"*
-
-Every classification model ultimately forces a binary decision:
-- **Flag** vs. **Do Not Flag**.
-- **Admit** vs. **Reject**.
-- **Biopsy** vs. **Discharge**.
-
-Today, we master the four leading families of supervised classifiers, and learn how to align mathematical predictions with real-world decision costs.
-
----
-
-## The Four Machine Learning Families
-
-```
-   ┌────────────────────────────────────────────────────────────────────────┐
-   │ 1. Decision Trees (CART)        Flowchart partitions; highly visual    │
-   │                                                                        │
-   │ 2. Random Forests               Ensemble of 500 decorrelated trees     │
-   │                                                                        │
-   │ 3. k-Nearest Neighbors (k-NN)   Local distance-based majority voting   │
-   │                                                                        │
-   │ 4. Support Vector Machines      Maximal margin boundary with kernels   │
-   └────────────────────────────────────────────────────────────────────────┘
-```
-
-We will train all four on the exact same Semester 1 dataset, compare them using 10-fold cross-validation, and optimize their decision thresholds.
-
----
-
-# Decision Trees (CART)
-
----
-
-## Flowchart Logic: The CART Algorithm
-
-A **Classification and Regression Tree (CART)** segments the predictor space through a recursive series of binary (yes/no) questions:
-
-```
-                         [ All Students (N = 450) ]
-                                     │
-                           Is Support < 2.75?
-                                    / \
-                              Yes  /   \  No
-                                  /     \
-                     [ Support Low ]   [ Support High: Leaf 1 ]
-                           │             P(Dropout) = 4% (Safe)
-                    Is Stress >= 3.1?
-                          / \
-                    Yes  /   \  No
-                        /     \
-           [ Leaf 2: High Risk ]   [ Leaf 3: Moderate Risk ]
-             P(Dropout) = 78%        P(Dropout) = 22%
-```
-
-To classify a student, you begin at the root node and follow the branches down to a terminal **leaf**.
-
----
-
-## How Trees Choose Their Splits: Gini Impurity
-
-At each step, the algorithm scans **every predictor** and **every possible cutpoint** to find the split that maximizes node purity.
-
-Purity is measured by **Gini Impurity** ($I_G$):
-
-$$I_G = 1 - \sum_{k=1}^K p_k^2$$
-
-- **Pure Node** (100% "Yes" or 100% "No"): $I_G = 1 - (1.0^2 + 0^2) = \mathbf{0.0}$ (Perfect!).
-- **Completely Mixed Node** (50% "Yes", 50% "No"): $I_G = 1 - (0.5^2 + 0.5^2) = \mathbf{0.50}$ (Maximum disorder).
-
-The algorithm greedily selects the split that yields the largest drop in Gini Impurity ($\Delta I_G$).
-
----
-
-## Fitting a Decision Tree in R
-
-Decision trees do not require normalized variables or dummy encoding (scale-invariant). A simple imputation recipe suffices:
-
-```r
+```{r}
+#| include: false
+library(data2thesis)
+library(dplyr)
+library(ggplot2)
 library(tidymodels)
 tidymodels_prefer()
 
+navy <- "#1d588c"; copper <- "#b4762e"; soft <- "#46586d"
+theme_set(theme_minimal(base_size = 15) +
+  theme(panel.grid.minor = element_blank(),
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        axis.title = element_text(colour = soft),
+        strip.text = element_text(colour = navy, face = "bold", size = 12)))
+knitr::opts_chunk$set(dev = "svg", dev.args = list(bg = "transparent"),
+                      message = FALSE, warning = FALSE)
+f2 <- function(x) sprintf("%.2f", x)
+pc <- function(x) round(100 * x)
+
+scores <- questionnaire |>
+  mutate(stress_4 = 6 - stress_4,
+         stress = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+         burnout = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+         support = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+         satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)) |>
+  select(student_id, stress, burnout, support, satisfaction)
+dropout_data <- students |>
+  left_join(scores, join_by(student_id)) |>
+  left_join(semesters |> filter(semester == 1) |> select(-semester), join_by(student_id)) |>
+  mutate(considering_dropout = factor(considering_dropout, levels = c("Yes", "No"))) |>
+  select(-student_id, -supervisor_id, -workshop, -workshop_sessions)
+set.seed(2026)
+dropout_split <- initial_split(dropout_data, prop = 0.75, strata = considering_dropout)
+dropout_train <- training(dropout_split); dropout_test <- testing(dropout_split)
+dropout_recipe <- recipe(considering_dropout ~ ., data = dropout_train) |>
+  step_impute_median(all_numeric_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_normalize(all_numeric_predictors())
+set.seed(2026)
+dropout_folds <- vfold_cv(dropout_train, v = 10, strata = considering_dropout)
+
+tiny <- tibble(
+  stress  = c(1.5, 2.0, 2.2, 2.8, 3.0, 3.1, 3.4, 3.6, 3.8, 4.0, 4.2, 4.5),
+  support = c(4.5, 3.0, 4.0, 2.0, 4.2, 3.8, 2.1, 4.4, 1.8, 2.5, 3.9, 1.5),
+  dropout = factor(c("No", "No", "No", "No", "No", "No", "Yes", "No", "Yes", "Yes", "No", "Yes")))
+
 tree_recipe <- recipe(considering_dropout ~ ., data = dropout_train) |>
   step_impute_median(all_numeric_predictors())
-
-tree_spec <- decision_tree(tree_depth = 3, min_n = 10) |>
-  set_engine("rpart") |>
-  set_mode("classification")
-
-tree_wf <- workflow() |>
-  add_recipe(tree_recipe) |>
-  add_model(tree_spec)
-
-tree_fit <- fit(tree_wf, data = dropout_train)
-```
-
----
-
-## Visualizing the Fitted Tree
-
-```r
+tree_fit <- fit(workflow() |> add_recipe(tree_recipe) |>
+                  add_model(decision_tree(tree_depth = 3, min_n = 10) |> set_mode("classification")),
+                data = dropout_train)
 tree_engine <- extract_fit_engine(tree_fit)
-plot(tree_engine, uniform = TRUE, margin = 0.08)
-text(tree_engine, use.n = TRUE, cex = 0.8)
+set.seed(2026)
+forest_fit <- fit(workflow() |> add_recipe(tree_recipe) |>
+                    add_model(rand_forest(trees = 500) |> set_engine("ranger", importance = "permutation") |>
+                                set_mode("classification")), data = dropout_train)
+importance <- extract_fit_engine(forest_fit)$variable.importance
+
+knn_wf <- workflow() |> add_recipe(dropout_recipe) |>
+  add_model(nearest_neighbor(neighbors = tune()) |> set_mode("classification"))
+set.seed(2026)
+knn_tuning <- tune_grid(knn_wf, resamples = dropout_folds,
+                        grid = tibble(neighbors = c(1, 5, 11, 21, 41, 81)), metrics = metric_set(roc_auc))
+knn_res <- collect_metrics(knn_tuning)
+
+svm_linear_spec <- svm_linear() |> set_engine("kernlab") |> set_mode("classification")
+svm_rbf_spec <- svm_rbf() |> set_mode("classification")
+dropout_models <- workflow_set(
+  preproc = list(tree_data = tree_recipe),
+  models = list(tree = decision_tree(tree_depth = 4, min_n = 10) |> set_mode("classification"),
+                forest = rand_forest(trees = 500) |> set_engine("ranger") |> set_mode("classification"))) |>
+  bind_rows(workflow_set(
+    preproc = list(normalised = dropout_recipe),
+    models = list(logistic = logistic_reg(),
+                  knn = nearest_neighbor(neighbors = 41) |> set_mode("classification"),
+                  svm_linear = svm_linear_spec, svm_rbf = svm_rbf_spec)))
+dropout_comparison <- workflow_map(dropout_models, "fit_resamples", resamples = dropout_folds,
+                                   metrics = metric_set(roc_auc), seed = 2026)
+ranked <- rank_results(dropout_comparison, rank_metric = "roc_auc")
+auc_of <- function(id) f2(ranked$mean[ranked$wflow_id == id])
+se_of  <- function(id) sprintf("%.3f", ranked$std_err[ranked$wflow_id == id])
+
+logistic_wf <- workflow() |> add_recipe(dropout_recipe) |> add_model(logistic_reg())
+logistic_fit <- fit(logistic_wf, data = dropout_train)
+test_results <- augment(logistic_fit, new_data = dropout_test)
+class_metrics <- metric_set(accuracy, sensitivity, specificity, precision, f_meas)
+m50 <- class_metrics(test_results, truth = considering_dropout, estimate = .pred_class)
+cm <- test_results |> count(considering_dropout, .pred_class)
+tp <- cm$n[cm$considering_dropout == "Yes" & cm$.pred_class == "Yes"]
+n_yes <- sum(test_results$considering_dropout == "Yes")
+
+set.seed(2026)
+logistic_cv <- fit_resamples(logistic_wf, resamples = dropout_folds,
+                             control = control_resamples(save_pred = TRUE))
+cv_predictions <- collect_predictions(logistic_cv)
+threshold_table <- purrr::map(c(0.5, 0.4, 0.3, 0.2, 0.15, 0.1), \(t) {
+  cv_predictions |>
+    mutate(flag = factor(if_else(.pred_Yes >= t, "Yes", "No"), levels = c("Yes", "No"))) |>
+    summarise(threshold = t, flagged = mean(flag == "Yes"),
+              recall = sensitivity_vec(considering_dropout, flag),
+              precision = precision_vec(considering_dropout, flag),
+              specificity = specificity_vec(considering_dropout, flag))
+}) |> purrr::list_rbind()
+cost_curve <- purrr::map(seq(0.02, 0.6, by = 0.02), \(t) {
+  cv_predictions |>
+    summarise(threshold = t,
+              misses = sum(.pred_Yes < t & considering_dropout == "Yes"),
+              false_alarms = sum(.pred_Yes >= t & considering_dropout == "No"),
+              flagged = mean(.pred_Yes >= t))
+}) |> purrr::list_rbind() |> mutate(total_cost = 10 * misses + 1 * false_alarms)
+best_cost <- cost_curve |> slice_min(total_cost, n = 1, with_ties = FALSE)
+row20 <- threshold_table |> filter(threshold == 0.2)
+test_results <- test_results |>
+  mutate(flag = factor(if_else(.pred_Yes >= 0.2, "Yes", "No"), levels = c("Yes", "No")))
+m20 <- class_metrics(test_results, truth = considering_dropout, estimate = flag)
+tp20 <- sum(test_results$flag == "Yes" & test_results$considering_dropout == "Yes")
+flag20 <- sum(test_results$flag == "Yes")
+found_by_gender <- test_results |> filter(considering_dropout == "Yes") |>
+  summarise(at_risk = n(), found = sum(flag == "Yes"), .by = gender)
+
+upsample_wf <- workflow() |>
+  add_recipe(dropout_recipe |> themis::step_upsample(considering_dropout, over_ratio = 1)) |>
+  add_model(logistic_reg())
+set.seed(2026)
+upsample_cv <- fit_resamples(upsample_wf, resamples = dropout_folds,
+                             metrics = metric_set(roc_auc, sensitivity, precision))
+up <- collect_metrics(upsample_cv)
+m_of <- function(tab, m) tab$.estimate[tab$.metric == m]
 ```
 
-**Key Advantages of Decision Trees**:
-1. **White-Box Interpretability**: You can print the rules on a single sheet of paper and explain them to a university dean in 60 seconds.
-2. **Automatic Interactions**: A split on stress *only within* low-support students captures a non-linear interaction without specifying interaction terms!
-3. **No Monotonic Scaling Required**: A cutpoint at `stress > 3.4` is mathematically identical whether stress is raw or standardized.
+# Classification Models
+
+From predicted probabilities to decisions about people
+
+**Chapter 12**
+
+Polla Fattah
 
 ---
 
-## The Fatal Flaw of Single Trees: High Variance
+## By the end of today you can
 
-Despite their elegance, single decision trees have a critical structural weakness:
-
-```
-        Dataset Sample A                           Dataset Sample B
-       (Slightly different)                      (Slightly different)
-                │                                         │
-        First Split: Support                       First Split: Stress
-               / \                                       / \
-        Tree A Structure                          Tree B Structure
-        (Completely different branches!)          (Completely different branches!)
-```
-
-- **High Instability**: Changing just 5 data points can radically alter the root split, completely re-routing all downstream branches.
-- **Hierarchical Error Accumulation**: A mistake made at the top split propagates irreversibly down to every single leaf.
-
-How do we tame this instability? We build a **Random Forest**.
+- explain how trees, random forests, k-nearest neighbours, and SVMs classify;
+- fit each with tidymodels, and compare them fairly;
+- read a confusion matrix;
+- calculate sensitivity, specificity, precision, and F1;
+- choose a threshold from the costs of the two errors;
+- handle an imbalanced outcome, and say what resampling changes.
 
 ---
 
-# Random Forests & Ensemble Learning
+## Two questions about a classifier
+
+1. Would more flexible methods rank the cases better than logistic regression?
+2. What happens when predictions become decisions?
+
+Every decision rule flags some cases wrongly and misses others. The balance depends on what each error costs, and to whom.
 
 ---
 
-## The Wisdom of Crowds: Random Forests
-
-A **Random Forest** (Breiman, 2001) resolves tree instability by growing an **ensemble of hundreds of decorrelated trees**:
-
-```
-      Training Data (N = 450)
-        │
-   Bootstrap Resampling (Draw N with replacement)
-        ├──────────────────────┬──────────────────────┐
-        ▼                      ▼                      ▼
-  Bootstrap 1            Bootstrap 2            Bootstrap 500
-        │                      │                      │
-   Tree 1 (mtry = 3)      Tree 2 (mtry = 3)      Tree 500 (mtry = 3)
-        │                      │                      │
-     Vote "Yes"             Vote "No"              Vote "Yes"
-        └──────────────────────┬──────────────────────┘
-                               ▼
-               Majority Vote / Average Probability
-                     P(Dropout) = 68%
-```
-
----
-
-## Two Layers of Randomness
-
-Why are 500 trees better than 1 tree?
-
-1. **Bootstrap Aggregation (Bagging)**:
-   - Each tree is trained on a random bootstrap sample of students (drawn with replacement).
-   - About 63.2% of students appear in each tree; the remaining 36.8% form the **Out-Of-Bag (OOB)** validation set!
-
-2. **Feature Subspace Sampling (`mtry`)**:
-   - At *every single split*, the algorithm is only allowed to choose from a random subset of predictors (e.g., `mtry = 3` out of 10).
-   - **Why?** If one predictor (like supervisor support) is overwhelmingly dominant, every single bagged tree would split on it first, making all trees correlated!
-   - Forcing trees to consider secondary predictors **decorrelates the trees**.
-
-> When you average 500 uncorrelated noisy models, **the individual errors cancel out**, leaving only pure signal!
-
----
-
-## Fitting a Random Forest with `ranger`
+## Same data, same split, same folds
 
 ```r
-forest_spec <- rand_forest(trees = 500, mtry = 3, min_n = 10) |>
+dropout_split <- initial_split(dropout_data, prop = 0.75,
+                               strata = considering_dropout)
+dropout_recipe <- recipe(considering_dropout ~ ., data = dropout_train) |>
+  step_impute_median(all_numeric_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_normalize(all_numeric_predictors())
+dropout_folds <- vfold_cv(dropout_train, v = 10, strata = considering_dropout)
+```
+
+Exactly as in Chapter 11, so every model is trained and tested on the same students.
+
+---
+
+## A decision tree asks questions
+
+```r
+tiny_tree <- rpart(dropout ~ stress + support, data = tiny,
+                   method = "class",
+                   control = rpart.control(minsplit = 2, cp = 0))
+```
+
+Twelve imaginary students, four considering dropout.
+
+1. "Is support below 2.75?" puts seven, all "No", on one side.
+2. "Is stress 3.1 or more?" separates the rest perfectly.
+
+---
+
+## How a tree chooses its questions
+
+| Term | Meaning |
+|---|---|
+| node | a question and the students who reached it |
+| leaf | a final node, with a predicted class |
+| Gini impurity | 0 when a group holds only one class |
+
+The tree tries every predictor and cut-off, and picks the one that makes the groups most pure.
+
+---
+
+## Why trees are attractive
+
+- easy to explain;
+- no dummy variables or normalisation needed;
+- interactions captured automatically: stress matters only for low-support students.
+
+```r
+tree_recipe <- recipe(considering_dropout ~ ., data = dropout_train) |>
+  step_impute_median(all_numeric_predictors())
+```
+
+---
+
+## A depth-3 tree for dropout
+
+```{r}
+#| fig-width: 9
+#| fig-height: 4.4
+par(mar = c(0.5, 0.5, 0.5, 0.5), bg = NA, xpd = NA)
+plot(tree_engine, uniform = TRUE, margin = 0.08, col = navy)
+text(tree_engine, use.n = TRUE, cex = 0.8, col = "#172a42")
+```
+
+The first question is about `r as.character(tree_engine$frame$var[1])`. Students meeting each condition go left.
+
+---
+
+## A single tree is unstable
+
+A slightly different sample of students can produce a completely different tree.
+
+A deep tree overfits (Chapter 11).
+
+The next method turns this weakness into a strength.
+
+---
+
+## Random forests
+
+- grow hundreds of trees;
+- each on a **bootstrap sample** of the students;
+- each split chooses from a random subset of predictors (`mtry`);
+- let the trees vote: P(Yes) is the share voting "Yes".
+
+Each tree overfits in its own way; many errors cancel. An **ensemble** of trees.
+
+---
+
+## Fitting a forest
+
+```r
+forest_spec <- rand_forest(trees = 500) |>
   set_engine("ranger", importance = "permutation") |>
   set_mode("classification")
 
 forest_wf <- workflow() |>
   add_recipe(tree_recipe) |>
   add_model(forest_spec)
+```
 
+500 trees cannot be drawn: a black box. **Permutation importance** opens it a little.
+
+---
+
+## What the forest relies on
+
+```{r}
+#| fig-width: 8
+#| fig-height: 3.9
+tibble(predictor = names(importance), importance = importance) |>
+  slice_max(importance, n = 12) |>
+  ggplot(aes(x = importance, y = reorder(predictor, importance))) +
+  geom_col(fill = navy) + labs(x = "Drop in accuracy when shuffled", y = NULL)
+```
+
+Shuffle one predictor, measure the drop. Importance says what the model **uses**, not what causes dropout.
+
+---
+
+## k-nearest neighbours
+
+```r
+tiny |>
+  mutate(distance = sqrt((stress - 3.5)^2 + (support - 3.0)^2)) |>
+  arrange(distance) |> head(3)
+```
+
+A new student with stress 3.5 and support 3.0.
+
+The three nearest students vote: two considered dropping out, so P(Yes) = 2/3.
+
+---
+
+## The three nearest neighbours
+
+```{r}
+#| fig-width: 6
+#| fig-height: 3.9
+circle <- tibble(angle = seq(0, 2 * pi, length.out = 100),
+                 stress = 3.5 + 0.91 * cos(angle), support = 3.0 + 0.91 * sin(angle))
+ggplot(tiny, aes(x = stress, y = support)) +
+  geom_path(data = circle, linetype = "dashed", colour = soft) +
+  geom_point(aes(colour = dropout), size = 3.5) +
+  annotate("point", x = 3.5, y = 3.0, shape = 4, size = 5, stroke = 1.5) +
+  scale_colour_manual(values = c(No = navy, Yes = copper)) +
+  coord_equal() + labs(x = "Stress", y = "Support", colour = "Dropout")
+```
+
+Distances need predictors on one scale: the recipe normalises them.
+
+---
+
+## Tuning k
+
+```r
+knn_tuning <- tune_grid(knn_wf, resamples = dropout_folds,
+                        grid = tibble(neighbors = c(1, 5, 11, 21, 41, 81)),
+                        metrics = metric_set(roc_auc))
+```
+
+| k | 1 | 5 | 11 | 21 | 41 | 81 |
+|---|---|---|---|---|---|---|
+| AUC | `r f2(knn_res$mean[1])` | `r f2(knn_res$mean[2])` | `r f2(knn_res$mean[3])` | `r f2(knn_res$mean[4])` | `r f2(knn_res$mean[5])` | `r f2(knn_res$mean[6])` |
+
+The smoother k-NN becomes, the better: the pattern in this data is smooth.
+
+---
+
+## Support vector machines
+
+- separate the classes with the widest empty "street", the **margin**;
+- only the students closest to the boundary, the **support vectors**, place it;
+- overlapping classes: some students may cross, at a cost;
+- a **kernel** lets the boundary bend; the RBF kernel is popular.
+
+```r
+svm_linear() |> set_engine("kernlab") |> set_mode("classification")
+svm_rbf() |> set_mode("classification")
+```
+
+---
+
+## Four ways to draw a boundary
+
+```{r}
+#| fig-width: 10
+#| fig-height: 3.3
+two_recipe <- recipe(considering_dropout ~ stress + support, data = dropout_train) |>
+  step_normalize(all_numeric_predictors())
+two_models <- list(
+  "Logistic" = logistic_reg(),
+  "Tree (depth 4)" = decision_tree(tree_depth = 4, min_n = 10) |> set_mode("classification"),
+  "k-NN (k = 21)" = nearest_neighbor(neighbors = 21) |> set_mode("classification"),
+  "SVM (RBF)" = svm_rbf() |> set_mode("classification"))
+grid <- tidyr::expand_grid(stress = seq(1, 5, length.out = 70), support = seq(1, 5, length.out = 70))
 set.seed(2026)
-forest_fit <- fit(forest_wf, data = dropout_train)
+surfaces <- purrr::imap(two_models, \(spec, name) {
+  fitted <- fit(workflow(two_recipe, spec), data = dropout_train)
+  predict(fitted, grid, type = "prob") |> bind_cols(grid) |> mutate(model = name)
+}) |> purrr::list_rbind() |> mutate(model = factor(model, levels = names(two_models)))
+ggplot(surfaces, aes(stress, support)) +
+  geom_raster(aes(fill = .pred_Yes)) +
+  scale_fill_gradient(low = "#eaf0f7", high = copper, limits = c(0, 1)) +
+  facet_wrap(~ model, nrow = 1) + coord_equal() +
+  labs(x = "Stress", y = "Support", fill = "P(Yes)") + theme(axis.text = element_text(size = 9))
 ```
 
-`importance = "permutation"`: Measures how much model accuracy drops when each predictor's values are randomly shuffled in the OOB data.
+Smooth gradient, boxes, patches, rounded regions. All agree: highest risk at high stress and low support.
 
 ---
 
-## Variable Importance: Peeking into the Forest
+## Comparing six models fairly
 
 ```r
-importance <- extract_fit_engine(forest_fit)$variable.importance
+dropout_models <- workflow_set(
+  preproc = list(tree_data = tree_recipe),
+  models  = list(tree = ..., forest = ...)) |>
+  bind_rows(workflow_set(
+    preproc = list(normalised = dropout_recipe),
+    models  = list(logistic = ..., knn = ..., svm_linear = ..., svm_rbf = ...)))
 
-tibble(Predictor = names(importance), Importance = importance) |>
-  ggplot(aes(x = Importance, y = reorder(Predictor, Importance))) +
-  geom_col(fill = "#1b365d") +
-  labs(
-    title = "Permutation Feature Importance (Random Forest)",
-    x = "Mean Decrease in Accuracy When Permuted",
-    y = NULL
-  ) +
-  theme_minimal(base_size = 12)
+workflow_map(dropout_models, "fit_resamples", resamples = dropout_folds,
+             metrics = metric_set(roc_auc), seed = 2026)
 ```
 
-**Empirical Insights**:
-- **Supervisor Support, Perceived Stress, and Academic Burnout** overwhelmingly dominate predictive importance.
-- Demographic variables (`gender`, `international`, `study_mode`) contribute virtually zero predictive power.
+Same folds for every model. Trees use the simple recipe, the others the normalised one.
 
 ---
 
-# K-Nearest Neighbors ($k$-NN)
+## The simple model wins again
+
+| Model | Cross-validated AUC | Std. error |
+|---|---|---|
+| logistic regression | `r auc_of("normalised_logistic")` | `r se_of("normalised_logistic")` |
+| linear SVM | `r auc_of("normalised_svm_linear")` | `r se_of("normalised_svm_linear")` |
+| random forest | `r auc_of("tree_data_forest")` | `r se_of("tree_data_forest")` |
+| RBF SVM | `r auc_of("normalised_svm_rbf")` | `r se_of("normalised_svm_rbf")` |
+| k-NN (k = 41) | `r auc_of("normalised_knn")` | `r se_of("normalised_knn")` |
+| decision tree | `r auc_of("tree_data_tree")` | `r se_of("tree_data_tree")` |
+
+Risk changes smoothly, with no thresholds for a tree to find. Logistic regression is kept, and explained in one sentence.
 
 ---
 
-## Distance-Based Local Voting
+## From ranking to deciding
 
-**$k$-Nearest Neighbors ($k$-NN)** operates on a simple spatial premise:
+The AUC measures how well a model **ranks** students.
 
-> *"Students with similar habits and emotional states will experience similar outcomes."*
+The counselling service needs a **decision**: contact this student or not.
 
-Given a new student ($X_{\text{new}}$):
-1. Compute the multidimensional **Euclidean distance** to all 450 training students:
-   $$d(X_{\text{new}}, X_i) = \sqrt{\sum_{j=1}^p (X_{\text{new}, j} - X_{ij})^2}$$
-2. Identify the $k$ closest students.
-3. Calculate the proportion of those $k$ neighbors who considered dropout.
-
-```r
-# If k = 5, and 4 neighbors answered "Yes", predicted P(Yes) = 4/5 = 80%!
-```
+A student is flagged when P(Yes) is above a **threshold**, 0.5 by default. The **confusion matrix** counts how the decisions turn out.
 
 ---
 
-## Tuning $k$: From Noise to Smoothing
+## The four outcomes
 
-```
-   Small k (e.g., k = 1)                 Moderate k (e.g., k = 21)             Huge k (e.g., k = 200)
-   ┌───────────────────────┐             ┌───────────────────────┐             ┌───────────────────────┐
-   │  *   *       o        │             │  *   *                 │             │                       │
-   │    *    o  *          │             │     * * *              │             │  Averages across      │
-   │  *   *       o        │             │             o   o      │             │  nearly the entire    │
-   │  (Islands of noise!)  │             │  (Smooth boundary)     │             │  dataset!             │
-   └───────────────────────┘             └───────────────────────┘             └───────────────────────┘
-     Severe Overfitting!                     Optimal Sweet Spot                   Severe Underfitting!
-```
+| | Truly at risk | Not at risk | Total |
+|---|---|---|---|
+| **flagged** | 8 true positives | 4 false positives | 12 |
+| **not flagged** | 2 false negatives | 86 true negatives | 88 |
+| **total** | 10 | 90 | 100 |
 
-- When $k$ is small, the model draws jagged, hyper-local boundaries around individual outliers.
-- When $k$ is large, the decision boundary becomes smooth and stable.
-
-**Mandatory Requirement**: Predictors must be normalized ($z$-scores) so that large-scale variables (e.g., caffeine in mg) do not dwarf small-scale variables (e.g., stress 1–5)!
+A screening questionnaire given to 100 students, 10 truly at risk.
 
 ---
 
-# Support Vector Machines (SVM)
+## Measures from the four counts
+
+| Measure | Question | Here |
+|---|---|---|
+| sensitivity (recall) | how many at risk are found? | 8/10 = 80% |
+| specificity | how many not at risk are left alone? | 86/90 = 96% |
+| precision | how often is a contact justified? | 8/12 = 67% |
+| F1 | precision and recall together | 0.73 |
+| accuracy | share classified correctly | 94% |
 
 ---
 
-## The Maximal Margin Hyperplane
-
-A **Support Vector Machine (SVM)** searches for the optimal decision boundary that separates the two classes with the **widest possible margin**:
-
-```
-      Stress ^                     [Class: Yes]
-             │                         *
-             │                      *     *  <-- Support Vector
-             │       ───────────────────────────── [Upper Margin Boundary]
-             │        \                         /
-             │         \      MARGIN (M)       /   <-- Widest Empty "Street"
-             │          \                     /
-             │       ───────────────────────────── [Decision Hyperplane]
-             │          /                     \
-             │         /      MARGIN (M)       /
-             │        /                         \
-             │       ───────────────────────────── [Lower Margin Boundary]
-             │                      o     o  <-- Support Vector
-             │                         o
-             │                     [Class: No]
-             └─────────────────────────────────────────> Support
-```
-
-- Only the data points lying directly on the edge of the street—the **Support Vectors**—dictate the position of the boundary.
-- All other data points far from the boundary can move around freely without changing the model!
-
----
-
-## Non-Linear Boundaries: The Kernel Trick
-
-What if the classes cannot be separated by a straight line?
-
-An SVM uses a mathematical **Kernel Function** to project the data into a higher-dimensional space where a linear cut becomes possible:
-
-$$\text{Radial Basis Function (RBF) Kernel: } K(x, x') = \exp\left(-\gamma \|x - x'\|^2\right)$$
-
-```
-     Input Space (2D: Non-separable)               Feature Space (3D: Linearly Separable!)
-            ^                                                ^
-            │   * * *                                        │        * * * (Lifted high)
-            │  *  o  *  (Ring of Yes around No)              │       /
-            │   * * *                                        │  ────/───────── Hyperplane Cut!
-            └─────────>                                      │     o (Low)
-                                                             └─────────>
-```
-
-The RBF kernel creates smooth, flexible circular or elliptical decision boundaries around complex clusters.
-
----
-
-## Visualizing All Four Decision Surfaces
-
-Look at how differently each model carves up the exact same Stress-Support plane:
-
-```
-    Logistic Regression (Smooth Linear)               Decision Tree (Orthogonal Boxes)
-    ┌─────────────────────────────────┐               ┌─────────────────────────────────┐
-    │ High Risk                       │               │ High Risk   │                   │
-    │ \                               │               ├─────────────┤                   │
-    │  \                              │               │             │ Low Risk          │
-    │   \                    Low Risk │               │ Moderate    │                   │
-    └─────────────────────────────────┘               └─────────────────────────────────┘
-    
-    k-Nearest Neighbors (Patchy Local)                SVM with RBF Kernel (Curved Margins)
-    ┌─────────────────────────────────┐               ┌─────────────────────────────────┐
-    │ High Risk                       │               │ High Risk                       │
-    │   ( * )                         │               │   (~~~~~)                       │
-    │          ( * )                  │               │          (~~~~)                 │
-    │                        Low Risk │               │                        Low Risk │
-    └─────────────────────────────────┘               └─────────────────────────────────┘
-```
-
----
-
-# Fair Model Benchmarking with `workflowsets`
-
----
-
-## Setting Up the Multi-Model Tournament
-
-We evaluate all models on the **identical 10-fold cross-validation folds**:
-
-```r
-library(workflowsets)
-
-# Group models by required recipe:
-models_tree <- workflow_set(
-  preproc = list(simple = tree_recipe),
-  models  = list(
-    tree   = decision_tree(tree_depth = 4, min_n = 10) |> set_mode("classification"),
-    forest = rand_forest(trees = 500) |> set_engine("ranger") |> set_mode("classification")
-  )
-)
-
-models_norm <- workflow_set(
-  preproc = list(normalized = dropout_recipe),
-  models  = list(
-    logistic   = logistic_reg(),
-    knn        = nearest_neighbor(neighbors = 41) |> set_mode("classification"),
-    svm_linear = svm_linear() |> set_engine("kernlab") |> set_mode("classification"),
-    svm_rbf    = svm_rbf() |> set_mode("classification")
-  )
-)
-
-all_workflows <- bind_rows(models_tree, models_norm)
-```
-
----
-
-## Cross-Validating All Workflows Simultaneously
-
-```r
-set.seed(2026)
-cv_tournament <- workflow_map(
-  all_workflows, 
-  "fit_resamples", 
-  resamples = dropout_folds,
-  metrics = metric_set(roc_auc)
-)
-
-rank_results(cv_tournament, rank_metric = "roc_auc") |>
-  select(wflow_id, mean, std_err)
-```
-
-```
-  wflow_id                   mean std_err
-1 normalized_logistic       0.871  0.0215  <-- Winner!
-2 normalized_svm_linear     0.868  0.0221  <-- Extremely close 2nd
-3 simple_forest             0.854  0.0240
-4 normalized_svm_rbf        0.849  0.0238
-5 normalized_knn            0.838  0.0262
-6 simple_tree               0.802  0.0295
-```
-
----
-
-## The Verdict: Why Did Linear Models Win?
-
-Look at the top two performers:
-1. **Logistic Regression** ($\text{AUC} = 0.871$)
-2. **Linear SVM** ($\text{AUC} = 0.868$)
-
-Both draw **straight, linear decision boundaries**!
-
-Why did complex non-linear algorithms (Random Forests, RBF SVMs, $k$-NN) fail to beat simple lines?
-- **Domain Psychology**: In human mental health, dropout risk increases monotonically and additively with stress, exhaustion, and lack of support.
-- There are no weird circular islands or chessboard patterns in the feature space.
-- **Parsimony Principle**: A linear model estimates fewer parameters and has lower variance on modest sample sizes ($N = 450$).
-
-> **Decision**: We retain **Logistic Regression**. It is tied for highest accuracy, trains instantly, and provides crystal-clear interpretability for counselors.
-
----
-
-# The Confusion Matrix & Classification Metrics
-
----
-
-## Beyond the AUC: Making Real Decisions
-
-The ROC-AUC confirms our model ranks students brilliantly.  
-Now, we must assign hard labels: **Flag ("Yes")** or **Do Not Flag ("No")**.
-
-```
-                           TRUE STATUS (Reality)
-                    At Risk ("Yes")      Safe ("No")
-                  ┌───────────────────┬───────────────────┐
-     Flag ("Yes") │   True Positive   │  False Positive   │  Total Flagged:
-                  │       (TP)        │       (FP)        │     TP + FP
- PREDICTION       ├───────────────────┼───────────────────┤
-                  │  False Negative   │   True Negative   │  Total Unflagged:
-     Ignore ("No")│       (FN)        │       (TN)        │     FN + TN
-                  └───────────────────┴───────────────────┘
-                    Total At Risk:       Total Safe:
-                       TP + FN              FP + TN
-```
-
----
-
-## The Four Core Operational Metrics
-
-1. **Sensitivity (Recall)**:
-   $$\text{Sensitivity} = \frac{TP}{TP + FN}$$
-   *Out of all students who truly considered dropping out, what fraction did we catch?*
-
-2. **Specificity**:
-   $$\text{Specificity} = \frac{TN}{TN + FP}$$
-   *Out of all students who were perfectly safe, what fraction did we leave alone?*
-
-3. **Precision (Positive Predictive Value)**:
-   $$\text{Precision} = \frac{TP}{TP + FP}$$
-   *When the system sounds an alarm, what is the probability the student is actually in trouble?*
-
-4. **F1-Score**: Harmonic mean balancing Precision and Recall:
-   $$F_1 = 2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$$
-
----
-
-## The Default 0.50 Cutoff Trap
-
-Let us inspect the test set confusion matrix using the standard default cutoff ($P \ge 0.50$):
+## The study's model at 0.5
 
 ```r
 test_results |> conf_mat(truth = considering_dropout, estimate = .pred_class)
+class_metrics <- metric_set(accuracy, sensitivity, specificity,
+                            precision, f_meas)
 ```
 
-```
-          Truth
-Prediction Yes  No
-       Yes  10   4   <-- Caught 10, False alarm on 4
-       No   12 124   <-- MISSED 12 AT-RISK STUDENTS!
-```
+| Accuracy | Sensitivity | Specificity | Precision |
+|---|---|---|---|
+| `r pc(m_of(m50, "accuracy"))`% | `r pc(m_of(m50, "sensitivity"))`% | `r pc(m_of(m50, "specificity"))`% | `r pc(m_of(m50, "precision"))`% |
+
+Of `r n_yes` at-risk test students, only `r tp` are flagged. The model ranks well; the threshold is the problem.
+
+---
+
+## 0.5 is a default, not a law
+
+| Lower threshold | Higher threshold |
+|---|---|
+| more students flagged | fewer students flagged |
+| higher recall | higher precision |
+| more false alarms | more students missed |
+
+Here a flag means a conversation: cheap and harmless. Missing a student who leaves is costly. The threshold belongs well below 0.5.
+
+---
+
+## Choose the threshold without the test set
 
 ```r
-test_results |> class_metrics(truth = considering_dropout, estimate = .pred_class)
-# Sensitivity (Recall): 10 / 22 = 45.5%  <-- WE MISSED OVER HALF!
-# Specificity:          124 / 128 = 96.9%
-# Precision:            10 / 14 = 71.4%
-# Accuracy:             134 / 150 = 89.3%
+logistic_cv <- fit_resamples(logistic_wf, resamples = dropout_folds,
+                             control = control_resamples(save_pred = TRUE))
+cv_predictions <- collect_predictions(logistic_cv)
 ```
 
-> **Catastrophic Failure**:  
-> Despite 89.3% accuracy, the model **missed 54.5% of students in crisis**!  
-> Why? Because with a 15% base rate, very few students ever cross $P = 0.50$.
+Cross-validated predictions for every training student, each from a model that did not see them.
 
 ---
 
-# Threshold Tuning & Asymmetric Cost Optimization
+## The ROC curve
+
+```{r}
+#| fig-width: 5.5
+#| fig-height: 4
+roc_points <- roc_curve(cv_predictions, truth = considering_dropout, .pred_Yes)
+marked <- roc_points |> slice(sapply(c(0.5, 0.2), \(t) which.min(abs(.threshold - t))))
+ggplot(roc_points, aes(x = 1 - specificity, y = sensitivity)) +
+  geom_path(colour = navy, linewidth = 1.2) +
+  geom_abline(linetype = "dashed", colour = "grey60") +
+  geom_point(data = marked, size = 3.5, colour = copper) +
+  geom_text(data = marked, aes(label = paste("t =", round(.threshold, 1))),
+            hjust = -0.2, vjust = 1.2, colour = copper, size = 4.5) +
+  coord_equal() + labs(x = "False positive rate", y = "Sensitivity")
+```
+
+Every threshold at once. The AUC is the area under the curve.
 
 ---
 
-## The 0.50 Threshold is NOT a Natural Law!
+## The trade-off in a table
 
-The default threshold of $0.50$ assumes that:
-$$\text{Cost of a False Positive} = \text{Cost of a False Negative}$$
+```{r}
+#| results: asis
+threshold_table |>
+  mutate(across(flagged:specificity, ~ paste0(round(100 * .x), "%"))) |>
+  knitr::kable()
+```
 
-In university counseling:
-- **False Positive** (Flagging a safe student): A counselor sends a polite email inviting the student for coffee. Cost = $15 minutes of staff time.
-- **False Negative** (Missing a struggling student): Student suffers silently, fails exams, and drops out permanently. Cost = Thousands in lost tuition, derailed career, human tragedy!
-
-> **Missing an at-risk student is 10 times more costly than an unnecessary email!**
+`map()` runs the calculation for each threshold; `list_rbind()` stacks them.
 
 ---
 
-## Calculating Out-of-Fold Predictions
-
-To tune the threshold without contaminating our test set, we collect **cross-validated predictions** from the training set:
+## Costs of the two errors
 
 ```r
-set.seed(2026)
-logistic_cv <- fit_resamples(
-  logistic_wf, 
-  resamples = dropout_folds,
-  control = control_resamples(save_pred = TRUE)
-)
-
-cv_preds <- collect_predictions(logistic_cv)
+cost_miss        <- 10   # a student at risk who is not contacted
+cost_false_alarm <- 1    # an unnecessary conversation
 ```
 
-Now, let us evaluate the operational tradeoff across different thresholds:
+Costs are judgements about consequences, not statistics. Make them explicit.
 
 ---
 
-## The Threshold Tradeoff Matrix
+## The cheapest threshold
+
+```{r}
+#| fig-width: 8
+#| fig-height: 3.2
+ggplot(cost_curve, aes(threshold, total_cost)) +
+  geom_line(linewidth = 1.2, colour = navy) +
+  geom_point(data = best_cost, size = 3.5, colour = copper) +
+  labs(x = "Threshold", y = "Total cost")
+```
+
+Lowest at about `r best_cost$threshold`, flagging `r pc(best_cost$flagged)`% of students. Decision theory: $1 / (1 + 10) \approx 0.09$. Both say: far below 0.5.
+
+---
+
+## The threshold is a decision with an ethical side
+
+- set costs with the people who will use the model;
+- state them in the thesis;
+- examine the effects on different groups;
+- respect practical limits: counsellors cannot see everyone.
+
+The service settles on 0.2: flag about `r pc(row20$flagged)`%, find about `r pc(row20$recall)`% of those at risk, precision about `r pc(row20$precision)`%.
+
+---
+
+## Applying 0.2 to the test students
 
 ```r
-threshold_table <- map(c(0.50, 0.40, 0.30, 0.20, 0.15, 0.10), \(t) {
-  cv_preds |>
-    mutate(flag = factor(if_else(.pred_Yes >= t, "Yes", "No"), levels = c("Yes", "No"))) |>
-    summarise(
-      Threshold   = t,
-      Flagged_Pct = paste0(round(100 * mean(flag == "Yes"), 1), "%"),
-      Recall      = round(sensitivity_vec(considering_dropout, flag), 3),
-      Precision   = round(precision_vec(considering_dropout, flag), 3),
-      Specificity = round(specificity_vec(considering_dropout, flag), 3)
-    )
-}) |> list_rbind()
-
-threshold_table
+test_results <- test_results |>
+  mutate(flag = factor(if_else(.pred_Yes >= 0.2, "Yes", "No"),
+                       levels = c("Yes", "No")))
+test_results |> class_metrics(truth = considering_dropout, estimate = flag)
 ```
 
-| Threshold | % Students Flagged | Recall (Caught) | Precision (True Alarm) | Specificity |
-| :---: | :---: | :---: | :---: | :---: |
-| **0.50** | 9.8% | 0.455 | **0.682** | 96.3% |
-| **0.30** | 16.2% | 0.697 | 0.630 | 93.0% |
-| **0.20** | **24.0%** | **0.818** | **0.500** | **86.0%** |
-| **0.10** | 38.5% | 0.939 | 0.358 | 71.0% |
+The model now finds `r tp20` of `r n_yes` at-risk students instead of `r tp`, flagging `r flag20` in all.
+
+Accuracy fell to `r pc(m_of(m20, "accuracy"))`%. It does not matter: accuracy was never the goal.
 
 ---
 
-## Formal Cost Curve Optimization
+## Report the threshold
 
-Suppose counseling leadership establishes the formal cost ratio:
-$$\text{Cost}(\text{Miss}) = 10 \quad \text{vs.} \quad \text{Cost}(\text{False Alarm}) = 1$$
+Sensitivity, specificity, precision, and F1 all depend on the threshold.
 
-$$\text{Total Expected Cost} = 10 \times \text{Misses} + 1 \times \text{False Alarms}$$
+Report which threshold was used, and why.
+
+The AUC does not depend on it, which is why it is used to **compare** models.
+
+---
+
+## Imbalanced outcomes
+
+| Remedy | How |
+|---|---|
+| move the threshold | flag at a lower probability |
+| upsampling | repeat rare-class students |
+| downsampling | drop common-class students |
+| SMOTE | create artificial rare-class students |
+| class weights | make rare-class mistakes count more |
+
+The themis package adds resampling steps to a recipe.
+
+---
+
+## Upsampling
 
 ```r
-cost_curve <- map(seq(0.05, 0.60, by = 0.01), \(t) {
-  cv_preds |>
-    summarise(
-      threshold    = t,
-      misses       = sum(.pred_Yes < t & considering_dropout == "Yes"),
-      false_alarms = sum(.pred_Yes >= t & considering_dropout == "No"),
-      total_cost   = (10 * misses) + (1 * false_alarms)
-    )
-}) |> list_rbind()
-
-best_threshold <- cost_curve |> slice_min(total_cost, n = 1)
-```
-
-Decision theory states the optimal threshold is:
-$$T^* = \frac{C_{\text{FP}}}{C_{\text{FP}} + C_{\text{FN}}} = \frac{1}{1 + 10} \approx \mathbf{0.091}$$
-
----
-
-## Practical Deployment: The 0.20 Threshold
-
-While mathematical cost minimization suggests $T \approx 0.10$, university counseling staff have limited bandwidth: they cannot contact 38% of the student body.
-
-Counseling leadership chooses **$T = 0.20$**:
-- **Flags 24% of students** (manageable caseload for advisors).
-- **Catches 82% of all at-risk students** (up from 45%!).
-- **Precision = 50%**: Exactly 1 out of every 2 contacted students is truly in crisis!
-
-Let us evaluate $T = 0.20$ on our untouched **test set**:
-
----
-
-## Test Set Re-Evaluation at $T = 0.20$
-
-```r
-test_results_tuned <- test_results |>
-  mutate(flag = factor(if_else(.pred_Yes >= 0.20, "Yes", "No"), levels = c("Yes", "No")))
-
-test_results_tuned |> conf_mat(truth = considering_dropout, estimate = flag)
-```
-
-```
-          Truth
-Prediction Yes  No
-       Yes  18  18   <-- CAME TO RESCUE OF 18 STUDENTS (81.8% Recall!)
-       No    4 110   <-- Missed only 4 students (Down from 12!)
-```
-
-```
-Metric at Threshold 0.20:
-- Sensitivity (Recall): 18 / 22 = 81.8%  (MASSIVE JUMP!)
-- Precision:            18 / 36 = 50.0%
-- Specificity:          110 / 128 = 85.9%
-- Test Accuracy:        85.3%
-```
-
-> **By adjusting the threshold from 0.50 to 0.20, we rescued 8 additional students from silent crisis, while maintaining 86% specificity!**
-
----
-
-# Imbalanced Data Remedies: Resampling & SMOTE
-
----
-
-## When Outcomes Are Rare
-
-When target classes are severely imbalanced (e.g., 2% fraud, 5% rare disease), algorithms can become overly conservative.
-
-Three technical remedies exist:
-
-1. **Threshold Adjustment**: (What we just did!) Retains true probabilities; simplest, cleanest, and most transparent.
-2. **Class Weights**: Penalizes mistakes on the minority class during loss optimization (e.g., `scale_pos_weight` in XGBoost).
-3. **Resampling the Training Set**:
-   - **Downsampling**: Randomly delete majority cases.
-   - **Upsampling**: Duplicate minority cases.
-   - **SMOTE** (Synthetic Minority Over-sampling Technique): Interpolates synthetic artificial minority cases in feature space.
-
----
-
-## Upsampling with `themis`
-
-```r
-library(themis)
-
 upsample_recipe <- dropout_recipe |>
-  step_upsample(considering_dropout, over_ratio = 1.0) # Equalize classes in training!
-
-upsample_wf <- workflow() |>
-  add_recipe(upsample_recipe) |>
-  add_model(logistic_reg())
-
-upsample_cv <- fit_resamples(
-  upsample_wf, 
-  resamples = dropout_folds,
-  metrics = metric_set(roc_auc, sensitivity, precision)
-)
-
-collect_metrics(upsample_cv)
+  step_upsample(considering_dropout, over_ratio = 1)
 ```
 
-**What Resampling Actually Does**:
-- It shifts all predicted probabilities upward.
-- At the default 0.50 cutoff, sensitivity increases, but precision drops identically to lowering the threshold!
-- **ROC-AUC does not change!** Resampling does not create new information.
+| | Sensitivity at 0.5 | AUC |
+|---|---|---|
+| upsampled | `r pc(up$mean[up$.metric == "sensitivity"])`% | `r f2(up$mean[up$.metric == "roc_auc"])` |
+
+Resampling applies to training data only. It pushed probabilities up, like lowering the threshold, but did not improve ranking.
+
+After upsampling, a "probability" of 0.6 no longer means a 60% chance.
 
 ---
 
-# Algorithmic Auditing & Subgroup Fairness
+## Does the model work equally well for everyone?
+
+| Test students at risk | Found at 0.2 |
+|---|---|
+| women: `r found_by_gender$at_risk[found_by_gender$gender == "Female"]` | `r found_by_gender$found[found_by_gender$gender == "Female"]` |
+| men: `r found_by_gender$at_risk[found_by_gender$gender == "Male"]` | `r found_by_gender$found[found_by_gender$gender == "Male"]` |
+
+Similar shares, but too few students to detect a difference.
+
+Check sensitivity and precision for every group that matters, on as much data as possible.
 
 ---
 
-## Does the Model Treat All Groups Fairly?
-
-An algorithm that achieves 82% sensitivity overall might catch 90% of male students but only 60% of female students.
-
-We perform a **Subgroup Fairness Audit** on our test predictions:
+## In your field: ecology
 
 ```r
-test_results_tuned |>
-  filter(considering_dropout == "Yes") |>
-  summarise(
-    Total_At_Risk = n(),
-    Caught = sum(flag == "Yes"),
-    Recall = round(mean(flag == "Yes"), 3),
-    .by = gender
-  )
-```
-
-```
-  gender Total_At_Risk Caught Recall
-1 Female            12     10  0.833
-2 Male              10      8  0.800
-```
-
-Both demographic subgroups exhibit comparable recall ($\approx 80\%–83\%$).
-
-> Always audit models across `gender`, `faculty`, and `international` status before deploying institutional interventions.
-
----
-
-# Multi-Class Classification Benchmark: Palmer Penguins
-
----
-
-## Multi-Class Classification ($K > 2$)
-
-When the outcome has more than 2 categories, the confusion matrix expands to a $K \times K$ grid:
-
-```r
-data(penguins, package = "modeldata")
-penguins_clean <- drop_na(penguins)
-
-set.seed(1)
-penguin_split <- initial_split(penguins_clean, strata = species)
-
 penguin_wf <- workflow() |>
-  add_formula(species ~ bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g) |>
-  add_model(rand_forest(trees = 500) |> set_engine("ranger") |> set_mode("classification"))
-
-penguin_fit <- last_fit(penguin_wf, penguin_split)
-collect_predictions(penguin_fit) |> conf_mat(truth = species, estimate = .pred_class)
+  add_formula(species ~ bill_length_mm + bill_depth_mm +
+                flipper_length_mm + body_mass_g) |>
+  add_model(rand_forest(trees = 500) |> set_engine("ranger") |>
+              set_mode("classification"))
+last_fit(penguin_wf, penguin_split) |> collect_predictions() |>
+  conf_mat(truth = species, estimate = .pred_class)
 ```
 
-```
-           Truth
-Prediction  Adelie Chinstrap Gentoo
-  Adelie        37         1      0   <-- Correct classifications on diagonal
-  Chinstrap      1        16      0   <-- Off-diagonal cells reveal specific confusions!
-  Gentoo         0         0     31   <-- 100% perfect separation for Gentoo
-```
+Three penguin species from four measurements: every test penguin classified correctly.
+
+Well-separated classes suit flexible models.
 
 ---
 
-# Thesis Checkpoint: How to Report Classification Research
+## Practical lab: the Chapter 12 playground
+
+Work through the playground exercises in your browser, with hints and solutions.
+
+The browser version builds trees and thresholds with base R and rpart; the download uses tidymodels.
 
 ---
 
-## Writing Up Classification Results in a Thesis
+## Practical exercises 1–4: models
 
-> *"Supervised classification models were trained to predict graduate student dropout consideration at the conclusion of Semester 1. Four model architectures were benchmarked using 10-fold cross-validation: CART decision trees, random forests (500 trees), k-nearest neighbors (k = 41), and support vector machines. Penalized logistic regression achieved the highest generalization performance (CV ROC-AUC = .871, SE = .021), closely followed by linear SVM (.868), with complex non-linear ensembles demonstrating no empirical advantage over linear boundaries.*
->
-> *To align model deployment with institutional resource allocation, the classification threshold was calibrated using out-of-fold cross-validated risk scores and cost-sensitive optimization. Given an asymmetric error ratio where missing an at-risk student is deemed ten times more costly than an unnecessary outreach, an operational threshold of 0.20 was selected.*
->
-> *When evaluated on the independent holdout test set (n = 150), the calibrated model flagged 24.0% of students, achieving 81.8% sensitivity (18 of 22 at-risk students successfully detected), 85.9% specificity, and a precision of 50.0% (1 in 2 flagged students confirmed in crisis), dramatically outperforming the naive 0.50 cutoff which missed over half (54.5%) of vulnerable students."*
-
----
-
-## Chapter 12 Summary: Core Principles
-
-1. **Understand Algorithm Geometries**: Decision trees create orthogonal boxes; random forests smooth variance via bagging + subspace sampling; $k$-NN votes locally; SVM maximizes margins.
-2. **Benchmark Fairly**: Use `workflowsets` with identical cross-validation folds to compare algorithms across different preprocessing recipes.
-3. **Linear Simplicity Often Wins**: On smooth psychosocial outcomes, logistic regression and linear SVM routinely match or outperform complex non-linear models.
-4. **Never Rely on Accuracy**: On imbalanced outcomes, evaluate sensitivity, specificity, precision, F1-score, and ROC-AUC.
-5. **Ditch the 0.50 Default**: The classification threshold is an operational decision dial. Shift the threshold downward when false negatives carry heavy human or financial costs.
-6. **Resampling vs Thresholding**: Upsampling and SMOTE shift predicted probabilities upward without changing ROC-AUC; adjusting thresholds directly is cleaner and preserves true calibrated probabilities.
-7. **Audit for Fairness**: Inspect sensitivity and precision across demographic subgroups to prevent disparate algorithmic impact.
+1. A depth-2 tree, explained to a counsellor.
+2. Tune the forest's `mtry` over 2, 5, and 10.
+3. k-NN with 81, 161, and 301 neighbours: what happens?
+4. The F1 score of the tiny confusion matrix, by hand.
 
 ---
 
-# Questions & Practical Workshop
+## Practical exercises 5–7: decisions
 
-### Next Step: Open `content/playground/chapter12.qmd` to fit random forests, plot ROC curves, and optimize decision cost matrices live in R!
+5. Only 10% of students can be contacted: which threshold?
+6. Downsampling instead of upsampling: sensitivity and AUC?
+7. A missed student costs 3, not 10: the new cheapest threshold?
+
+---
+
+## Try this yourself
+
+For a classifier in your own field:
+
+- name what a false positive and a false negative mean in practice;
+- estimate the cost of each;
+- calculate the decision-theory threshold;
+- say who should agree to those costs before the model is used.
+
+---
+
+## Troubleshooting guide (Part 1)
+
+| Symptom | Likely cause |
+|---|---|
+| a tree changes completely between samples | trees are unstable; use a forest |
+| k-NN dominated by one variable | predictors not normalised |
+| best k at the edge of the grid | extend the grid |
+| a flexible model loses | the pattern is smooth |
+
+---
+
+## Troubleshooting guide (Part 2)
+
+| Symptom | Likely cause |
+|---|---|
+| high accuracy, few cases found | threshold too high for a rare outcome |
+| threshold chosen on the test set | the test is spent; use cross-validation |
+| sensitivity reported without a threshold | the number cannot be interpreted |
+| probabilities too high after upsampling | resampling distorts probabilities |
+
+---
+
+## Completion checklist
+
+- [ ] every model uses the same folds;
+- [ ] recipes match each model's needs;
+- [ ] models are compared by cross-validated AUC;
+- [ ] the confusion matrix is read, not just accuracy;
+- [ ] costs of both errors are stated;
+- [ ] the threshold is chosen from cross-validated predictions;
+- [ ] the threshold is reported;
+- [ ] performance is checked for each group.
+
+---
+
+## Misconceptions to leave behind (Part 1)
+
+| Misconception | Better mental model |
+|---|---|
+| flexible models always predict better | only when the pattern needs flexibility |
+| importance shows cause | importance shows what the model uses |
+
+---
+
+## Misconceptions to leave behind (Part 2)
+
+| Misconception | Better mental model |
+|---|---|
+| 0.5 is the right threshold | the threshold comes from costs |
+| resampling improves a model | it usually shifts probabilities, not ranking |
+
+---
+
+## The chapter in one sentence
+
+> **Compare models by how well they rank cases, then choose the threshold from what each kind of error costs, and report it.**
+
+---
+
+## Next: Chapter 13
+
+The next chapter predicts a number:
+
+- measuring prediction error;
+- ordinary regression with many predictors;
+- regularised regression: ridge, lasso, elastic net;
+- boosting;
+- comparing models and the final test.
+
+---
+
+## Questions
+
+In your field, which is worse: a false alarm or a missed case?
+
+Who decides?

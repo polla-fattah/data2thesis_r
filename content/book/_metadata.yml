@@ -1,2 +1,4 @@
 toc: true
 number-sections: true
+crossref:
+  chapters: true

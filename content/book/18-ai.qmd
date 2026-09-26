@@ -1,3 +1,7 @@
+---
+number-offset: 17
+---
+
 # Using AI with R {#sec-ch18}
 
 ```{r}
@@ -11,7 +15,7 @@ library(yardstick)
 
 # The language model's results are produced once, by data-raw/run_ai_coding.R,
 # and read from a file, so the book renders without an API key.
-ai_file <- Sys.getenv("AI_RESULTS", "../data-raw/ai_coding_results.csv")
+ai_file <- Sys.getenv("AI_RESULTS", "../../data-raw/ai_coding_results.csv")
 ai_meta_file <- sub("results", "meta", ai_file)
 has_ai <- file.exists(ai_file)
 ```

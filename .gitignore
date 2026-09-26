@@ -8,6 +8,8 @@ _site/
 !**/_freeze/site_libs/
 *_files/
 *.html
+!_extensions/**/*.html
+!_freeze/**/*.html
 content/book/*.html
 content/playground/*.html
 content/slides/*.html
@@ -18,3 +20,6 @@ downloads/
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Stray plot files from running R scripts outside an interactive session
+Rplots.pdf

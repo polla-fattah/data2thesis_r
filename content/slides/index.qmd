@@ -6,37 +6,42 @@ toc: false
 
 ::: {.callout-note appearance="simple"}
 ## Lecture Decks
-These presentation decks accompany the book chapters, designed for classroom instruction, seminars, and self-paced review.
+One deck for each chapter of the book, for teaching in class and for revision.
 :::
 
-## Available Presentations
+## Chapters
 
-| Chapter | Topic | Format | Presentation Deck |
-|---|---|---|---|
-| **Chapter 1** | Getting Started with R | Interactive RevealJS (50 slides) | [**Open Presentation Deck**](01-getting-started.html) · [Source](01-getting-started.qmd) |
-| **Chapter 2** | Data Structures and Data Import | Interactive RevealJS (63 slides) | [**Open Presentation Deck**](02-data-structures.html) · [Source](02-data-structures.qmd) |
-| **Chapter 3** | Data Manipulation with dplyr and tidyr | Interactive RevealJS (60 slides) | [**Open Presentation Deck**](03-data-manipulation.html) · [Source](03-data-manipulation.qmd) |
-| **Chapter 4** | Data Visualization with ggplot2 | Interactive RevealJS (55 slides) | [**Open Presentation Deck**](04-data-visualization.html) · [Source](04-data-visualization.qmd) |
-| **Chapter 5** | Framing Research Questions and Analysis Plan | Interactive RevealJS (58 slides) | [**Open Presentation Deck**](05-research-question.html) · [Source](05-research-question.qmd) |
-| **Chapter 6** | Descriptive Statistics and Exploratory Data Analysis | Interactive RevealJS (56 slides) | [**Open Presentation Deck**](06-descriptive-statistics.html) · [Source](06-descriptive-statistics.qmd) |
-| **Chapter 7** | Hypothesis Testing & Statistical Inference | Interactive RevealJS (62 slides) | [**Open Presentation Deck**](07-hypothesis-testing.html) · [Source](07-hypothesis-testing.qmd) |
-| **Chapter 8** | ANOVA and Multiple Regression | Interactive RevealJS (65 slides) | [**Open Presentation Deck**](08-anova-regression.html) · [Source](08-anova-regression.qmd) |
-| **Chapter 9** | Multivariate Statistical Methods | Interactive RevealJS (77 slides) | [**Open Presentation Deck**](09-multivariate.html) · [Source](09-multivariate.qmd) |
-| **Chapter 10** | Longitudinal & Hierarchical Data: Mixed Models | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](10-mixed-models.html) · [Source](10-mixed-models.qmd) |
-| **Chapter 11** | Machine Learning Foundations: Prediction vs. Inference | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](11-machine-learning.html) · [Source](11-machine-learning.qmd) |
-| **Chapter 12** | Classification Models & Supervised Learning | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](12-classification.html) · [Source](12-classification.qmd) |
-| **Chapter 13** | Predictive Regression & Regularization | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](13-predictive-regression.html) · [Source](13-predictive-regression.qmd) |
-| **Chapter 14** | Advanced Clustering & Unsupervised Learning | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](14-advanced-clustering.html) · [Source](14-advanced-clustering.qmd) |
-| **Chapter 15** | Neural Networks & Deep Learning | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](15-neural-networks.html) · [Source](15-neural-networks.qmd) |
-| **Chapter 16** | Time Series Analysis & Forecasting | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](16-time-series.html) · [Source](16-time-series.qmd) |
-| **Chapter 17** | Reproducible Research, Quarto & Shiny | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](17-reproducible-research.html) · [Source](17-reproducible-research.qmd) |
-| **Chapter 18** | Artificial Intelligence in Academic Research | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](18-ai.html) · [Source](18-ai.qmd) |
-| **Chapter 19** | The Complete Thesis Project | Interactive RevealJS (75 slides) | [**Open Presentation Deck**](19-putting-it-together.html) · [Source](19-putting-it-together.qmd) |
+### Foundations of R Programming and Data Handling
 
-### Using the Slide Decks
+1. [Getting Started with R](01-getting-started.qmd)
+2. [Data Structures in R](02-data-structures.qmd)
+3. [Data Manipulation](03-data-manipulation.qmd)
+4. [Data Visualization](04-data-visualization.qmd)
 
-- **Navigation**: Use Space, Arrow Keys, or the on-screen navigation buttons.
-- **Slide Overview**: Press `O` (or `Esc`) to zoom out and view all slide tiles simultaneously.
-- **Chalkboard / Drawing**: Press `B` to open the interactive blackboard or click the pen icon.
-- **PDF Export**: Add `?print-pdf` to the URL or open print dialog (`Ctrl + P`) in Chromium browsers.
+### Statistical Analysis for Research
 
+5. [From Research Question to Data](05-research-question.qmd)
+6. [Descriptive Statistics and Exploratory Data Analysis](06-descriptive-statistics.qmd)
+7. [Hypothesis Testing and Statistical Inference](07-hypothesis-testing.qmd)
+8. [ANOVA and Regression](08-anova-regression.qmd)
+9. [Multivariate Statistical Methods](09-multivariate.qmd)
+10. [Mixed-Effects Models](10-mixed-models.qmd)
+
+### Machine Learning with R
+
+11. [Introduction to Machine Learning in R](11-machine-learning.qmd)
+12. [Classification Models](12-classification.qmd)
+13. [Predictive Regression](13-predictive-regression.qmd)
+14. [Advanced Clustering](14-advanced-clustering.qmd)
+15. [Neural Networks](15-neural-networks.qmd)
+16. [Time Series Forecasting](16-time-series.qmd)
+
+### Reproducible Research and Applications
+
+17. [Reproducible Research](17-reproducible-research.qmd)
+18. [Using AI with R](18-ai.qmd)
+19. [Putting It All Together](19-putting-it-together.qmd)
+
+### Using the slide decks
+
+Open a deck to present it. The arrow keys, space bar, Page Up and Page Down move between slides, Home and End jump to the first and last slide, and **F** switches to full screen. On a touch screen, swipe left or right. Each slide has its own address, so a link can point to a single slide. Printing a deck, or saving it as PDF from the print dialog, gives one slide per landscape page for handouts.

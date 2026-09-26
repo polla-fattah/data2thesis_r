@@ -1,3 +1,7 @@
+---
+number-offset: 5
+---
+
 # Descriptive Statistics and Exploratory Data Analysis {#sec-ch06}
 
 ```{r}
@@ -36,7 +40,7 @@ The three fit into one workflow, shown in @fig-workflow. Exploration comes first
 ```{mermaid}
 %%| label: fig-workflow
 %%| fig-cap: "The research data analysis workflow. Exploration comes before testing and prediction, and you return to it when results surprise you."
-flowchart LR
+flowchart TB
   A[Research question] --> B[Import]
   B --> C[Clean]
   C --> D[Explore:<br/>describe and visualise]

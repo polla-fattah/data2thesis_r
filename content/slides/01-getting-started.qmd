@@ -1,869 +1,734 @@
 ---
 title: "Getting Started with R"
-subtitle: "Research Written in Code"
-author: "Dr. Polla Fattah"
-institute: "From Data to Thesis: Research Data Analysis with R"
-format:
-  revealjs:
-    theme: [default, ../../styles/theme.scss]
-    slide-number: true
-    preview-links: auto
-    chalkboard: true
-    transition: slide
-    highlight-style: github
-    code-line-numbers: false
-    width: 1200
-    height: 750
+description: "Chapter 1: why research is written in code, RStudio, objects, types, missing values, functions, scripts, projects, packages, and a first look at the student wellbeing data."
+format: deck-html
 execute:
+  echo: false
   freeze: auto
 ---
 
+```{r}
+#| include: false
+library(data2thesis)
+mean_age    <- mean(students$age, na.rm = TRUE)
+missing_age <- sum(is.na(students$age))
+```
+
 # Getting Started with R
 
-### Research Written in Code
+Research written in code
 
-**Chapter 1 · From Data to Thesis**
+**Chapter 1**
 
-Dr. Polla Fattah
-
----
-
-## The Examination Question
-
-Imagine sitting in your Master's thesis defence.
-
-An examiner points to a table on page 42:
-
-> *"How exactly was this number produced? Which participants were excluded, and how did you recode the missing values?"*
-
-Can you answer with certainty, or was it lost in a chain of menu clicks?
+Polla Fattah
 
 ---
 
-## The Problem with Point-and-Click
+## By the end of today you can
 
-In spreadsheet programs and point-and-click statistical tools:
-
-- You click menus, tick boxes, and paste outputs into your thesis.
-- The software changes your data silently in memory.
-- Weeks later, not even the researcher can reconstruct the exact steps.
-- An examiner who asks cannot be given a verifiable audit trail.
-
----
-
-## Analysis as Code: The Solution
-
-Writing an analysis as code changes everything:
-
-- A **script** records every decision in exact sequential order.
-- Your supervisor can inspect your reasoning line by line.
-- You can re-run the entire thesis in seconds after fixing a typo or adding new data.
-- Research that can be repeated independently is **reproducible**.
+- explain why researchers write their analysis in R;
+- find your way around RStudio;
+- run code in the Console and in a script;
+- store values in objects and recognise the basic types of data;
+- handle missing values;
+- use functions and their arguments, and get help;
+- organise work in an RStudio Project and install packages;
+- open the student wellbeing data and answer a first question.
 
 ---
 
-## Meet the Case Study: Elaf's Thesis
+## Every analysis is a chain of decisions
 
-Throughout this entire book and course, we follow **Elaf**, a graduate student in Educational Psychology.
+- which cases are kept and which are excluded;
+- how a messy answer is corrected;
+- which variables are combined into a score;
+- which test is used;
+- how the result is rounded.
 
-- **Her Study**: 600 graduate students followed over four semesters across five university faculties.
-- **Her Variables**: Sleep duration, financial worry, stress, supervisor support, grades, and thoughts of dropping out.
-- **Her Intervention**: A 6-week wellbeing workshop offered to half the students at random.
-- **Her Goal**: Submit and defend an empirical Master's thesis.
+Each choice shapes the final numbers, and each should be open to inspection.
 
 ---
 
-## The Supervisor's Challenge
+## Point-and-click leaves no trace
 
-At their first meeting, Elaf's supervisor set the standard:
-
-```text
-Raw Survey Export ──► Data Cleaning ──► Statistical Tests ──► Thesis Chapter
-     (messy)             (recorded)         (justified)          (defended)
+```{mermaid}
+flowchart LR
+    A["Raw data"] --> B["Many clicks"] --> C["A number in the thesis"]
+    D["An examiner asks: how?"] -.-> B
 ```
 
-> *"Examiners will scrutinise your findings. You must be able to show them every step, from the raw data to the final thesis table."*
+Weeks later, not even the researcher can say exactly how the number was produced.
 
 ---
 
-## What We Will Explain Today
+## Code is a record of the analysis
 
-By the end of this lecture deck, you will be able to:
+A script records every step, in order.
 
-- Navigate the **RStudio IDE** and its four primary panes.
-- Store research values in **objects** and recognize basic **data types**.
-- Handle **missing values (`NA`)** correctly without corrupting calculations.
-- Call **functions**, configure arguments, and access documentation.
-- Organize your research into reproducible **RStudio Projects**.
-- Load the study's dataset (`data2thesis`) and answer your first research question.
+- a supervisor can read it;
+- an examiner can check it;
+- the researcher can run it again after fixing a mistake or receiving new data.
+
+> **An analysis written as code can be shown step by step.**
 
 ---
 
-## R and RStudio: Two Different Programs
+## What R is
+
+R is a free program for cleaning, analysing, and presenting data.
+
+It began in the early 1990s at the University of Auckland, written by Ross Ihaka and Robert Gentleman for teaching.
+
+Today it is used in universities, hospitals, governments, and companies around the world.
+
+---
+
+## Four reasons researchers use R
+
+| Property | Why it matters |
+|---|---|
+| made for data | tests, models, and graphs are part of the language |
+| free and open source | anyone can check your work without a licence |
+| reproducible | the same code gives exactly the same results |
+| a large community | thousands of free packages for every field |
+
+The price: you type instead of click. It feels slow at first and fast surprisingly soon.
+
+---
+
+## For users of SPSS or Excel
 
 ```text
-┌───────────────────────────────────────────────┐
-│                    RStudio                    │
-│      The Dashboard & Cockpit (Editor, Plots)  │
-│  ┌─────────────────────────────────────────┐  │
-│  │                    R                    │  │
-│  │        The Engine (Runs the Code)       │  │
-│  └─────────────────────────────────────────┘  │
-└───────────────────────────────────────────────┘
+SPSS / Excel:  click  → the program changes the data
+R:             write  → R carries out the instruction
 ```
 
-- **R** is the programming language and statistical computational engine.
-- **RStudio** is the Integrated Development Environment (IDE) in which you work.
-- You almost never open R directly; you open RStudio, and it drives R.
+The instructions are saved in a file.
+
+Next time, you run the file instead of clicking through the menus again.
 
 ---
 
-## The Four Panes of RStudio
+## The study behind the data
 
-When you open RStudio with a script, the window is divided into four functional zones:
+A two-year study of 600 graduate students from five faculties:
 
-| Pane | Location | Purpose |
+- a questionnaire at the start;
+- sleep, study, and wellbeing recorded at the end of every semester;
+- a six-week wellbeing workshop, with half the students invited at random.
+
+The questions: how do sleep, stress, and supervisor support relate to wellbeing, grades, and thoughts of dropping out, and does the workshop help?
+
+---
+
+## The data is fictional
+
+The student wellbeing data was generated by a computer program to look like a realistic survey.
+
+Its patterns were built in by the author, not discovered.
+
+It describes no real people. Do not cite or use it as findings about real students.
+
+---
+
+## Two programs: R and RStudio
+
+```{mermaid}
+flowchart LR
+    A["You write code<br>in RStudio"] --> B["R does the work"] --> C["Results appear<br>in RStudio"]
+```
+
+**R** is the engine. **RStudio** is where you drive it.
+
+You almost never open R itself.
+
+---
+
+## Installing both
+
+1. Install R from [cran.r-project.org](https://cran.r-project.org/) for your operating system.
+2. Install RStudio Desktop from [posit.co](https://posit.co/download/rstudio-desktop/).
+
+R must be installed first. Appendix A walks through both, with solutions to common problems.
+
+**Positron**, a newer editor from the same company, is a good alternative if you also use Python.
+
+---
+
+## The four panes of RStudio
+
+| Where | Pane | What it is for |
 |---|---|---|
-| **Source** | Top-Left | Where you write and save your scripts (`.R`) |
-| **Console** | Bottom-Left | Where R executes instructions and prints results |
-| **Environment** | Top-Right | Lists all active datasets, variables, and objects |
-| **Files / Plots / Help** | Bottom-Right | File browser, visual graphs, package manager, and manuals |
+| top left | Source | writing and saving scripts |
+| bottom left | Console | running code and showing results |
+| top right | Environment | the objects you have created |
+| bottom right | Files, Plots, Packages, Help | files, graphs, packages, help pages |
 
 ---
 
-## The Console: R as an Immediate Calculator
+## The Console answers straight away
 
-Type calculations directly into the Console and press **Enter**:
+```r
+2 + 2
+#> [1] 4
+```
+
+Type in the Console and press Enter.
+
+`[1]` means "this is the first value of the result". Ignore it for now.
+
+---
+
+## R as a calculator
 
 ```r
 (6.5 + 7 + 5.5) / 3
+#> [1] 6.333333
 ```
 
-```
-[1] 6.333333
-```
+Three nights of sleep, averaged.
 
-- R calculates the answer immediately.
-- The `[1]` prefix means: *"this is the first value in the result vector"*.
-- Standard arithmetic operators work as expected: `+`, `-`, `*`, `/`, `^`.
+The symbols: `+`, `-`, `*` (multiply), `/` (divide), `^` (power).
 
 ---
 
-## The Importance of Parentheses
-
-R strictly follows standard mathematical order of operations:
-
-Multiplication and division occur **before** addition and subtraction.
+## Brackets decide the order
 
 ```r
 6.5 + 7 + 5.5 / 3
+#> [1] 15.33333
 ```
 
-```
-[1] 15.33333
-```
+Without brackets, R divides only the last number by 3.
 
-Without brackets, only `5.5` was divided by `3`.
-
-Always use parentheses to make research calculations unambiguous.
+Multiplication and division come before addition and subtraction; brackets come first of all.
 
 ---
 
-## Storing Values: The Assignment Arrow
-
-Typing raw numbers repeatedly invites transcription mistakes.
-
-Instead, store values in named **objects** using the assignment arrow `<-`:
+## Store a value under a name
 
 ```r
 nights <- 3
-```
-
-- Read this line as: *"nights gets the value 3"*.
-- Nothing is printed to the console, but `nights` now appears in the **Environment** pane.
-- You can now use the object by its name in any calculation:
-
-```r
 nights * 7
+#> [1] 21
 ```
 
-```
-[1] 21
-```
+The stored value is an **object**. The **assignment arrow** `<-` reads as "gets".
+
+Nothing is printed on assignment, but the object appears in the Environment pane.
 
 ---
 
-## Collections of Values: Vectors
-
-Research rarely concerns a single number. We measure samples.
-
-To store multiple numbers in a single object, combine them with `c()`:
+## Several values in one object
 
 ```r
 sleep <- c(6.5, 7, 5.5)
-sleep
-```
-
-```
-[1] 6.5 7.0 5.5
-```
-
-- `c()` stands for **combine** (or *concatenate*).
-- An ordered collection of values of the same type is called a **vector**.
-
----
-
-## Computing Across a Vector
-
-Once data is stored in a named vector, code reads like clear mathematics:
-
-```r
 sum(sleep) / nights
+#> [1] 6.333333
 ```
 
-```
-[1] 6.333333
-```
+`c()` stands for *combine*. The result is a **vector** (Chapter 2).
 
-Compare this line to:
-
-```r
-(6.5 + 7 + 5.5) / 3
-```
-
-Named objects state the *meaning* of the analysis, reducing human error.
+Named values make code clearer than bare numbers.
 
 ---
 
-## Rules for Object Names
+## Rules for names
 
-R gives you freedom in naming, but enforces four hard rules:
+| Rule | Good | Not allowed or unwise |
+|---|---|---|
+| start with a letter | `sleep_week1` | `1week` |
+| no spaces | `sleep_hours` | `sleep hours` |
+| case matters | `sleep` ≠ `Sleep` | mixing both by accident |
+| say what it holds | `sleep_hours` | `x` |
 
-1. **Must start with a letter**: `sleep_hours` is valid; `1st_sleep` is illegal.
-2. **Permitted characters**: Letters, numbers, underscores (`_`), and dots (`.`).
-3. **No spaces allowed**: Use snake_case (`student_age`), not `student age`.
-4. **R is case-sensitive**: `Sleep`, `SLEEP`, and `sleep` are three completely different objects!
+Your future self will be grateful for clear names.
 
 ---
 
-## Object Overwriting is Silent
-
-If you assign a new value to an existing name, R replaces it without confirmation:
+## Reassignment replaces silently
 
 ```r
-nights <- 3
 nights <- 4
 nights
+#> [1] 4
 ```
 
-```
-[1] 4
-```
+The old value is gone, without a warning.
 
-- Never use standard function names (like `mean`, `c`, or `table`) as variable names.
-- Keep variable names descriptive: `workshop_attendance` is far better than `x2`.
+Check the Environment pane when a result surprises you.
 
 ---
 
-## Types of Research Data
+## Every value has a type
 
-Research data is not all numbers. Surveys collect numbers, categories, and binary flags.
-
-R tracks the **type** of every object to protect you from invalid operations:
-
-| Type | Holds | Research Example |
+| Type | Holds | Example |
 |---|---|---|
-| **numeric** | Continuous or discrete numbers | `age <- 28.5` |
-| **character** | Text strings (enclosed in quotes) | `faculty <- "Education"` |
-| **logical** | Binary truth flags (`TRUE` or `FALSE`) | `completed <- TRUE` |
+| numeric | numbers | `6.5`, `600` |
+| character | text in quotes | `"Education"` |
+| logical | yes or no | `TRUE`, `FALSE` |
+
+The type decides what can be done: hours of sleep can be averaged, faculty names cannot.
 
 ---
 
-## Checking Data Types: `class()`
-
-The `class()` function tells you how R sees your variable:
+## `class()` reports the type
 
 ```r
 hours   <- 6.5
 faculty <- "Education"
 invited <- TRUE
 
-class(hours)
-```
-
-```
-[1] "numeric"
-```
-
-```r
-class(faculty)
-```
-
-```
-[1] "character"
-```
-
-```r
-class(invited)
-```
-
-```
-[1] "logical"
+class(hours)     #> "numeric"
+class(faculty)   #> "character"
+class(invited)   #> "logical"
 ```
 
 ---
 
-## The Common Beginner Error: Missing Quotes
-
-Text **must** always be surrounded by quotation marks (`"` or `'`):
+## Text needs quotes
 
 ```r
 faculty <- Education
+#> Error: object 'Education' not found
 ```
 
-```
-Error: object 'Education' not found
-```
+Without quotes, R looks for an object called `Education`.
 
-Why did this occur?
-
-- Without quotes, R thinks `Education` is an object in your Environment.
-- It searched for a variable named `Education`, found none, and halted.
-- Fix: `faculty <- "Education"`.
+One of the most common beginner errors, and the message says exactly what went wrong.
 
 ---
 
-## Missing Data in Research: `NA`
-
-Real survey data always has gaps: a student skips an item, or an export drops a field.
-
-In R, missing values are represented by **`NA`** (*Not Available*):
-
-- `NA` is **not** zero.
-- `NA` is **not** the text `"NA"`.
-- `NA` is **not** an empty string `""`.
-- `NA` means: *"A value exists in reality, but we do not know what it is."*
-
----
-
-## The Contagion of Missing Values
-
-If an input to a calculation is unknown, the result is logically unknown:
+## `NA` marks a missing value
 
 ```r
 sleep_with_gap <- c(6.5, NA, 5.5)
 mean(sleep_with_gap)
+#> [1] NA
 ```
 
-```
-[1] NA
-```
+`NA` means *not available*: not zero, not empty text, but "we do not know".
 
-- R refuses to guess.
-- A missing value propagates through arithmetic to prevent you from silently reporting false averages.
+If one value is unknown, the average is unknown too. R does not guess.
 
 ---
 
-## Handling Missing Values: `na.rm = TRUE`
-
-To instruct R to compute across available observations, set `na.rm = TRUE`:
+## Functions take input and return a result
 
 ```r
-mean(sleep_with_gap, na.rm = TRUE)
+mean(sleep)     #> 6.333333
+max(sleep)      #> 7
+length(sleep)   #> 3
 ```
 
-```
-[1] 6
-```
+A function name is followed by brackets, with the input inside.
 
-- `na.rm` stands for *NA remove*.
-- It drops `NA` values for that specific calculation only.
-- In your thesis, every time you use `na.rm = TRUE`, you must report the effective sample size ($n$).
+You have already used `c()`, `sum()`, `mean()`, and `class()`.
 
 ---
 
-## Anatomy of a Function Call
-
-A **function** takes inputs (called *arguments*), performs an operation, and returns a result:
-
-```text
-function_name( argument1 = value1, argument2 = value2 )
-```
+## Arguments are the inputs
 
 ```r
 round(6.333333, digits = 1)
+#> [1] 6.3
 ```
 
-```
-[1] 6.3
-```
+Arguments are separated by commas, and they have names.
 
-- `round` is the function name.
-- `6.333333` is the first argument (the number).
-- `digits = 1` is a named argument specifying decimal precision.
+`round(6.333333, 1)` gives the same result, but the named version is easier to read.
 
 ---
 
-## Argument Position vs Argument Names
-
-If you provide arguments in the exact order the function expects, you can omit their names:
+## `na.rm` leaves missing values out
 
 ```r
-round(6.333333, 1)
+mean(sleep_with_gap, na.rm = TRUE)
+#> [1] 6
 ```
 
-```
-[1] 6.3
-```
+`na.rm` is short for "NA remove".
 
-However, writing argument names explicitly (`digits = 1`, `na.rm = TRUE`):
-
-- Clarifies your intent to supervisors and examiners.
-- Prevents catastrophic bugs when functions have multiple optional parameters.
+The average of the values R does know.
 
 ---
 
-## Nesting Functions vs Step-by-Step
-
-Functions can be combined inside one another. R executes from the inside out:
+## Functions inside functions
 
 ```r
 round(mean(sleep), digits = 1)
+#> [1] 6.3
 ```
 
-```
-[1] 6.3
-```
-
-1. `mean(sleep)` is calculated first ($6.333333$).
-2. The result is immediately passed into `round(..., digits = 1)`.
-
-In Chapter 3, we will learn the pipe operator (`|>`) to write this in intuitive left-to-right order.
+R works from the inside out: first the mean, then the rounding.
 
 ---
 
-## Getting Help in R
-
-Every installed function has an authoritative manual page built directly into R:
+## Getting help
 
 ```r
 ?mean
 ```
 
-Three essential sections to look at first:
+The help page opens in the Help pane. Start with three parts:
 
-1. **Usage**: Shows all accepted arguments and their default values.
-2. **Arguments**: Explains what each parameter actually does.
-3. **Examples**: Executable code at the bottom that you can run immediately.
-
----
-
-## Scripts: Preserving Your Research
-
-Commands typed in the Console vanish when you close RStudio.
-
-A **script** (`.R`) is a permanent plain-text file containing your analysis code.
-
-```text
-Console:  Ephemeral scratchpad for testing quick commands.
-Script:   The authoritative, permanent record of your thesis.
-```
-
-- Create a new script: **File > New File > R Script** (`Ctrl+Shift+N`).
-- Run the active line: **Ctrl+Enter** (`Cmd+Enter` on Mac).
-- Save your script: **Ctrl+S** (`Cmd+S` on Mac).
+- **Usage**: how to call the function;
+- **Arguments**: what each input means;
+- **Examples**: code you can copy and run.
 
 ---
 
-## Writing Comments: Explaining *Why*
+## Treat suggested code with care
 
-Any text on a line following a hash symbol `#` is ignored by R:
+Code from a search engine or an AI assistant is like advice from a knowledgeable stranger.
+
+Often right, sometimes wrong, always worth checking.
+
+Chapter 18 shows how to use AI tools well.
+
+---
+
+## Console code disappears
+
+Code typed in the Console is gone when RStudio closes.
+
+A **script** is a plain text file, ending in `.R`, that holds your instructions in order.
+
+**File > New File > R Script** opens one in the Source pane.
+
+---
+
+## Working in a script
+
+| Action | Windows | Mac |
+|---|---|---|
+| run the line or selection | Ctrl+Enter | Cmd+Enter |
+| save the script | Ctrl+S | Cmd+S |
+
+The code is sent to the Console, and the result appears there.
+
+---
+
+## Comments explain why
 
 ```r
-# Student sleep duration during examination week (hours/night)
+# Sleep last week, in hours per night
 sleep <- c(6.5, 7, 5.5)
 
-# Calculate mean, rounded to 1 decimal place for Table 4.1
+# Average, rounded for reporting
 round(mean(sleep), digits = 1)
 ```
 
-- Good code explains *how* the calculation is done.
-- Good comments explain **why** you chose that parameter or sample filter.
-- Comments are notes to your future self and your thesis co-authors.
+Lines starting with `#` are ignored by R. They are notes for people.
+
+When a supervisor asks how a number was obtained, the script is the answer.
 
 ---
 
-## The Danger of `setwd()`
+## An RStudio Project keeps one piece of work together
 
-In older tutorials, you may see scripts starting with:
-
-```r
-# NEVER DO THIS:
-setwd("C:/Users/Elaf/Documents/MasterThesis/Data")
+```text
+wellbeing-thesis/
+├── wellbeing-thesis.Rproj
+├── data/
+├── figures/
+└── analysis.R
 ```
 
-Why is this a critical mistake?
+**File > New Project > New Directory > New Project.**
 
-- That folder path exists **only on that specific computer**.
-- When you email the script to your supervisor, the script will crash immediately.
-- It breaks the fundamental requirement of academic reproducibility.
+Open the project by double-clicking the `.Rproj` file.
 
 ---
 
-## RStudio Projects: The Professional Standard
+## The working directory
 
-Instead of hardcoded paths, use an **RStudio Project** (`.Rproj`):
+The folder R looks in for files is the **working directory**.
 
-1. **File > New Project > New Directory > New Project**.
-2. RStudio creates a project folder containing a `.Rproj` file.
-3. When opened, RStudio automatically sets the project folder as the working directory.
+In a project, it is the project folder:
 
 ```r
-# Clean, portable file access:
 students <- read.csv("students.csv")
 ```
 
-This line works on your laptop, your supervisor's Mac, and the university cluster without changing a single character!
+A file stored there opens by its name alone.
 
 ---
 
-## Extending R: The Package Ecosystem
+## `here()` builds paths from the project folder
 
-Base R comes with extensive statistical tools, but the global scientific community extends R through **packages**.
-
-A package is an organized bundle of functions, documentation, and sample datasets.
-
-```text
-CRAN (Comprehensive R Archive Network)
-Over 20,000 peer-reviewed, open-source scientific packages.
+```r
+library(here)
+students <- read.csv(here("data", "students.csv"))
 ```
 
-Whether you are performing structural equation modeling, genetic sequencing, or qualitative NLP, someone has built an R package for it.
+The same code works on any computer, and in any subfolder.
 
 ---
 
-## Package Installation vs Loading
+## Avoid `setwd()`
 
-Remember the library book analogy:
-
-```text
-install.packages("here")   # BUYING the book and putting it on your shelf.
-                           # Done ONCE per computer.
-
-library(here)              # TAKING the book off the shelf to read.
-                           # Done at the top of EVERY analysis script.
+```r
+setwd("C:/Users/me/Documents/thesis")
 ```
 
-Never leave `install.packages()` active inside your analysis script; keep it in the console, or commented out.
+That line works only on the computer where it was written.
+
+Use a project, and your code works for your supervisor too.
 
 ---
 
-## The Course Data Package: `data2thesis`
+## Packages add new abilities
 
-All data for Elaf's thesis is bundled in a custom R package: **`data2thesis`**.
+```r
+install.packages("here")   # once per computer
+library(here)              # once per session
+```
 
-Install it once directly from the course website:
+Install downloads the package from CRAN, R's official collection.
+
+Load makes it available in the current session.
+
+---
+
+## Installing is buying, loading is reading
+
+```{mermaid}
+flowchart LR
+    A["install.packages()<br>buy the book once"] --> B["On your shelf"]
+    B --> C["library()<br>take it down each session"]
+```
+
+Forgetting `library()` is the usual cause of "could not find function".
+
+---
+
+## The data package: data2thesis
 
 ```r
 install.packages(
   "https://polla-fattah.github.io/data2thesis_r/downloads/data2thesis_1.1.0.tar.gz",
-  repos = NULL, 
-  type = "source"
-)
-```
+  repos = NULL, type = "source")
 
-Then load it in your session:
-
-```r
 library(data2thesis)
 ```
 
----
-
-## Inspecting the Data: `nrow()` and `ncol()`
-
-The primary dataset in the package is `students`.
-
-Let us check its dimensions:
-
-```r
-nrow(students)
-```
-
-```
-[1] 600
-```
-
-```r
-ncol(students)
-```
-
-```
-[1] 14
-```
-
-- Exactly **600 rows**: each row represents one graduate student participant.
-- **14 columns**: 14 attributes recorded for each student.
+It is not on CRAN, so it is installed from the book's website.
 
 ---
 
-## Previewing Observations: `head()`
+## Data frames: one row per case
 
-To inspect the first six rows without flooding your screen, use `head()`:
+The package holds several **data frames**: tables with one row per case and one column per variable.
+
+The main one is `students`, one row per student.
 
 ```r
-head(students, n = 3)
+nrow(students)   #> 600
+ncol(students)   #> 14
 ```
-
-```
-  student_id supervisor_id age gender         faculty programme study_mode
-1      S0001        SUP088  31 Female Health Sciences  Master's  Full-time
-2      S0002        SUP116  28 Female       Education       PhD  Full-time
-3      S0003        SUP040  33   Male       Education       PhD  Full-time
-```
-
-In R, a two-dimensional rectangular table with columns of different types is called a **data frame** (or **tibble**).
 
 ---
 
-## Listing Variables: `names()`
-
-To view all 14 variable names at once:
+## Looking at the data
 
 ```r
-names(students)
+head(students)    # the first six rows
+names(students)   # the variable names
+?students         # what each variable means
 ```
 
-```
- [1] "student_id"          "supervisor_id"       "age"                
- [4] "gender"              "faculty"             "programme"          
- [7] "study_mode"          "employment"          "has_children"       
-[10] "lives_away"          "financial_worry"     "workshop"           
-[13] "workshop_sessions"   "considering_dropout"
-```
-
-Type `?students` in your console to read the complete data dictionary.
+Look before you analyse: what is in each column, and what does one row represent?
 
 ---
 
-## Extracting a Single Column: The `$` Operator
-
-To select one variable from a data frame, use `dataframe$variable`:
+## `$` picks out one variable
 
 ```r
-students$age[1:5]
+students$age
 ```
 
-```
-[1] 31 28 33 34 35
-```
+The data frame's name, a dollar sign, the variable's name.
 
-The `$` operator pulls out the column as a standalone vector, ready for statistical analysis.
+The result is a vector of every student's age.
 
 ---
 
-## Answering Elaf's First Question: Student Age
-
-What is the average age of graduate students in the sample?
+## A first question: how old are the students?
 
 ```r
 mean(students$age)
+#> [1] NA
 ```
 
-```
-[1] NA
-```
+One age is missing, and R will not guess.
 
-Why did `mean()` return `NA`?
-
-Because at least one student in the survey did not report their age!
+The solution is already familiar.
 
 ---
 
-## Counting the Missing Ages
-
-How many students skipped the age question?
-
-`is.na()` marks missing values with `TRUE`.
-
-Because R treats `TRUE` as $1$ and `FALSE` as $0$, summing them counts the missing items:
-
-```r
-sum(is.na(students$age))
-```
-
-```
-[1] 1
-```
-
-Out of 600 participants, exactly **1 age is missing**.
-
----
-
-## Computing the Sample Mean Age
-
-Now we instruct R to remove the single missing observation for this calculation:
+## Leaving the missing age out
 
 ```r
 mean(students$age, na.rm = TRUE)
+#> [1] 29.72454
 ```
 
-```
-[1] 29.72454
-```
-
-```r
-round(mean(students$age, na.rm = TRUE), digits = 1)
-```
-
-```
-[1] 29.7
-```
-
-**Thesis finding**: The mean age of graduate students in the sample is $29.7$ years ($SD = 4.2, n = 599$).
+The students are `r round(mean_age, 1)` years old on average.
 
 ---
 
-## Summarizing Categorical Data: `table()`
+## Counting missing values
 
-For categorical variables, calculating an average is meaningless (e.g. `mean(faculty)`).
+```r
+sum(is.na(students$age))
+#> [1] 1
+```
 
-Instead, we compute frequency counts using `table()`:
+`is.na()` marks each missing value as `TRUE`.
+
+`sum()` counts them, because R counts every `TRUE` as 1. Chapter 3 shows why the age is missing.
+
+---
+
+## `table()` counts categories
 
 ```r
 table(students$faculty)
-```
-
-```
-      Education Health Sciences      Humanities Natural Sciences Social Sciences 
-            148             154              95              87             116 
-```
-
-Health Sciences ($154$) and Education ($148$) represent the largest faculties in Elaf's cohort.
-
----
-
-## Verifying Experimental Randomization
-
-Half the graduate students were invited to a six-week wellbeing workshop.
-
-Did the random assignment produce balanced groups?
-
-```r
 table(students$workshop)
 ```
 
-```
-    Invited Not invited 
-        300         300 
-```
+Five faculties, from `r min(table(students$faculty))` to `r max(table(students$faculty))` students each.
 
-Exactly **300 students in each group** ($50.0\%$).
-
-In Chapter 5 and 7, we will test whether this random assignment balanced baseline stress.
+Exactly `r sum(students$workshop == "Invited")` students were invited to the workshop: half, chosen at random (Chapter 5).
 
 ---
 
-## In Your Field: Agricultural Science
-
-The exact same commands apply across every scientific discipline.
-
-Base R includes classic datasets. Consider `PlantGrowth` (dried weight of plants under control and two treatments):
+## In your field: agriculture
 
 ```r
-head(PlantGrowth, n = 3)
-```
-
-```
-  weight group
-1   4.17  ctrl
-2   5.58  ctrl
-3   5.18  ctrl
-```
-
----
-
-## Analysing the Crop Yields
-
-```r
+head(PlantGrowth)
 table(PlantGrowth$group)
+mean(PlantGrowth$weight)
 ```
 
-```
-ctrl trt1 trt2 
-  10   10   10 
-```
+Dried plant weight under a control and two treatments, 10 plants each.
 
-```r
-round(mean(PlantGrowth$weight), digits = 2)
-```
-
-```
-[1] 5.07
-```
-
-Whether measuring plant biomass ($5.07$ g) or student age ($29.7$ years), the core mechanics of R are identical.
+The same functions work on any data frame. `data()` lists R's built-in datasets.
 
 ---
 
-## Documenting Your Computational Environment
+## Practical lab: the Chapter 1 playground
 
-In a reproducible thesis, always record the exact version of R and packages used.
+Work through the playground exercises in your browser, with hints and solutions.
 
-```r
-R.version.string
-```
-
-```
-[1] "R version 4.4.3 (2025-02-28 ucrt)"
-```
-
-Include software and key package version numbers in your Methodology chapter or Appendix.
+Every exercise also runs in RStudio, from the downloadable chapter project.
 
 ---
 
-## Key Terms to Remember
+## Practical exercises 1–3: objects and types
 
-- **Reproducibility**: The ability of an independent researcher to obtain identical results using the original code and data.
-- **Object**: A named storage location in R memory created with `<-`.
-- **Vector**: A sequence of data elements of the same basic type created with `c()`.
-- **Missing Value (`NA`)**: A sentinel value indicating missing empirical data that propagates through calculations unless removed with `na.rm = TRUE`.
-- **Data Frame**: A two-dimensional table holding variables in columns and observations in rows.
-- **RStudio Project (`.Rproj`)**: A self-contained directory context that eliminates fragile absolute file paths.
+1. Store a supervisor's four nights of sleep and find the rounded average.
+2. Compare `class("600")` and `class(600)`, and explain the difference.
+3. Explain why `mean(c(4, NA, 6))` returns `NA`, then average the known values.
 
 ---
 
-## Summary of Core Syntax
+## Practical exercises 4–6: the data
 
-| Task | R Syntax |
+4. Find the youngest and the oldest student; `min()` and `max()` also take `na.rm`.
+5. Count the part-time students with `table()`.
+6. List three decisions in a point-and-click analysis that a reader could not check.
+
+---
+
+## Try this yourself
+
+Create an RStudio Project for your own thesis.
+
+- add `data/` and `figures/` folders;
+- write a script that loads data2thesis;
+- count the students in each faculty;
+- add a comment above each line explaining why.
+
+Then close RStudio, reopen the project, and run the script again from the top.
+
+---
+
+## Troubleshooting guide (Part 1)
+
+| Symptom | Likely cause |
 |---|---|
-| Assignment | `x <- 10` |
-| Vector Creation | `sleep <- c(7, 8, 6.5)` |
-| Mean with NA Removal | `mean(x, na.rm = TRUE)` |
-| Frequency Counts | `table(df$category)` |
-| Check Dimensions | `nrow(df)`, `ncol(df)` |
-| Inspect First Rows | `head(df, n = 6)` |
-| Get Function Help | `?function_name` |
+| `object 'Education' not found` | text written without quotes |
+| `could not find function` | the package is not loaded with `library()` |
+| the result is `NA` | a missing value; add `na.rm = TRUE` |
+| `+` appears in the Console | an unfinished line, often a missing bracket |
 
 ---
 
-## Practice in the Playground
+## Troubleshooting guide (Part 2)
 
-Reinforce what you have learned with the interactive Chapter 1 exercises:
-
-- In your browser: Visit the [Chapter 1 Interactive Playground](../../content/playground/chapter01.html).
-- As an RStudio project: Download `chapter01.zip` to run and modify the exercises on your own machine.
-- Try the 7 exercises: from basic vector math to finding the oldest student in Elaf's study.
+| Symptom | Likely cause |
+|---|---|
+| a file cannot be found | not working inside the project |
+| code works only on your computer | `setwd()` with a personal path |
+| a value changed unexpectedly | the name was reassigned silently |
+| yesterday's work is gone | code typed in the Console, not a script |
 
 ---
 
-## Next Lecture: Chapter 2
+## Completion checklist
 
-In Chapter 2, we tackle:
+- [ ] R and RStudio are installed;
+- [ ] the thesis has its own RStudio Project;
+- [ ] code is written in a script, not only the Console;
+- [ ] objects have names that say what they hold;
+- [ ] comments explain why, not what;
+- [ ] data2thesis is installed and loads;
+- [ ] missing values are counted before averaging.
 
-### **Data Structures and Data Import**
+---
 
-- Working with measurement levels (nominal, ordinal, interval, ratio).
-- Mastering R factors and label preservation.
-- Importing real-world messy files: CSV, Excel (`readxl`), and SPSS (`haven`).
-- How familiar SPSS and Excel menu tasks translate into R.
+## Misconceptions to leave behind (Part 1)
+
+| Misconception | Better mental model |
+|---|---|
+| R and RStudio are the same program | R is the engine; RStudio is where you drive it |
+| `NA` is the same as zero | `NA` means "we do not know" |
+| installing a package makes it available | it must also be loaded each session |
+
+---
+
+## Misconceptions to leave behind (Part 2)
+
+| Misconception | Better mental model |
+|---|---|
+| code is only for programmers | code is a written record of research decisions |
+| the Console is where work is kept | scripts keep the work |
+| `setwd()` sets up a project | a Project makes paths portable |
+
+---
+
+## The chapter in one sentence
+
+> **Write the analysis as code in a script inside a project, so every number in the thesis can be shown step by step.**
+
+---
+
+## Next: Chapter 2
+
+The next chapter looks at data as measurement:
+
+- levels of measurement and vectors;
+- factors for categories;
+- data frames, matrices, and lists;
+- importing CSV, Excel, and SPSS files;
+- codebooks, exporting, and reading error messages.
+
+---
+
+## Questions
+
+Think of one number in a thesis or paper you have read.
+
+Could its author show you, step by step, how it was produced?

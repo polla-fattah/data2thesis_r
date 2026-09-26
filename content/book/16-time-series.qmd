@@ -1,3 +1,7 @@
+---
+number-offset: 15
+---
+
 # Time Series Forecasting {#sec-ch16}
 
 ```{r}

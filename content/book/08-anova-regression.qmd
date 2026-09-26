@@ -1,3 +1,7 @@
+---
+number-offset: 7
+---
+
 # ANOVA and Regression {#sec-ch08}
 
 ```{r}

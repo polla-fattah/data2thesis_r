@@ -1,4 +1,8 @@
-# Further Learning Resources {#sec-app-resources}
+---
+number-sections: false
+---
+
+# Appendix E: Further Learning Resources {#sec-app-resources}
 
 This book is a starting point. This appendix suggests where to go next: books, courses, and communities, almost all of them free. The books cited in the chapters are listed first, by topic; the rest are chosen because they suit researchers who are not programmers.
 

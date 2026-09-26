@@ -1,3 +1,7 @@
+---
+number-offset: 2
+---
+
 # Data Manipulation {#sec-ch03}
 
 ```{r}

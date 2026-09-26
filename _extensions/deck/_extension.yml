@@ -1,0 +1,24 @@
+title: Lecture deck
+author: Polla Fattah
+version: 1.0.0
+quarto-required: ">=1.4.0"
+contributes:
+  formats:
+    html:
+      # One 16:9 slide at a time, in the style of the book's companion decks.
+      # deck.lua splits the page into slides at each --- on its own line.
+      minimal: true
+      theme: none
+      toc: false
+      number-sections: false
+      section-divs: false
+      anchor-sections: false
+      code-copy: false
+      body-classes: deck
+      highlight-style: nord
+      html-math-method: mathjax
+      css: deck.css
+      include-after-body:
+        - deck-script.html
+      filters:
+        - deck.lua

@@ -4,8 +4,8 @@ subtitle: Using AI with R
 format:
   live-html:
     theme:
-      light: [cosmo, ../styles/light.scss, ../styles/theme.scss]
-      dark: [darkly, ../styles/dark.scss, ../styles/theme.scss]
+      light: [cosmo, ../../styles/light.scss, ../../styles/theme.scss]
+      dark: [darkly, ../../styles/dark.scss, ../../styles/theme.scss]
     toc: true
 engine: knitr
 resources:
@@ -27,7 +27,7 @@ webr:
     - ai_coding_results.csv
 ---
 
-{{< include ../_extensions/r-wasm/live/_knitr.qmd >}}
+{{< include ../../_extensions/r-wasm/live/_knitr.qmd >}}
 
 This page practises the ideas of Chapter 18 in four parts. **Practise the chapter** works through the book's exercises, with starter code, hints, and solutions. **Go further** goes beyond the book, with new questions about agreement and about checking code. **Check your understanding** asks short questions whose answers open with a click. **Do it yourself** gives open tasks with no answers: you decide how to use and check AI in your own work, as you will in your thesis.
 

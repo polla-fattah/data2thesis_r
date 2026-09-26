@@ -1,3 +1,7 @@
+---
+number-offset: 12
+---
+
 # Predictive Regression {#sec-ch13}
 
 ```{r}

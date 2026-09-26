@@ -634,6 +634,38 @@ blockquote > :last-child {
   border-radius: 8px;
 }
 
+/* ---------- Diagrams (mermaid) ---------- */
+
+/* Each diagram sits on a card like the code cards; its colours come from the
+   $mermaid-* variables in light.scss and dark.scss */
+div:has(> svg[aria-roledescription]) {
+  margin: 0.4rem 0 0.6rem;
+  padding: 1.1rem 1rem;
+  border: 1px solid var(--d2t-line);
+  border-radius: 12px;
+  background: var(--d2t-paper);
+  box-shadow: var(--d2t-shadow-sm);
+  text-align: center;
+}
+svg[aria-roledescription] {
+  display: block;
+  margin: 0 auto;
+}
+/* Rounded boxes, and decision diamonds in the copper accent */
+svg[aria-roledescription] .node rect {
+  rx: 8px;
+  ry: 8px;
+}
+svg[aria-roledescription] .node polygon {
+  fill: color-mix(in srgb, var(--d2t-copper) 12%, var(--d2t-paper)) !important;
+  stroke: var(--d2t-copper-dim) !important;
+}
+svg[aria-roledescription] .edgeLabel,
+svg[aria-roledescription] .edgeLabel p {
+  color: var(--d2t-soft);
+  font-size: 0.92em;
+}
+
 /* ---------- Footer and page navigation ---------- */
 
 .nav-footer {

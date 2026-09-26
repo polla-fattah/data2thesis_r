@@ -1,563 +1,581 @@
 ---
-title: "Neural Networks & Deep Learning"
-subtitle: "Multilayer Perceptrons, Gradient Descent, Backpropagation, and Deep Learning in R"
-author: "Dr. Polla Fattah"
-institute: "From Data to Thesis: Research Data Analysis with R"
-format:
-  revealjs:
-    theme: [default, ../../styles/theme.scss]
-    slide-number: true
-    preview-links: auto
-    chalkboard: true
-    transition: slide
-    highlight-style: github
-    code-line-numbers: false
-    width: 1200
-    height: 750
+title: "Neural Networks"
+description: "Chapter 15: a single neuron as logistic regression, layers and activations, gradient descent by hand, weight decay, a tuned network for the dropout question, and when deep learning is worth it."
+format: deck-html
 execute:
+  echo: false
   freeze: auto
 ---
 
-# Neural Networks & Deep Learning
+```{r}
+#| include: false
+library(data2thesis)
+library(dplyr)
+library(ggplot2)
+library(tidymodels)
+tidymodels_prefer()
 
-### Demystifying Artificial Intelligence: From Logistic Units to Deep Representations
+navy <- "#1d588c"; copper <- "#b4762e"; soft <- "#46586d"
+theme_set(theme_minimal(base_size = 15) +
+  theme(panel.grid.minor = element_blank(),
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        axis.title = element_text(colour = soft),
+        strip.text = element_text(colour = navy, face = "bold", size = 14)))
+knitr::opts_chunk$set(dev = "svg", dev.args = list(bg = "transparent"),
+                      message = FALSE, warning = FALSE)
+f2 <- function(x) sprintf("%.2f", x); f3 <- function(x) sprintf("%.3f", x)
 
-**Chapter 15 · From Data to Thesis**
+sigmoid <- function(z) 1 / (1 + exp(-z))
+neuron <- function(stress, support) sigmoid(-4 + 1.2 * stress - 0.8 * support)
+six <- data.frame(stress = c(2.0, 2.5, 3.0, 3.5, 4.0, 4.5) - 3.25, dropout = c(0, 0, 1, 0, 1, 1))
+log_loss <- function(b0, b1) { p <- sigmoid(b0 + b1 * six$stress)
+  -mean(six$dropout * log(p) + (1 - six$dropout) * log(1 - p)) }
+p0 <- sigmoid(0 + 0 * six$stress)
+g0 <- mean(p0 - six$dropout); g1 <- mean((p0 - six$dropout) * six$stress)
+b0_1 <- -g0; b1_1 <- -g1
+b0 <- 0; b1 <- 0; loss_history <- numeric(2000)
+for (step in 1:2000) {
+  p <- sigmoid(b0 + b1 * six$stress)
+  b0 <- b0 - mean(p - six$dropout); b1 <- b1 - mean((p - six$dropout) * six$stress)
+  loss_history[step] <- log_loss(b0, b1)
+}
+glm_coef <- coef(glm(dropout ~ stress, data = six, family = binomial))
 
-Dr. Polla Fattah
+scores <- questionnaire |>
+  mutate(stress_4 = 6 - stress_4,
+         stress = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+         burnout = rowMeans(pick(burnout_1:burnout_6), na.rm = TRUE),
+         support = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+         satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)) |>
+  select(student_id, stress, burnout, support, satisfaction)
+dropout_data <- students |>
+  left_join(scores, join_by(student_id)) |>
+  left_join(semesters |> filter(semester == 1) |> select(-semester), join_by(student_id)) |>
+  mutate(considering_dropout = factor(considering_dropout, levels = c("Yes", "No"))) |>
+  select(-student_id, -supervisor_id, -workshop, -workshop_sessions)
+set.seed(2026)
+dropout_split <- initial_split(dropout_data, prop = 0.75, strata = considering_dropout)
+dropout_train <- training(dropout_split); dropout_test <- testing(dropout_split)
+dropout_recipe <- recipe(considering_dropout ~ ., data = dropout_train) |>
+  step_impute_median(all_numeric_predictors()) |>
+  step_dummy(all_nominal_predictors()) |>
+  step_normalize(all_numeric_predictors())
+set.seed(2026)
+dropout_folds <- vfold_cv(dropout_train, v = 10, strata = considering_dropout)
 
----
+big_net <- mlp(hidden_units = 20, penalty = 0, epochs = 1000) |>
+  set_engine("nnet", MaxNWts = 5000) |> set_mode("classification")
+set.seed(2026)
+big_fit <- fit(workflow(dropout_recipe, big_net), data = dropout_train)
+n_weights <- length(extract_fit_engine(big_fit)$wts)
+big_train_auc <- augment(big_fit, new_data = dropout_train) |> roc_auc(considering_dropout, .pred_Yes) |> pull(.estimate)
+big_test_auc <- augment(big_fit, new_data = dropout_test) |> roc_auc(considering_dropout, .pred_Yes) |> pull(.estimate)
 
-## The AI Allure in Academic Research
+net_wf <- workflow(dropout_recipe, mlp(hidden_units = tune(), penalty = tune(), epochs = 500) |>
+                     set_engine("nnet", MaxNWts = 5000) |> set_mode("classification"))
+net_grid <- tidyr::expand_grid(hidden_units = c(1, 3, 5, 10, 20), penalty = 10^seq(-2, 1.5, by = 0.5))
+set.seed(2026)
+net_tuning <- tune_grid(net_wf, resamples = dropout_folds, grid = net_grid, metrics = metric_set(roc_auc))
+best_net <- select_best(net_tuning, metric = "roc_auc")
+best_net_auc <- show_best(net_tuning, metric = "roc_auc", n = 1)$mean
+set.seed(2026)
+logistic_cv <- fit_resamples(workflow(dropout_recipe, logistic_reg()), resamples = dropout_folds,
+                             metrics = metric_set(roc_auc))
+logistic_auc <- collect_metrics(logistic_cv)$mean
+set.seed(2026)
+final_net <- net_wf |> finalize_workflow(best_net) |> last_fit(dropout_split, metrics = metric_set(roc_auc, accuracy))
+final_net_auc <- collect_metrics(final_net) |> filter(.metric == "roc_auc") |> pull(.estimate)
+n_best_weights <- length(extract_fit_engine(extract_workflow(final_net))$wts)
+final_logistic_auc <- last_fit(workflow(dropout_recipe, logistic_reg()), dropout_split) |>
+  collect_metrics() |> filter(.metric == "roc_auc") |> pull(.estimate)
 
-In contemporary data science, a pervasive assumption has taken root:
-
-> *"Why bother with regression or decision trees?  
-> Just throw a Deep Neural Network at the data—AI always wins!"*
-
-A colleague asks Elaf: *"Why didn't you build an AI neural network to predict student dropout? Surely a deep learning model would crush logistic regression!"*
-
-Her PhD supervisor advises: *"Never accept a tool's reputation on faith. Build the network, train it rigorously, test it fairly on unseen data, and find out."*
-
-Today, we peel back the mysticism of neural networks to discover their mathematical reality.
-
----
-
-## Demystifying the Neuron
-
-Strip away the science-fiction terminology:
-- An "Artificial Neuron" is not a biological brain cell.
-- It is a **mathematical weighted sum followed by a non-linear squashing function**.
-
-$$\text{Neuron Output } y = \sigma\left( b + \sum_{j=1}^p w_j x_j \right)$$
-
-- **Weights ($w_j$)**: Regression slopes ($\beta_j$).
-- **Bias ($b$)**: Regression intercept ($\beta_0$).
-- **Activation Function ($\sigma$)**: Non-linear transformation (e.g., the Sigmoid logit function!).
-
-> **Fundamental Insight**:  
-> A single artificial neuron with a sigmoid activation function is **mathematically identical to a Logistic Regression**!
-
----
-
-# Anatomy of an Artificial Neuron
-
----
-
-## The Mathematical Operations of a Neuron
-
+data(concrete, package = "modeldata")
+set.seed(1)
+concrete_split <- initial_split(concrete)
+concrete_recipe <- recipe(compressive_strength ~ ., data = training(concrete_split)) |>
+  step_log(age) |> step_normalize(all_numeric_predictors())
+set.seed(1)
+concrete_lm_fit <- last_fit(workflow(concrete_recipe, linear_reg()), concrete_split)
+set.seed(1)
+concrete_net_fit <- last_fit(workflow(concrete_recipe,
+  mlp(hidden_units = 10, penalty = 0.1, epochs = 1000) |> set_engine("nnet", MaxNWts = 5000) |>
+    set_mode("regression")), concrete_split)
+concrete_rmse <- function(f) collect_metrics(f) |> filter(.metric == "rmse") |> pull(.estimate)
 ```
-        Inputs (x_j)       Synaptic Weights (w_j)       Summation & Bias (z)        Activation f(z)
-        
-         [ Stress ] ───────> ( w_1 = +1.2 ) ──────┐
-                                                  │
-                                                  ▼
-                                            ┌───────────┐     Sigmoid: 1/(1+e^-z)     Output
-                                            │ z = b +   │ ──────────────────────────> P(Dropout)
-                                            │ sum(w*x)  │
-                                            └───────────┘
-                                                  ▲
-         [ Support ] ──────> ( w_2 = -0.8 ) ──────┘
-                                                  │
-         [ Bias (b) ] ─────> ( b = -4.0 ) ────────┘
-```
 
-A neuron executes three sequential steps:
-1. **Multiplication**: Each input is multiplied by its weight ($w_j x_j$).
-2. **Summation**: Adds the weighted inputs plus a constant bias ($b$).
-3. **Activation**: Passes the total $z$ through an activation function $f(z)$.
+# Neural Networks
+
+Less mysterious than the reputation suggests
+
+**Chapter 15**
+
+Polla Fattah
 
 ---
 
-## Calculating a Neuron by Hand in R
+## By the end of today you can
 
-Let us test our neuron on two students:
-- **Student A** (High stress = 4.0, Low support = 2.0)
-- **Student B** (Low stress = 2.0, High support = 4.0)
+- explain how a neuron combines its inputs;
+- explain why a single sigmoid neuron is a logistic regression;
+- describe layers, weights, activation functions, and training;
+- fit and tune a network with `mlp()`, using weight decay;
+- compare a network fairly with simpler models;
+- say when deep learning is, and is not, the right tool.
+
+---
+
+## A claim worth testing
+
+"A neural network would surely predict better than logistic regression."
+
+Neural networks power image recognition, speech, translation, and large language models.
+
+On a table of research data, the claim should be tested, not accepted.
+
+---
+
+## A single neuron
+
+| Step | Does |
+|---|---|
+| weight | multiplies each input |
+| bias | a constant added to the total |
+| activation function | turns the total into the output |
+
+Two inputs, stress and support, with weights 1.2 and −0.8, and a bias of −4.
+
+---
+
+## Working one neuron by hand
+
+For a student with stress 4 and support 2:
+
+$$
+-4 + 1.2 \times 4 - 0.8 \times 2 = -0.8
+$$
+
+The **sigmoid** squeezes any number into 0 to 1:
+
+$$
+\text{sigmoid}(z) = \frac{1}{1 + e^{-z}}
+$$
+
+---
+
+## The neuron in R
 
 ```r
 sigmoid <- function(z) 1 / (1 + exp(-z))
-
-neuron <- function(stress, support) {
-  z <- -4.0 + (1.2 * stress) - (0.8 * support)
-  sigmoid(z)
+neuron  <- function(stress, support) {
+  sigmoid(-4 + 1.2 * stress - 0.8 * support)
 }
-
-# Student A: z = -4 + (1.2 * 4) - (0.8 * 2) = -0.8 -> Sigmoid(-0.8)
-neuron(stress = 4, support = 2)
-# [1] 0.310 (31% probability of dropout)
-
-# Student B: z = -4 + (1.2 * 2) - (0.8 * 4) = -4.8 -> Sigmoid(-4.8)
-neuron(stress = 2, support = 4)
-# [1] 0.008 (0.8% probability of dropout)
+neuron(stress = 4, support = 2)   #> 0.31
+neuron(stress = 2, support = 4)   #> 0.008
 ```
 
-This single unit is performing standard logistic regression.
+---
+
+## A single neuron is a logistic regression
+
+| Neuron | Logistic regression (Chapter 8) |
+|---|---|
+| bias | intercept |
+| weights | coefficients |
+| sigmoid | turns log odds into a probability |
+
+Everything a single neuron can do, Chapter 8 has already done.
 
 ---
 
-## Common Activation Functions
+## From neurons to networks
 
-Why do neurons need an activation function?  
-Without non-linear activations, stacking 100 layers would collapse into a single linear equation: $W_2(W_1 x) = (W_2 W_1) x = W_{\text{combined}} x$.
-
-```
-     1. Sigmoid (Logistic)                    2. Rectified Linear Unit (ReLU)
-        sigma(z) = 1 / (1 + e^-z)                f(z) = max(0, z)
-        
-        1.0 ^            .----'                  ^            /
-            │          .'                        │           /
-        0.5 │       .-'                          │          /
-            │     .'                             │         /
-        0.0 └───''─────────────> z           0.0 └────────/─────────> z
-           Squeezes (-inf, +inf) into (0, 1)        Sets negative inputs to 0;
-           Standard for binary probability.         Standard for deep hidden layers!
-```
-
-- **Sigmoid**: Smooth, bounded between 0 and 1; susceptible to vanishing gradients in deep networks.
-- **ReLU**: Computationally fast, prevents vanishing gradients, induces sparse representations.
-
----
-
-# Multilayer Perceptrons (MLP)
-
----
-
-## Stacking Neurons in Layers
-
-A **Multilayer Perceptron (MLP)** connects layers of neurons in a feedforward network:
-
-```
-      Input Layer                     Hidden Layer                     Output Layer
-      (Features)                   (Latent Concepts)                   (Prediction)
-      
-       ( Stress ) ───────────────> ( H_1: Burnout ) ────────────────┐
-                   \           /                                    │
-                    \         /                                     ▼
-       ( Support ) ───\─────/────> ( H_2: Isolation ) ─────────> ( P(Dropout) )
-                       \   /                                        ▲
-                        \ /                                         │
-       ( Sleep ) ────────X───────> ( H_3: Exhaustion ) ─────────────┘
+```{mermaid}
+flowchart LR
+  I1((Stress)) --> H1((H1))
+  I1 --> H2((H2))
+  I1 --> H3((H3))
+  I2((Support)) --> H1
+  I2 --> H2
+  I2 --> H3
+  I3((Sleep)) --> H1
+  I3 --> H2
+  I3 --> H3
+  H1 --> O((P of<br>dropout))
+  H2 --> O
+  H3 --> O
 ```
 
-1. **Input Layer**: One node per predictor variable.
-2. **Hidden Layer**: Intermediate neurons with non-linear activations. Each hidden neuron learns a distinct combination of inputs.
-3. **Output Layer**: Combines hidden activations to produce the final prediction.
+A **multilayer perceptron**: inputs, a **hidden layer**, an output. Every arrow is a weight.
 
 ---
 
-## The Universal Approximation Theorem
+## Why layers add power
 
-Why are neural networks so revered in applied mathematics?
+- each hidden neuron learns its own combination of inputs;
+- the output neuron combines those;
+- curved activations let the network represent curves and interactions.
 
-> **Universal Approximation Theorem (Hornik et al., 1989)**:  
-> A feedforward neural network with a single hidden layer containing a finite number of non-linear neurons can approximate **any continuous function on a compact domain to arbitrary precision**!
-
-- With enough hidden units, an MLP can model any non-linear surface, arbitrary threshold, or high-order interaction.
-- **The Catch**: The theorem guarantees that an ideal network *exists*, but it does NOT guarantee that gradient descent will find it, nor does it guarantee that the network will **generalize out-of-sample** without overfitting!
+With enough hidden neurons, a network can approximate almost any relationship. That flexibility is its strength, and its danger.
 
 ---
 
-# How Networks Learn: Gradient Descent by Hand
+## Two activation functions
+
+```{r}
+#| fig-width: 8
+#| fig-height: 3.2
+activations <- data.frame(z = rep(seq(-5, 5, length.out = 200), 2),
+                          name = rep(c("Sigmoid", "ReLU"), each = 200))
+activations$output <- ifelse(activations$name == "Sigmoid", 1 / (1 + exp(-activations$z)), pmax(0, activations$z))
+activations$name <- factor(activations$name, levels = c("Sigmoid", "ReLU"))
+ggplot(activations, aes(z, output)) +
+  geom_line(colour = navy, linewidth = 1.3) +
+  facet_wrap(~ name, scales = "free_y") + labs(x = "Total input", y = "Output")
+```
+
+The sigmoid squeezes into 0 to 1. The **ReLU** zeroes negatives and is standard in deep networks.
 
 ---
 
-## Loss Functions & The Learning Mechanism
+## How a network learns
 
-A neural network starts with **randomly initialized weights**, producing pure garbage predictions.
-
-How does it learn?
-1. Present training cases to the network (**Forward Propagation**).
-2. Quantify prediction error using a **Loss Function** (Binary Cross-Entropy / Log Loss):
-   $$\text{Loss} = -\frac{1}{n} \sum_{i=1}^n \left[ y_i \ln(p_i) + (1 - y_i) \ln(1 - p_i) \right]$$
-3. Compute the **Gradient ($\nabla$)**: Calculate the derivative of the loss with respect to each individual weight.
-4. **Gradient Descent**: Nudge every weight a small step in the direction that reduces error!
+- start with small random weights;
+- for every weight, find whether a small change would reduce the error: the **gradient**;
+- move all weights a little in the helpful direction: **gradient descent**;
+- one pass through the data is an **epoch**; training runs for hundreds.
 
 ---
 
-## Writing Gradient Descent from Scratch in R
-
-Let us prove this by training a neuron on 6 students using raw gradient descent:
+## Six students, one neuron
 
 ```r
-# Six students (Stress centered, Dropout: 0 = No, 1 = Yes)
-six <- data.frame(
-  stress  = c(2.0, 2.5, 3.0, 3.5, 4.0, 4.5) - 3.25,
-  dropout = c(0,   0,   1,   0,   1,   1)
-)
+six <- data.frame(stress  = c(2.0, 2.5, 3.0, 3.5, 4.0, 4.5) - 3.25,
+                  dropout = c(0,   0,   1,   0,   1,   1))
+```
 
+Stress is measured from the group's average.
+
+The error to reduce is the **log loss**: small when high probabilities go to students who did consider dropping out.
+
+---
+
+## Starting from zero
+
+```r
 log_loss <- function(b0, b1) {
   p <- sigmoid(b0 + b1 * six$stress)
   -mean(six$dropout * log(p) + (1 - six$dropout) * log(1 - p))
 }
-
-# Analytical gradient equations:
-# Gradient(b0) = mean(p - y)
-# Gradient(b1) = mean((p - y) * x)
+log_loss(0, 0)   #> 0.693
 ```
+
+With both weights at zero, every student gets a probability of 0.5.
 
 ---
 
-## Running 2,000 Iterations of Gradient Descent
+## The gradient
 
 ```r
-b0 <- 0.0; b1 <- 0.0  # Initialize weights to 0
-learning_rate <- 1.0
-loss_history  <- numeric(2000)
-
-for (step in 1:2000) {
-  p  <- sigmoid(b0 + b1 * six$stress)
-  b0 <- b0 - learning_rate * mean(p - six$dropout)
-  b1 <- b1 - learning_rate * mean((p - six$dropout) * six$stress)
-  loss_history[step] <- log_loss(b0, b1)
-}
-
-# Compare weights found by Gradient Descent vs R's official glm():
-rbind(
-  Gradient_Descent = c(Intercept = b0, Stress = b1),
-  Official_GLM     = coef(glm(dropout ~ stress, data = six, family = binomial))
-)
+p <- sigmoid(b0 + b1 * six$stress)
+gradient_b0 <- mean(p - six$dropout)
+gradient_b1 <- mean((p - six$dropout) * six$stress)
 ```
 
-```
-                 Intercept   Stress
-Gradient_Descent  0.038421 1.764125
-Official_GLM      0.038423 1.764131  <-- IDENTICAL TO 5 DECIMAL PLACES!
-```
+The average prediction error, multiplied by the weight's input (1 for the bias).
+
+The stress gradient is `r f3(g1)`: negative, so increasing the weight would reduce the error.
 
 ---
 
-## Visualizing the Optimization Path
-
-```
-     Log Loss
-        0.70 ^  * Step 1 (Loss = 0.693, Random Guessing)
-             │   \
-        0.60 │    \
-             │     \
-        0.50 │      \___________
-             │                  \__________
-        0.44 │                             \_________________* Step 2000 (Loss = 0.441)
-             └─────────────────────────────────────────────────> Training Steps (Log Scale)
-             1                  10                 100               2000
-```
-
-- In early steps, the loss plummets as weights orient in the correct direction.
-- As the weights approach their optimal maximum-likelihood values, gradients shrink toward zero, and the loss flattens out.
-- In multi-layer networks, **Backpropagation** applies the chain rule of calculus to propagate these error gradients backward through all hidden layers.
-
----
-
-# Overfitting & Regularization: Weight Decay
-
----
-
-## The Danger of Massive Parameter Spaces
-
-An unconstrained neural network with 20 hidden units and 10 inputs has:
-$$(10 \text{ inputs} \times 20 \text{ hidden}) + 20 \text{ biases} + (20 \times 1 \text{ output}) + 1 = \mathbf{241 \text{ parameters!}}$$
-
-With only 450 training students, 241 parameters will happily **memorize every student's name, hobbies, and random noise**!
+## One step of gradient descent
 
 ```r
-library(tidymodels)
+learning_rate <- 1
+b0 <- b0 - learning_rate * gradient_b0
+b1 <- b1 - learning_rate * gradient_b1
+```
 
-big_net <- mlp(hidden_units = 20, penalty = 0, epochs = 1000) |>
+| | Before | After one step |
+|---|---|---|
+| stress weight | 0 | `r f3(b1_1)` |
+| log loss | `r f3(log_loss(0, 0))` | `r f3(log_loss(b0_1, b1_1))` |
+
+Training is nothing more than this step, repeated.
+
+---
+
+## 2,000 steps
+
+```{r}
+#| fig-width: 8
+#| fig-height: 2.5
+ggplot(data.frame(step = 1:2000, loss = loss_history), aes(step, loss)) +
+  geom_line(colour = navy, linewidth = 1.2) + scale_x_log10() +
+  labs(x = "Training step (log scale)", y = "Log loss")
+```
+
+| | Bias | Stress weight |
+|---|---|---|
+| gradient descent | `r f3(b0)` | `r f3(b1)` |
+| `glm()` | `r f3(abs(glm_coef[1]))` | `r f3(glm_coef[2])` |
+
+---
+
+## Two consequences
+
+- training starts from random weights, so two runs differ: `set.seed()` matters;
+- many weights can keep reducing training error by memorising noise.
+
+**Weight decay** penalises large weights, exactly like the ridge penalty of Chapter 13. In tidymodels it is `penalty`.
+
+Backpropagation calculates gradients efficiently for thousands of weights.
+
+---
+
+## A network for the dropout question
+
+```r
+mlp(hidden_units = , penalty = , epochs = ) |>
   set_engine("nnet", MaxNWts = 5000) |>
   set_mode("classification")
+```
 
+Same data, split, recipe, and folds as Chapters 11 and 12. Networks need normalised inputs; the recipe provides them.
+
+The nnet engine, which comes with R, fits one hidden layer.
+
+---
+
+## A network that memorises
+
+```r
+big_net <- mlp(hidden_units = 20, penalty = 0, epochs = 1000) |>
+  set_engine("nnet", MaxNWts = 5000) |> set_mode("classification")
 big_fit <- fit(workflow(dropout_recipe, big_net), data = dropout_train)
-
-# Training vs Unseen Holdout Test AUC:
-augment(big_fit, new_data = dropout_train) |> roc_auc(considering_dropout, .pred_Yes)
-# [1] 1.0000000  <-- "PERFECT" AUC on training data!
-
-augment(big_fit, new_data = dropout_test) |> roc_auc(considering_dropout, .pred_Yes)
-# [1] 0.6920455  <-- Collapses to 0.69 on test students!
 ```
 
----
+| Data | AUC |
+|---|---|
+| training | `r f2(big_train_auc)` |
+| test | `r f2(big_test_auc)` |
 
-## The Antidote: Weight Decay ($L_2$ Regularization)
-
-To prevent weights from ballooning to memorization scales, we introduce **Weight Decay**:
-
-$$\text{Objective} = \text{Log Loss} + \lambda \sum w_j^2$$
-
-- Exactly like the **Ridge penalty** from Chapter 13!
-- At every training step, each weight is shrunk toward zero:
-  $$w \leftarrow w \times (1 - 2\lambda) - \eta \nabla L$$
-- Prevents the network from depending on isolated extreme weights, forcing it to find smooth, generalized representations.
-- In `tidymodels`, weight decay is tuned via the `penalty` argument.
+`r n_weights` weights for `r nrow(dropout_train)` students: more than enough freedom to memorise every one.
 
 ---
 
-# Tuning Neural Networks with `tidymodels`
-
----
-
-## Hyperparameter Grid: Hidden Units vs. Penalty
-
-We tune two fundamental structural parameters across 10-fold cross-validation:
-1. `hidden_units`: Network capacity ($1, 3, 5, 10, 20$ neurons).
-2. `penalty`: Weight decay regularization ($10^{-2}$ to $10^{1.5}$).
+## Tuning size and weight decay
 
 ```r
-net_spec <- mlp(
-  hidden_units = tune(), 
-  penalty = tune(), 
-  epochs = 500
-) |>
-set_engine("nnet", MaxNWts = 5000) |>
-set_mode("classification")
+net_spec <- mlp(hidden_units = tune(), penalty = tune(), epochs = 500) |>
+  set_engine("nnet", MaxNWts = 5000) |> set_mode("classification")
 
-net_wf <- workflow(dropout_recipe, net_spec)
-
-net_grid <- expand_grid(
-  hidden_units = c(1, 3, 5, 10, 20),
-  penalty = 10^seq(-2, 1.5, by = 0.5)
-)
-
-set.seed(2026)
-net_tuning <- tune_grid(
-  net_wf, 
-  resamples = dropout_folds, 
-  grid = net_grid,
-  metrics = metric_set(roc_auc)
-)
+net_grid <- expand_grid(hidden_units = c(1, 3, 5, 10, 20),
+                        penalty = 10^seq(-2, 1.5, by = 0.5))
 ```
+
+Weight decay on a log scale from 0.01 to about 30.
 
 ---
 
-## The Tuning Landscape
+## The penalty matters more than the size
+
+```{r}
+#| fig-width: 9
+#| fig-height: 3.6
+collect_metrics(net_tuning) |>
+  mutate(hidden_units = factor(hidden_units)) |>
+  ggplot(aes(penalty, mean, colour = hidden_units)) +
+  geom_line(linewidth = 1) + geom_point(size = 1.6) + scale_x_log10() +
+  scale_colour_manual(values = c("#b9c7d6", "#7d97b3", navy, "#d9a66b", copper)) +
+  labs(x = "Weight decay (log scale)", y = "Cross-validated AUC", colour = "Hidden units")
+```
+
+Little decay: networks overfit, the big ones most. Enough decay: every size does about equally well.
+
+---
+
+## A fair comparison
+
+| Model | Cross-validated AUC | Test AUC |
+|---|---|---|
+| tuned network (`r best_net$hidden_units` hidden units) | `r f3(best_net_auc)` | `r f2(final_net_auc)` |
+| logistic regression | `r f3(logistic_auc)` | `r f2(final_logistic_auc)` |
+
+With `r nrow(dropout_test)` test students, `r sum(dropout_test$considering_dropout == "Yes")` at risk, this difference is well within chance.
+
+A neural network does not predict dropout better.
+
+---
+
+## The costs of the network
+
+- `r n_best_weights` weights that cannot be interpreted: no odds ratios;
+- results depend on random starting weights without strong decay;
+- careful tuning needed to avoid overfitting.
+
+Logistic regression is kept. Reporting that a network was tried and did not help is itself a finding.
+
+---
+
+## When neural networks are worth using
+
+| Situation | Why networks help |
+|---|---|
+| unstructured data: images, sound, text | features must be learned from raw inputs |
+| very large datasets | thousands of weights need many cases |
+| complex non-linear relationships | flexibility finds structure |
+
+A table of a few hundred cases and a few dozen variables, the typical thesis, rarely qualifies.
+
+---
+
+## Deep learning
+
+- many hidden layers, millions or billions of weights;
+- each layer builds on the last: edges, then shapes, then objects;
+- **convolutional networks** for images, **transformers** for text;
+- large language models (Chapter 18) are transformers with billions of weights.
+
+---
+
+## Deep learning in R
+
+| Tool | Notes |
+|---|---|
+| keras3 | interface to Keras; needs Python alongside R |
+| torch | the PyTorch engine, without Python |
+| brulee | tidymodels deep networks through torch, with `mlp()` |
+
+For most researchers, the practical route is a **pretrained model**, as Chapter 18 does with a language model.
+
+---
+
+## In your field: engineering
 
 ```r
-autoplot(net_tuning) +
-  theme_minimal(base_size = 12) +
-  labs(
-    title = "Neural Network ROC-AUC Across Hidden Units & Weight Decay",
-    x = "Weight Decay Penalty (Log Scale)",
-    y = "10-Fold CV ROC-AUC"
-  )
+concrete_recipe <- recipe(compressive_strength ~ ., data = training(concrete_split)) |>
+  step_log(age) |>
+  step_normalize(all_numeric_predictors())
+concrete_net <- mlp(hidden_units = 10, penalty = 0.1, epochs = 1000) |>
+  set_engine("nnet", MaxNWts = 5000) |> set_mode("regression")
 ```
 
-```
-     ROC-AUC
-        0.87 ^                                     * All network sizes converge
-             │                                   /   to identical performance!
-        0.80 │                 ________________/
-             │               /
-        0.70 │   * Hidden = 1 (Too Simple)
-             │   x Hidden = 20 (Severe Overfitting without penalty!)
-        0.65 └────────────────────────────────────────────────> Weight Decay (Penalty)
-                 10^-2                10^0                 10^1.5
-```
+| Model | Test RMSE (MPa) |
+|---|---|
+| linear regression | `r sprintf("%.1f", concrete_rmse(concrete_lm_fit))` |
+| neural network | `r sprintf("%.1f", concrete_rmse(concrete_net_fit))` |
 
-**Key Takeaways**:
-- With weak weight decay ($\lambda = 0.01$), 20-unit networks overfit severely ($\text{AUC} \approx 0.70$).
-- With strong weight decay ($\lambda \ge 1.0$), **networks of all sizes perform identically** ($\text{AUC} \approx 0.869$).
-- Regularization strength, NOT network width, is the primary driver of generalization!
+Curves and interactions give the flexibility something to capture.
 
 ---
 
-# The Head-to-Head Showdown: AI vs. Logistic Regression
+## Practical lab: the Chapter 15 playground
+
+Work through the playground exercises in your browser, with hints and solutions.
+
+nnet runs in the browser; the download uses tidymodels.
 
 ---
 
-## Cross-Validated Comparison on the Student Panel
+## Practical exercises 1–3: neurons and networks
 
-We select the best tuned neural network (`hidden_units = 3, penalty = 3.16`) and benchmark it against simple Logistic Regression on the exact same folds:
-
-```r
-show_best(net_tuning, metric = "roc_auc", n = 1)
-# # A tibble: 1 x 8
-#   hidden_units penalty .metric  mean     n std_err
-#          <int>   <dbl> <chr>   <dbl> <int>   <dbl>
-# 1            3    3.16 roc_auc 0.869    10  0.0218
-```
-
-| Model Architecture | 10-Fold CV ROC-AUC | Standard Error | Interpretable Parameters |
-| :--- | :---: | :---: | :---: |
-| **Simple Logistic Regression** | **0.871** | 0.0215 | **Yes** (Odds Ratios, $p$-values) |
-| **Tuned Neural Network (MLP)** | **0.869** | 0.0218 | **No** (37 uninterpretable weights) |
+1. Double the importance of support in the neuron: what does a negative weight mean?
+2. One hidden neuron with decay 1 against logistic regression.
+3. Three seeds with decay 0.01 and with the best decay: when does the seed matter?
 
 ---
 
-## Holdout Test Set Validation
+## Practical exercises 4–6: training
 
-We evaluate both finalized workflows on the locked 25% test set:
-
-```r
-best_net <- select_best(net_tuning, metric = "roc_auc")
-
-final_net <- net_wf |>
-  finalize_workflow(best_net) |>
-  last_fit(dropout_split, metrics = metric_set(roc_auc, accuracy))
-
-collect_metrics(final_net)
-```
-
-```
-.metric  .estimator .estimate
-accuracy binary         0.867
-roc_auc  binary         0.880  <-- Neural Network Test AUC = 0.880
-```
-
-- **Logistic Regression Test AUC**: **0.882**
-- **Neural Network Test AUC**: **0.880**
-
-> **The Empirical Verdict**:  
-> The Neural Network does **NOT** predict student dropout better than Logistic Regression!
+4. The 20-neuron network for 10, 100, and 1000 epochs.
+5. Explain to the research group why the thesis keeps logistic regression.
+6. Gradient descent with learning rates 0.1 and 10: what goes wrong?
 
 ---
 
-## Why Didn't the Neural Network Win?
+## Try this yourself
 
-Why did artificial intelligence fail to outperform a standard 200-year-old generalized linear model?
+Someone suggests "just use AI" for your prediction problem.
 
-1. **The Nature of Psychosocial Data**:
-   - In student mental health and academic persistence, the underlying data-generating process is **smooth and monotonic**.
-   - Higher stress steadily elevates risk; higher support steadily buffers risk.
-   - Logistic regression already fits a smooth sigmoidal surface; there are no complex periodic waves or topological manifolds to discover.
-2. **Tabular Data Structure**:
-   - Tabular features with clear semantic meanings (GPA, sleep hours, stress score) rarely require high-dimensional representation learning.
-3. **The High Price of Neural Networks**:
-   - Zero parameter interpretability (no odds ratios to report to university counseling).
-   - Higher risk of overfitting, training instability, and dependency on random seeds.
+- how many cases and variables do you have?
+- is the data a table, or images, sound, or text?
+- what simple model would you compare against?
+- what would you lose in interpretability?
 
 ---
 
-# When Neural Networks & Deep Learning Truly Shine
+## Troubleshooting guide (Part 1)
+
+| Symptom | Likely cause |
+|---|---|
+| perfect training AUC | memorisation; add weight decay |
+| different results on each run | random starting weights; set a seed, add decay |
+| "too many weights" error | raise `MaxNWts` |
+| a network no better than regression | a smooth pattern; that is a finding |
 
 ---
 
-## The Deep Learning Sweet Spot
+## Troubleshooting guide (Part 2)
 
-If neural networks don't beat regression on student tables, **why is the world investing billions in AI?**
-
-Because Deep Learning dominates in environments with completely different properties:
-
-```
-    Tabular Research Data (Theses)              Unstructured Big Data (Deep Learning)
-    ┌──────────────────────────────────┐        ┌──────────────────────────────────┐
-    │ - Sample: N = 100 to 5,000       │        │ - Sample: N = 100,000 to Billions│
-    │ - Features: Pre-engineered survey│        │ - Features: Raw pixels, audio    │
-    │   scales, GPA, hours             │        │   waveforms, tokenized text      │
-    │ - Meaning: Features have strong  │        │ - Meaning: Individual pixels or  │
-    │   individual semantic clarity    │        │   audio frequencies mean nothing!│
-    │ ──> Logistic, Trees, & Lasso win!│        │ ──> Deep Learning crushes all!   │
-    └──────────────────────────────────┘        └──────────────────────────────────┘
-```
+| Symptom | Likely cause |
+|---|---|
+| loss explodes during training | learning rate too large |
+| loss barely moves | learning rate too small, or too few epochs |
+| inputs on very different scales | missing `step_normalize()` |
+| no one can explain the model | many uninterpretable weights |
 
 ---
 
-## Deep Learning Architectures
+## Completion checklist
 
-In **Deep Learning**, networks have dozens or hundreds of hidden layers that learn hierarchical feature representations from raw unstructured inputs:
-
-```
-     Raw Input                   Early Layers                    Deep Layers                   Final Output
-     
-    [ Image Pixels ] ──> ( Edge Detectors ) ──> ( Textures & Shapes ) ──> ( Eyes, Noses ) ──> [ "Face: Yes" ]
-```
-
-Specialized Architectures:
-1. **Convolutional Neural Networks (CNNs)**: Image processing, radiology MRI/CT scans, computer vision (exploits spatial locality).
-2. **Transformers (Vaswani et al., 2017)**: Self-attention networks powering ChatGPT, Claude, and Gemini (exploits sequential contextual attention).
-3. **Recurrent Networks (LSTMs)**: Speech signals, time-series sensor streams.
+- [ ] a simple model is fitted first as the benchmark;
+- [ ] inputs are normalised;
+- [ ] hidden units and weight decay are tuned by cross-validation;
+- [ ] the seed is set;
+- [ ] training and test performance are both reported;
+- [ ] the comparison with the benchmark is fair;
+- [ ] the loss in interpretability is weighed.
 
 ---
 
-## The Engineering Case Study: Concrete Compressive Strength
+## Misconceptions to leave behind (Part 1)
 
-When tabular data contains **complex non-linear interactions**, neural networks *do* triumph:
-
-```r
-data(concrete, package = "modeldata")
-set.seed(1)
-concrete_split <- initial_split(concrete)
-
-# 1. Linear OLS Regression:
-lm_fit <- last_fit(workflow(compressive_strength ~ ., linear_reg()), concrete_split)
-
-# 2. Neural Network (10 Hidden Units, Penalty = 0.10):
-net_fit <- last_fit(
-  workflow(recipe(compressive_strength ~ ., data = training(concrete_split)) |> 
-             step_log(age) |> step_normalize(all_numeric_predictors()),
-           mlp(hidden_units = 10, penalty = 0.1, epochs = 1000) |> 
-             set_engine("nnet") |> set_mode("regression")),
-  concrete_split
-)
-```
-
-- **Linear Regression RMSE**: **10.4 MPa**
-- **Neural Network RMSE**: **5.2 MPa** (Cuts error in half!)
-- When non-linear chemistry governs the data, neural flexibility pays off.
+| Misconception | Better mental model |
+|---|---|
+| a neural network is always more accurate | on typical tables, often not |
+| networks learn mysteriously | gradient descent: small steps that reduce error |
 
 ---
 
-## Deep Learning in R: The Modern Toolchain
+## Misconceptions to leave behind (Part 2)
 
-How do researchers run real deep learning in R?
-
-1. **`torch` & `brulee` (Pure R + LibTorch)**:
-   - Does NOT require Python!
-   - Runs PyTorch directly through R C++ bindings.
-   - Fits deep networks seamlessly through the standard `tidymodels` interface (`set_engine("brulee")`).
-2. **`keras3` (Keras + TensorFlow / PyTorch / JAX)**:
-   - Interfaces Google's Keras API via Python backend (`reticulate`).
-   - Standard framework for custom convolutional vision models.
-3. **Pretrained Foundation Models**:
-   - The modern standard for empirical theses: instead of training from scratch, researchers use pretrained transformer embeddings to code qualitative text responses (as we will do in Chapter 18!).
+| Misconception | Better mental model |
+|---|---|
+| a perfect training fit means learning | usually memorisation |
+| neural networks and AI are the same | networks are one family; LLMs are one kind |
 
 ---
 
-# Thesis Checkpoint: Reporting Neural Network Benchmarks
+## The chapter in one sentence
+
+> **A neural network is logistic regression units stacked in layers and trained by small steps; it earns its complexity on large, unstructured, or strongly non-linear data, not on every table.**
 
 ---
 
-## Writing Up Neural Network Results (APA Style)
+## Next: Chapter 16
 
-> *"To assess whether non-linear algorithmic architectures provide enhanced predictive accuracy for student dropout screening (RQ9), a Multilayer Perceptron (MLP) artificial neural network was estimated using the nnet and tidymodels frameworks in R. Feature inputs were standardized to z-scores on the training partition (n = 450). Model hyperparameter optimization evaluated hidden layer width (1 to 20 units) and L2 weight decay penalties (0.01 to 31.6) across 10-fold stratified cross-validation (500 training epochs).*
->
-> *Cross-validation revealed that unregularized networks exhibited catastrophic overfitting (training ROC-AUC = 1.00 vs. test ROC-AUC = 0.69). Optimal regularization (penalty = 3.16, 3 hidden units) produced an out-of-fold cross-validated ROC-AUC of .869 (SE = .022), which was statistically indistinguishable from baseline penalized logistic regression (.871, SE = .022).*
->
-> *When applied to the holdout test set (n = 150), both architectures demonstrated comparable discriminative capability (Neural Network ROC-AUC = .880 vs. Logistic Regression ROC-AUC = .882). In accordance with the principle of parsimony, logistic regression was retained as the operational classification model, as it provides equivalent predictive fidelity while retaining full parametric interpretability (odds ratios) essential for transparent student advising."*
+The next chapter turns to data ordered in time:
 
----
-
-## Chapter 15 Summary: Core Principles
-
-1. **Neurons are Regressions**: A single artificial neuron with a sigmoid activation function is mathematically identical to a logistic regression.
-2. **Layered Representations**: Multilayer perceptrons stack non-linear activation functions (Sigmoid, ReLU) to learn latent feature interactions.
-3. **Gradient Descent**: Training iteratively adjusts weights opposite error gradients via backpropagation; on simple data, it converges to identical MLE regression parameters.
-4. **Regularization is Vital**: High-capacity networks easily memorize noise; weight decay ($L_2$ penalty) is mandatory to force generalized solutions.
-5. **The Tabular Reality**: On structured research survey tables, neural networks rarely beat regularized logistic regression, random forests, or boosted trees.
-6. **Where AI Wins**: Deep learning shines on unstructured data (pixels, audio, text) and enormous sample sizes ($N > 100,000$).
-7. **Occam's Razor in Science**: If an AI model cannot beat a linear baseline on unseen holdout test data, always choose the transparent, explainable model.
+- time series data and its components;
+- the counselling service's weekly visits;
+- decomposition into trend and seasonality;
+- forecasting, and judging forecasts;
+- what forecasts assume about the future.
 
 ---
 
-# Questions & Practical Workshop
+## Questions
 
-### Next Step: Open `content/playground/chapter15.qmd` to train neurons from scratch with gradient descent loops and tune MLPs live in R!
+What would convince you that a neural network is worth its cost?
+
+What would you report if it were not?

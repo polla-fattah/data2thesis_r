@@ -7,7 +7,6 @@ project:
     - "content/book/*.qmd"
     - "content/playground/*.qmd"
     - "content/slides/*.qmd"
-    - "content/slides/*.md"
   resources:
     - downloads/
     - content/playground/*.zip
@@ -44,39 +43,167 @@ website:
         - content/book/index.qmd
         - section: "Foundations of R Programming and Data Handling"
           contents:
-            - content/book/01-getting-started.qmd
-            - content/book/02-data-structures.qmd
-            - content/book/03-data-manipulation.qmd
-            - content/book/04-data-visualization.qmd
+            - href: content/book/01-getting-started.qmd
+              text: "1  Getting Started with R"
+            - href: content/book/02-data-structures.qmd
+              text: "2  Data Structures in R"
+            - href: content/book/03-data-manipulation.qmd
+              text: "3  Data Manipulation"
+            - href: content/book/04-data-visualization.qmd
+              text: "4  Data Visualization"
         - section: "Statistical Analysis for Research"
           contents:
-            - content/book/05-research-question.qmd
-            - content/book/06-descriptive-statistics.qmd
-            - content/book/07-hypothesis-testing.qmd
-            - content/book/08-anova-regression.qmd
-            - content/book/09-multivariate.qmd
-            - content/book/10-mixed-models.qmd
+            - href: content/book/05-research-question.qmd
+              text: "5  From Research Question to Data"
+            - href: content/book/06-descriptive-statistics.qmd
+              text: "6  Descriptive Statistics and Exploratory Data Analysis"
+            - href: content/book/07-hypothesis-testing.qmd
+              text: "7  Hypothesis Testing and Statistical Inference"
+            - href: content/book/08-anova-regression.qmd
+              text: "8  ANOVA and Regression"
+            - href: content/book/09-multivariate.qmd
+              text: "9  Multivariate Statistical Methods"
+            - href: content/book/10-mixed-models.qmd
+              text: "10  Mixed-Effects Models"
         - section: "Machine Learning with R"
           contents:
-            - content/book/11-machine-learning.qmd
-            - content/book/12-classification.qmd
-            - content/book/13-predictive-regression.qmd
-            - content/book/14-advanced-clustering.qmd
-            - content/book/15-neural-networks.qmd
-            - content/book/16-time-series.qmd
+            - href: content/book/11-machine-learning.qmd
+              text: "11  Introduction to Machine Learning in R"
+            - href: content/book/12-classification.qmd
+              text: "12  Classification Models"
+            - href: content/book/13-predictive-regression.qmd
+              text: "13  Predictive Regression"
+            - href: content/book/14-advanced-clustering.qmd
+              text: "14  Advanced Clustering"
+            - href: content/book/15-neural-networks.qmd
+              text: "15  Neural Networks"
+            - href: content/book/16-time-series.qmd
+              text: "16  Time Series Forecasting"
         - section: "Reproducible Research and Applications"
           contents:
-            - content/book/17-reproducible-research.qmd
-            - content/book/18-ai.qmd
-            - content/book/19-putting-it-together.qmd
+            - href: content/book/17-reproducible-research.qmd
+              text: "17  Reproducible Research"
+            - href: content/book/18-ai.qmd
+              text: "18  Using AI with R"
+            - href: content/book/19-putting-it-together.qmd
+              text: "19  Putting It All Together"
         - content/book/references.qmd
         - section: "Appendices"
           contents:
-            - content/book/a-installation.qmd
-            - content/book/b-glossary.qmd
-            - content/book/c-packages.qmd
-            - content/book/d-common-errors.qmd
-            - content/book/e-resources.qmd
+            - href: content/book/a-installation.qmd
+              text: "A  Installation and Setup"
+            - href: content/book/b-glossary.qmd
+              text: "B  Glossary"
+            - href: content/book/c-packages.qmd
+              text: "C  R Packages"
+            - href: content/book/d-common-errors.qmd
+              text: "D  Common Errors and How to Fix Them"
+            - href: content/book/e-resources.qmd
+              text: "E  Further Learning Resources"
+    - id: playground
+      title: "Playground"
+      style: docked
+      search: true
+      contents:
+        - content/playground/index.qmd
+        - section: "Foundations of R Programming and Data Handling"
+          contents:
+            - href: content/playground/chapter01.qmd
+              text: "1  Getting Started with R"
+            - href: content/playground/chapter02.qmd
+              text: "2  Data Structures in R"
+            - href: content/playground/chapter03.qmd
+              text: "3  Data Manipulation"
+            - href: content/playground/chapter04.qmd
+              text: "4  Data Visualization"
+        - section: "Statistical Analysis for Research"
+          contents:
+            - href: content/playground/chapter05.qmd
+              text: "5  From Research Question to Data"
+            - href: content/playground/chapter06.qmd
+              text: "6  Descriptive Statistics and Exploratory Data Analysis"
+            - href: content/playground/chapter07.qmd
+              text: "7  Hypothesis Testing and Statistical Inference"
+            - href: content/playground/chapter08.qmd
+              text: "8  ANOVA and Regression"
+            - href: content/playground/chapter09.qmd
+              text: "9  Multivariate Statistical Methods"
+            - href: content/playground/chapter10.qmd
+              text: "10  Mixed-Effects Models"
+        - section: "Machine Learning with R"
+          contents:
+            - href: content/playground/chapter11.qmd
+              text: "11  Introduction to Machine Learning in R"
+            - href: content/playground/chapter12.qmd
+              text: "12  Classification Models"
+            - href: content/playground/chapter13.qmd
+              text: "13  Predictive Regression"
+            - href: content/playground/chapter14.qmd
+              text: "14  Advanced Clustering"
+            - href: content/playground/chapter15.qmd
+              text: "15  Neural Networks"
+            - href: content/playground/chapter16.qmd
+              text: "16  Time Series Forecasting"
+        - section: "Reproducible Research and Applications"
+          contents:
+            - href: content/playground/chapter17.qmd
+              text: "17  Reproducible Research"
+            - href: content/playground/chapter18.qmd
+              text: "18  Using AI with R"
+            - href: content/playground/chapter19.qmd
+              text: "19  Putting It All Together"
+    - id: slides
+      title: "Lecture Slides"
+      style: docked
+      search: true
+      contents:
+        - content/slides/index.qmd
+        - section: "Foundations of R Programming and Data Handling"
+          contents:
+            - href: content/slides/01-getting-started.qmd
+              text: "1  Getting Started with R"
+            - href: content/slides/02-data-structures.qmd
+              text: "2  Data Structures in R"
+            - href: content/slides/03-data-manipulation.qmd
+              text: "3  Data Manipulation"
+            - href: content/slides/04-data-visualization.qmd
+              text: "4  Data Visualization"
+        - section: "Statistical Analysis for Research"
+          contents:
+            - href: content/slides/05-research-question.qmd
+              text: "5  From Research Question to Data"
+            - href: content/slides/06-descriptive-statistics.qmd
+              text: "6  Descriptive Statistics and Exploratory Data Analysis"
+            - href: content/slides/07-hypothesis-testing.qmd
+              text: "7  Hypothesis Testing and Statistical Inference"
+            - href: content/slides/08-anova-regression.qmd
+              text: "8  ANOVA and Regression"
+            - href: content/slides/09-multivariate.qmd
+              text: "9  Multivariate Statistical Methods"
+            - href: content/slides/10-mixed-models.qmd
+              text: "10  Mixed-Effects Models"
+        - section: "Machine Learning with R"
+          contents:
+            - href: content/slides/11-machine-learning.qmd
+              text: "11  Introduction to Machine Learning in R"
+            - href: content/slides/12-classification.qmd
+              text: "12  Classification Models"
+            - href: content/slides/13-predictive-regression.qmd
+              text: "13  Predictive Regression"
+            - href: content/slides/14-advanced-clustering.qmd
+              text: "14  Advanced Clustering"
+            - href: content/slides/15-neural-networks.qmd
+              text: "15  Neural Networks"
+            - href: content/slides/16-time-series.qmd
+              text: "16  Time Series Forecasting"
+        - section: "Reproducible Research and Applications"
+          contents:
+            - href: content/slides/17-reproducible-research.qmd
+              text: "17  Reproducible Research"
+            - href: content/slides/18-ai.qmd
+              text: "18  Using AI with R"
+            - href: content/slides/19-putting-it-together.qmd
+              text: "19  Putting It All Together"
   page-footer:
     left: "© Polla Fattah. *From Data to Thesis: Research Data Analysis with R*."
     right: "Built with [Quarto](https://quarto.org)"

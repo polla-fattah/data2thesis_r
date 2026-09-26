@@ -1,3 +1,7 @@
+---
+number-offset: 13
+---
+
 # Advanced Clustering {#sec-ch14}
 
 ```{r}

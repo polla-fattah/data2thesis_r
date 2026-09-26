@@ -1,3 +1,7 @@
+---
+number-offset: 6
+---
+
 # Hypothesis Testing and Statistical Inference {#sec-ch07}
 
 ```{r}

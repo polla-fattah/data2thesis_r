@@ -1,3 +1,7 @@
+---
+number-offset: 10
+---
+
 # Introduction to Machine Learning in R {#sec-ch11}
 
 ```{r}
@@ -135,7 +139,7 @@ The function `tidymodels_prefer()` settles a few name clashes between packages i
 ```{mermaid}
 %%| label: fig-pipeline
 %%| fig-cap: "The machine learning workflow in tidymodels."
-flowchart LR
+flowchart TB
   A[All data] --> B[Split:<br/>training and test]
   B --> C[Training data]
   B --> T[Test data,<br/>set aside]

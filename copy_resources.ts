@@ -16,6 +16,8 @@ for (const file of ["students.csv", "semesters.csv", "questionnaire.csv", "super
                      "counselling_visits.csv", "open_responses.csv", "open_responses_coded.csv"]) {
   copy(`${repo}/data/${file}`, `content/playground/${file}`);
 }
+// The language model's saved coding (Chapter 18) is made by data-raw/run_ai_coding.R
+copy(`${repo}/data-raw/ai_coding_results.csv`, "content/playground/ai_coding_results.csv");
 
 // Downloads: the data package and every data file
 Deno.mkdirSync("downloads", { recursive: true });

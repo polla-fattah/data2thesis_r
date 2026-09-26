@@ -1,3 +1,7 @@
+---
+number-offset: 9
+---
+
 # Mixed-Effects Models {#sec-ch10}
 
 ```{r}

@@ -1,3 +1,7 @@
+---
+number-offset: 18
+---
+
 # Putting It All Together {#sec-ch19}
 
 ```{r}
@@ -32,7 +36,7 @@ Every quantitative project follows roughly the same path, and this book has foll
 ```{mermaid}
 %%| label: fig-project
 %%| fig-cap: "The path of a research project, with the chapters of this book that cover each step."
-flowchart LR
+flowchart TB
   A[Question and<br/>design<br/>Ch 5] --> B[Import<br/>Ch 1-2]
   B --> C[Clean and<br/>reshape<br/>Ch 3]
   C --> D[Explore and<br/>describe<br/>Ch 4, 6]
@@ -331,9 +335,12 @@ What a results chapter must contain is not left to taste. **Reporting standards*
 
 The choice of method for a new research question depends on the goal, on the kind of **outcome**, and on how the **observations** are related. @fig-choose summarises the methods of this book as a guide.
 
+::: {.column-page-right}
+
 ```{mermaid}
 %%| label: fig-choose
 %%| fig-cap: "A guide to choosing a method, with the chapters that cover each."
+%%{init: {"flowchart": {"nodeSpacing": 18, "rankSpacing": 45}}}%%
 flowchart TD
   Q{What is the goal?} -->|Describe| D[Summaries and plots<br/>Ch 4, 6]
   Q -->|Explain or compare| O{Outcome type?}
@@ -345,6 +352,8 @@ flowchart TD
   N -->|No| R[t-test, ANOVA,<br/>regression<br/>Ch 7-8]
   N -->|Yes| M[Mixed-effects<br/>models<br/>Ch 10]
 ```
+
+:::
 
 @tbl-map shows how each of the study's research questions was answered.
 

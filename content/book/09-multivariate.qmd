@@ -1,3 +1,7 @@
+---
+number-offset: 8
+---
+
 # Multivariate Statistical Methods {#sec-ch09}
 
 ```{r}

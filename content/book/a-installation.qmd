@@ -1,4 +1,8 @@
-# Installation and Setup {#sec-app-installation}
+---
+number-sections: false
+---
+
+# Appendix A: Installation and Setup {#sec-app-installation}
 
 ```{r}
 #| label: setup

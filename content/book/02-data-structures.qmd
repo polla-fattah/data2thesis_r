@@ -1,3 +1,7 @@
+---
+number-offset: 1
+---
+
 # Data Structures in R {#sec-ch02}
 
 ```{r}

@@ -1,3 +1,7 @@
+---
+number-offset: 16
+---
+
 # Reproducible Research {#sec-ch17}
 
 ```{r}
@@ -76,7 +80,7 @@ In RStudio, create a Quarto document with *File > New File > Quarto Document*, a
 ```{mermaid}
 %%| label: fig-render
 %%| fig-cap: "How a Quarto document is rendered."
-flowchart LR
+flowchart TB
   A[report.qmd<br/>text + code] --> B[knitr runs<br/>the R code]
   B --> C[report.md<br/>text + results]
   C --> D[Pandoc<br/>converts]

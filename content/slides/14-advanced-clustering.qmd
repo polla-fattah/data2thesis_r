@@ -1,570 +1,622 @@
 ---
-title: "Advanced Clustering & Unsupervised Learning"
-subtitle: "Gaussian Mixture Models, Density-Based Clustering (DBSCAN), and Cluster Validation"
-author: "Dr. Polla Fattah"
-institute: "From Data to Thesis: Research Data Analysis with R"
-format:
-  revealjs:
-    theme: [default, ../../styles/theme.scss]
-    slide-number: true
-    preview-links: auto
-    chalkboard: true
-    transition: slide
-    highlight-style: github
-    code-line-numbers: false
-    width: 1200
-    height: 750
+title: "Advanced Clustering"
+description: "Chapter 14: three definitions of a group, Gaussian mixture models with BIC and membership probabilities, DBSCAN and noise points, and evaluating a clustering."
+format: deck-html
 execute:
+  echo: false
   freeze: auto
 ---
 
-# Advanced Clustering
-
-### Probabilistic Mixtures, Density Manifolds, and Noise Detection
-
-**Chapter 14 · From Data to Thesis**
-
-Dr. Polla Fattah
-
----
-
-## What Actually Is a "Group"?
-
-In Chapter 9, we used $K$-means to divide students into lifestyle profiles.  
-Every thesis examiner will ask three hard questions about those clusters:
-
-1. *"Why four clusters? What statistical criterion proved four is optimal?"*
-2. *"Is a student right on the boundary truly 100% in Cluster 2?"*
-3. *"What about unusual students who fit into none of the profiles?"*
-
-> Every clustering algorithm carries a mathematical definition of what a "group" is.  
-> Your results are only as valid as that underlying definition!
-
-Today, we move beyond the rigid spheres of $K$-means to explore **Gaussian Mixture Models (GMM)** and **Density-Based Clustering (DBSCAN)**.
-
----
-
-## Three Competing Definitions of a Cluster
-
-```
-    1. Distance-to-Center (K-Means)          2. Probability Distribution (GMM)
-       ┌────────────────────────┐               ┌────────────────────────┐
-       │     *   *              │               │       . - ~ ~ - .      │
-       │   *   X1  *            │               │    . '    P1     ' .   │
-       │     *   *              │               │   (   Ellipsoidal   )  │
-       │            *   *       │               │    ' .    N(mu,S) . '  │
-       │          *   X2  *     │               │       ' - ~ ~ - '      │
-       └────────────────────────┘               └────────────────────────┘
-       Hard assignment; rigid spheres           Soft probabilities; flexible ellipses
-       
-                        3. Dense Connected Regions (DBSCAN)
-                           ┌────────────────────────┐
-                           │    * * * * *           │
-                           │   *         * * *      │
-                           │  (Arbitrary Shapes!)   │
-                           │                        │
-                           │     o (Noise / Outlier)│
-                           └────────────────────────┘
-                           Separated by empty space; isolates noise
-```
-
----
-
-## The Shape Simulation: When $K$-Means Fails
-
-Let us simulate a dataset with a known ground truth:
-- A small, dense **round group** ($N = 100$).
-- A long, thin **elongated group** ($N = 100$).
-- 15 scattered **background outliers** ($N = 15$).
-
-```r
-library(mclust)
-library(dbscan)
+```{r}
+#| include: false
+library(data2thesis)
 library(dplyr)
 library(ggplot2)
+library(mclust)
+library(dbscan)
+library(cluster)
+
+navy <- "#1d588c"; copper <- "#b4762e"; soft <- "#46586d"; green <- "#5b8c5a"; purple <- "#8a5a9c"
+theme_set(theme_minimal(base_size = 15) +
+  theme(panel.grid.minor = element_blank(),
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        axis.title = element_text(colour = soft),
+        strip.text = element_text(colour = navy, face = "bold", size = 13)))
+knitr::opts_chunk$set(dev = "svg", dev.args = list(bg = "transparent"),
+                      message = FALSE, warning = FALSE)
+f2 <- function(x) sprintf("%.2f", x)
+
+q <- questionnaire; q$stress_4 <- 6 - q$stress_4
+scores <- q |>
+  mutate(stress = rowMeans(pick(stress_1:stress_6), na.rm = TRUE),
+         support = rowMeans(pick(support_1:support_6), na.rm = TRUE),
+         satisfaction = rowMeans(pick(satisfaction_1:satisfaction_4), na.rm = TRUE)) |>
+  select(student_id, stress, support, satisfaction)
+profiles <- semesters |>
+  summarise(across(c(sleep_hours, study_hours, caffeine_mg, exercise_days), ~ mean(.x, na.rm = TRUE)),
+            .by = student_id) |>
+  left_join(scores, join_by(student_id)) |> na.omit()
+profile_data <- scale(profiles |> select(-student_id))
+set.seed(123)
+kmeans_clusters <- kmeans(profile_data, centers = 4, nstart = 25)
 
 set.seed(8)
 shapes <- bind_rows(
   tibble(x = rnorm(100, 0, 0.4), y = rnorm(100, 0, 0.4), truth = "Round group"),
-  tibble(x = rnorm(100, 3, 2.0), y = rnorm(100, 1.4, 0.2), truth = "Long group"),
-  tibble(x = runif(15, -2, 7.0), y = runif(15, -2, 4.0), truth = "Scattered")
-)
-```
+  tibble(x = rnorm(100, 3, 2), y = rnorm(100, 1.4, 0.2), truth = "Long group"),
+  tibble(x = runif(15, -2, 7), y = runif(15, -2, 4), truth = "Scattered"))
+xy <- shapes |> select(x, y)
+shape_clusters <- bind_rows(
+  shapes |> mutate(method = "k-means", cluster = factor(kmeans(xy, 2, nstart = 25)$cluster)),
+  shapes |> mutate(method = "Mixture model", cluster = factor(Mclust(xy, G = 2, verbose = FALSE)$classification)),
+  shapes |> mutate(method = "DBSCAN", cluster = factor(dbscan(xy, eps = 0.5, minPts = 5)$cluster))) |>
+  mutate(method = factor(method, levels = c("k-means", "Mixture model", "DBSCAN")),
+         cluster = forcats::fct_recode(cluster, noise = "0"))
+agreement <- shape_clusters |> filter(truth != "Scattered") |>
+  summarise(ari = adjustedRandIndex(truth, cluster), .by = method)
+ari_of <- function(m) f2(agreement$ari[agreement$method == m])
+db_noise_found <- shape_clusters |> filter(method == "DBSCAN", truth == "Scattered") |>
+  summarise(n = sum(cluster == "noise")) |> pull(n)
 
-How do the three algorithms partition these exact same points?
-
----
-
-## Benchmark Comparison on Non-Spherical Shapes
-
-```
-     K-Means (ARI = 0.58)              GMM (ARI = 0.98)               DBSCAN (ARI = 0.62)
-     ┌──────────────────────┐          ┌──────────────────────┐       ┌──────────────────────┐
-     │  Round   / Long      │          │  Round   Long        │       │  Continuous Dense    │
-     │   (*)   /  (------)  │          │   (*)    (--------)  │       │  Cluster: (~~~~~)    │
-     │ Cuts banana in half! │          │ Fits elliptical shape│       │                      │
-     │ Forces outliers in!  │          │ cleanly!             │       │ Isolates 14 Noise pts│
-     └──────────────────────┘          └──────────────────────┘       └──────────────────────┘
-```
-
-1. **$K$-Means**: Assumes equal spherical variance. It draws a straight boundary cutting the elongated group in half ($ARI = 0.58$).
-2. **Gaussian Mixture Model**: Allows parameterized covariance ellipses. It identifies the long group with near-perfection ($ARI = 0.98$).
-3. **DBSCAN**: Sees that the two shapes touch, merging them into one dense manifold while **uniquely isolating 14 scattered noise points**!
-
----
-
-# Model-Based Clustering: Gaussian Mixture Models (GMM)
-
----
-
-## The Probabilistic Foundation
-
-A **Gaussian Mixture Model (GMM)** assumes that the observed data was generated by a mixture of $K$ underlying multivariate normal distributions:
-
-$$f(x) = \sum_{k=1}^K \pi_k \, \mathcal{N}(x \mid \mu_k, \Sigma_k)$$
-
-Where:
-- $\pi_k$ = **Mixing Proportion** (relative size of cluster $k$, where $\sum \pi_k = 1$).
-- $\mu_k$ = **Mean Vector** (geometric centroid of cluster $k$).
-- $\Sigma_k$ = **Covariance Matrix** (governing cluster volume, shape, and spatial orientation).
-
-Parameters are estimated using the **Expectation-Maximization (EM) algorithm**.
-
----
-
-## 1D Intuition: Old Faithful Geyser
-
-Consider waiting times between 272 eruptions of the Old Faithful geyser (`faithful`):
-
-```r
-geyser_gmm <- Mclust(faithful$waiting)
-summary(geyser_gmm, parameters = TRUE)
-```
-
-```
-           Short Waits     Long Waits
-Proportion 0.36            0.64         <-- Mixing Proportions (pi)
-Mean       54.6 minutes    80.1 minutes <-- Means (mu)
-SD         5.8 minutes     5.9 minutes  <-- Spread (sigma)
-```
-
-```
-      Density
-        ^             [Short Waits]                  [Long Waits]
-        │                /¯¯¯\                          /¯¯¯¯¯\
-        │               /     \                        /       \
-        │              /   *   \                      /    *    \
-        │             /    │    \                    /     │     \
-        └────────────┴─────┴─────┴──────────*───────┴──────┴──────┴───> Minutes
-                          54.6             67.0            80.1
-                                        (Uncertain!)
-```
-
----
-
-## Soft Assignments & Membership Probabilities
-
-What happens to a tourist who waited **67 minutes**?
-
-$K$-means would rigidly slam them into one group with 100% false certainty.  
-A Gaussian Mixture Model computes the **posterior membership probability** ($z_{ik}$):
-
-```r
-predict(geyser_gmm, newdata = c(50, 67, 85))$z |> round(2)
-```
-
-```
-     Short Group  Long Group
-[1,]        1.00        0.00   <-- 50 mins: Definitely Short
-[2,]        0.44        0.56   <-- 67 mins: 44% Short / 56% Long (Borderline!)
-[3,]        0.00        1.00   <-- 85 mins: Definitely Long
-```
-
-> **Soft Clustering**: Cases on the margin are honestly acknowledged as ambiguous mixtures, rather than forced into artificial bins!
-
----
-
-## Covariance Geometry in Multidimensional Space
-
-In higher dimensions, the covariance matrix $\Sigma_k$ controls cluster geometry:
-
-$$\Sigma_k = \lambda_k \, D_k \, A_k \, D_k^T$$
-
-- $\lambda_k$: **Volume** (Cluster size).
-- $A_k$: **Shape** (Spherical vs. Elongated).
-- $D_k$: **Orientation** (Axis-aligned vs. Tilted).
-
-```
-        Equal Spherical (EII)          Equal Diagonal (EEI)          Unconstrained (VVV)
-        ┌──────────────────┐           ┌──────────────────┐          ┌──────────────────┐
-        │     O      O     │           │    (  )   (  )   │          │     /          \ │
-        │                  │           │                  │          │    /            \│
-        │      (Equal)     │           │ (Axis-Aligned)   │          │ (Tilted & Unique)│
-        └──────────────────┘           └──────────────────┘          └──────────────────┘
-```
-
-The `mclust` package automatically benchmarks **14 geometric covariance models**!
-
----
-
-## Objective Model Selection: The BIC Criterion
-
-How many clusters exist, and which geometric shape fits best?
-
-`mclust` evaluates models across $G = 1 \dots 8$ clusters using the **Bayesian Information Criterion (BIC)**:
-
-$$\text{BIC} = 2 \ln \hat{L} - k \ln(N)$$
-
-- Rewards model fit ($\ln \hat{L}$) while penalizing parameter count ($k$).
-- **Note**: In `mclust`, **HIGHER BIC IS BETTER**!
-
-```r
-library(mclust)
-library(factoextra)
+geyser <- Mclust(faithful$waiting, verbose = FALSE)
+gp <- geyser$parameters
+geyser_z <- round(predict(geyser, newdata = c(50, 67, 85))$z, 2)
 
 set.seed(123)
-profile_gmm <- Mclust(profile_data, G = 1:8)
-fviz_mclust(profile_gmm, what = "BIC")
-```
-
----
-
-## Diagnosing the BIC Curve
-
-```
-     BIC
-   -10500 ^                                 * Peak: G = 3 (EVE Geometry)
-          │                                / \
-   -10800 │                               /   \_____ G = 4 (BIC gap = -28.4)
-          │                              /
-   -11200 │                             /
-          │                            /
-   -12000 │         * G = 1           /
-          └─────────────────────────────────────────> Number of Clusters (G)
-```
-
-- **Winner**: **$G = 3$ clusters** with `EVE` covariance geometry (Ellipsoidal, equal volume and orientation, variable shape).
-- The 4-cluster model trails by $\Delta\text{BIC} = -28.4$ points.
-- A $\Delta\text{BIC} > 10$ provides **very strong statistical evidence** favoring the 3-profile solution over 4!
-
----
-
-# Profiling the Three GMM Student Typologies
-
----
-
-## Substantive Student Profiles ($G = 3$)
-
-We calculate unstandardized variable means grouped by GMM cluster:
-
-```r
+profile_gmm <- Mclust(profile_data, G = 1:8, verbose = FALSE)
+bic_gap <- round(max(profile_gmm$BIC, na.rm = TRUE) - max(profile_gmm$BIC["4", ], na.rm = TRUE), 1)
 profiles <- profiles |> mutate(gmm_cluster = profile_gmm$classification)
-
-profiles |>
-  summarise(
-    N = n(),
-    across(sleep_hours:satisfaction, ~ round(mean(.x), 1)),
-    .by = gmm_cluster
-  ) |>
-  arrange(gmm_cluster)
-```
-
-| Profile | $N$ | Sleep | Study | Caffeine | Exercise | Stress | Support | Sat. | Substantive Persona |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **1** | 184 | **7.5 h** | 34.0 | 165 mg | **4.2 d** | **2.1** | **4.2** | **4.1** | **The Balanced / Thriving** |
-| **2** | 218 | **5.5 h** | **50.1** | **385 mg** | **1.2 d** | **4.3** | 2.7 | 2.4 | **The Overloaded Hustler** |
-| **3** | 198 | 6.8 h | **26.4** | 180 mg | 2.1 d | 3.2 | **2.1** | **2.2** | **The Disengaged / Isolated** |
-
----
-
-## Comparing GMM vs. $K$-Means
-
-What happened to Chapter 9's four $K$-means clusters?
-
-```r
-table(GMM = profile_gmm$classification, KMeans = kmeans_clusters$cluster)
-```
-
-```
-     KMeans
-GMM     1   2   3   4
-  1   180   0   4   0   <-- Matches Balanced
-  2     2 142   0  74   <-- MERGED K-Means Clusters 2 & 4!
-  3     0   2 192   4   <-- Matches Disengaged
-```
-
-- $K$-means had split the overloaded students into two artificial groups (moderate vs extreme caffeine) because its spherical assumption forced equal-radius cuts.
-- GMM's flexible ellipsoidal covariance accommodates the natural spread of caffeine within a **single unified "Overloaded" profile**!
-
----
-
-## Uncertainty Mapping: Who Lies on the Border?
-
-The uncertainty of student $i$'s assignment is:
-
-$$u_i = 1 - \max_k(z_{ik})$$
-
-```r
 certainty <- apply(profile_gmm$z, 1, max)
-cat("Students with < 80% certainty:", sum(certainty < 0.8), "of 600\n")
-# Students with < 80% certainty: 64 of 600 (10.7%)
-```
 
-```r
-fviz_mclust(profile_gmm, what = "uncertainty") +
-  theme_minimal(base_size = 12) +
-  labs(title = "GMM Profiles: Point Size Proportional to Assignment Uncertainty")
-```
+profile_db <- dbscan(profile_data, eps = 2, minPts = 8)
+n_noise <- sum(profile_db$cluster == 0); n_db_clusters <- max(profile_db$cluster)
+noise_rows <- profiles |> filter(profile_db$cluster == 0)
+n_extreme_work <- sum(noise_rows$study_hours > 55); n_extreme_rest <- sum(noise_rows$study_hours < 10)
 
-- Large, uncertain points concentrate along the contact zones where profiles intersect.
-- In a thesis, you can report: *"89.3% of students belong definitively to a core profile, while 10.7% exhibit transitional, hybrid characteristics."*
-
----
-
-# Density-Based Clustering: DBSCAN
-
----
-
-## Clusters as Connected High-Density Regions
-
-**DBSCAN** (Density-Based Spatial Clustering of Applications with Noise; Ester et al., 1996) abandons geometric centroids completely:
-
-> A cluster is a **dense region of points**, separated from other clusters by **regions of low density (empty space)**.
-
-Two hyperparameter dials govern DBSCAN:
-1. **$\epsilon$ (Epsilon)**: The radius of the search neighborhood around a point.
-2. **`minPts`**: The minimum number of points required within $\epsilon$ to constitute a dense cluster core.
-
----
-
-## Anatomy of Points in DBSCAN
-
-```
-                          *          *
-                       *     * (Core) *   <-- CORE POINT (>= minPts within eps)
-                          *      \   *
-                                  \ eps
-                                   \
-                                    * (Border) <-- BORDER POINT (< minPts, but
-                                                   touches a Core point)
-                                                   
-                                           o (Noise) <-- NOISE POINT (Fits nowhere!)
-```
-
-1. **Core Point**: Has $\ge \text{minPts}$ neighbors within radius $\epsilon$.
-2. **Border Point**: Has $< \text{minPts}$ neighbors, but falls within $\epsilon$ of a Core Point (forms the outer perimeter).
-3. **Noise Point**: Isolated in empty space; assigned to **Cluster 0**!
-
----
-
-## Choosing Epsilon: The $k$-NN Distance Plot
-
-How do we select $\epsilon$ objectively?
-
-We plot the distance from every point to its $k$-th nearest neighbor, sorted in ascending order (with $k = \text{minPts} - 1$):
-
-```r
-# Rule of thumb for 7 variables: minPts = p + 1 = 8 -> k = 7
-kNNdistplot(profile_data, k = 7)
-abline(h = 2.0, lty = "dashed", col = "red")
-```
-
-```
-    Distance to 7th Neighbor
-        4.0 ^                                           / Steep Upward Knee
-            │                                          /  (Isolated Outliers!)
-        2.0 │- - - - - - - - - - - - - - - - - - - - -* <--- eps = 2.0
-            │                            ............/
-        1.0 │............................/  Flat Region (Dense Cluster Core)
-            └───────────────────────────────────────────────> Points Sorted
-```
-
-The curve remains flat across typical students, then bends sharply upward at **$\epsilon \approx 2.0$**.
-
----
-
-## Running DBSCAN on Student Profiles
-
-```r
-profile_db <- dbscan(profile_data, eps = 2.0, minPts = 8)
-table(profile_db$cluster)
-```
-
-```
-  0   1 
- 14 586 
-```
-
-DBSCAN found:
-- **1 large cluster** ($N = 586$).
-- **14 noise outliers** ($N = 14$, Cluster 0).
-
-> **Is this a failure? NO! It is a profound empirical discovery!**
-
----
-
-## The Continuous Cloud Insight
-
-Why did DBSCAN find only one cluster?
-
-- DBSCAN searches for **islands separated by empty oceans of zero density**.
-- Student mental health and lifestyle habits do **not** form separated islands; they form a **single continuous multivariate cloud**!
-- The profiles discovered by $K$-means and GMM are dense focal regions within that cloud, not hermetically sealed species.
-- But DBSCAN accomplishes something no other algorithm can: **it isolates the true anomalies who fit nowhere!**
-
----
-
-## Who Are the 14 Noise Students?
-
-Let us inspect the students flagged as Cluster 0 (Noise):
-
-```r
-profiles |> 
-  filter(profile_db$cluster == 0) |> 
-  select(sleep_hours:satisfaction) |> 
-  head(6)
-```
-
-Two extraordinary sub-populations emerge:
-
-1. **The Extreme Workaholics ($N = 8$)**:
-   - Study: **58–64 hours/week** (Extreme).
-   - Sleep: **3.8–4.2 hours/night** (Severe deprivation).
-   - Caffeine: **720–850 mg/day** (7–9 cups of coffee!).
-   - Exercise: **0 days/week**.
-2. **The Extreme Minimalists ($N = 6$)**:
-   - Study: **6–9 hours/week**; Sleep: **9.8 hours/night**; Zero caffeine.
-
-> In Chapter 6, we checked outliers one variable at a time.  
-> **DBSCAN detects multivariate anomalies: students who are extreme in their *combination* of behaviors!**
-
----
-
-# The Cluster Evaluation Framework
-
----
-
-## How to Validate Unsupervised Clusters
-
-In supervised learning, you compare predictions to ground truth labels ($Y$).  
-In clustering, there is **no answer key**! How do you prove your clusters are real?
-
-```
-                      The 4 Pillars of Cluster Validation
-                      
-     [ Internal Metrics ]     Silhouette Width, BIC, Calinski-Harabasz
-              │
-     [ Cross-Method ]         Adjusted Rand Index (ARI) concordance
-              │
-     [ Stability ]            Bootstrap resampling, random-start robustness
-              │
-     [ External Utility ]     Do clusters predict downstream outcomes (Dropout)?
-```
-
----
-
-## Concordance Across Methods: The Adjusted Rand Index
-
-The **Adjusted Rand Index (ARI)** measures the agreement between two independent clustering solutions, adjusted for chance:
-- $\text{ARI} = 1.0$: Identical cluster assignments.
-- $\text{ARI} = 0.0$: Agreement no better than random guessing.
-
-```r
-# Compare K-Means (4 clusters) vs GMM (3 clusters):
-adjustedRandIndex(kmeans_clusters$cluster, profile_gmm$classification)
-# [1] 0.642
-```
-
-- **$\text{ARI} = 0.64$**: Substantial, robust structural agreement between two completely different mathematical algorithms!
-
----
-
-## External Criterion Validation: Predicting Dropout
-
-Do these lifestyle clusters predict real-world outcomes that were **never included in the clustering algorithm**?
-
-Let us cross-tabulate GMM clusters against `considering_dropout`:
-
-```r
-profiles |>
-  left_join(students |> select(student_id, considering_dropout), join_by(student_id)) |>
-  summarise(
-    Students = n(),
-    Dropout_Pct = paste0(round(100 * mean(considering_dropout == "Yes"), 1), "%"),
-    .by = gmm_cluster
-  )
-```
-
-```
-  gmm_cluster Students Dropout_Pct
-1           1      184        3.8%  <-- Balanced: Minimal risk
-2           2      218       18.3%  <-- Overloaded: Elevated risk
-3           3      198       28.3%  <-- Disengaged: HIGH CRISIS (Nearly 1 in 3!)
-```
-
-> **The Ultimate Acid Test**:  
-> Even though dropout was excluded from the clustering model, the Disengaged profile exhibits a **7.4-fold higher dropout rate** than the Balanced profile ($p < .001$)!
-
----
-
-# Earth Sciences Benchmark: Fiji Earthquakes
-
----
-
-## When DBSCAN Truly Triumphs: Spatial Manifolds
-
-Where does DBSCAN crush $K$-means and GMM?  
-On **arbitrary, curved spatial geological structures**!
-
-Consider R's `quakes` dataset (1,000 seismic events near Fiji):
-
-```r
-data(quakes)
+profile_distances <- dist(profile_data)
+sil_km  <- mean(silhouette(kmeans_clusters$cluster, profile_distances)[, "sil_width"])
+sil_gmm <- mean(silhouette(profile_gmm$classification, profile_distances)[, "sil_width"])
+ari_methods <- adjustedRandIndex(kmeans_clusters$cluster, profile_gmm$classification)
 quake_db <- dbscan(quakes[, c("long", "lat")], eps = 1.5, minPts = 10)
 ```
 
+# Advanced Clustering
+
+Every method carries a definition of what a group is
+
+**Chapter 14**
+
+Polla Fattah
+
+---
+
+## By the end of today you can
+
+- explain three definitions of a group;
+- name the limits of k-means: hard assignments, round clusters, no outliers;
+- fit a Gaussian mixture model, choose the number of clusters with BIC, and read membership probabilities;
+- find dense clusters and noise points with DBSCAN, and choose its settings;
+- evaluate a clustering with the silhouette, the adjusted Rand index, and interpretability.
+
+---
+
+## Three definitions of a group
+
+| A group is | Method | Allows |
+|---|---|---|
+| cases close to a common centre | k-means | nothing else |
+| a population with its own distribution | Gaussian mixture model | partial membership |
+| a dense region separated by sparse ones | DBSCAN | cases in no group |
+
+The definition decides what the method can find.
+
+---
+
+## Questions Chapter 9 left open
+
+- how sure can we be which profile a student belongs to?
+- is four really the right number?
+- do some students fit no profile at all?
+
+Same profile data: average habits across semesters, plus stress, support, satisfaction, scaled to z-scores.
+
+---
+
+## Three assumptions of k-means
+
+| Assumption | Problem |
+|---|---|
+| every case in exactly one cluster, with certainty | a student halfway between is assigned as firmly as one at the centre |
+| clusters round and similar in size | elongated or unequal groups are cut wrongly |
+| every case in some cluster | no way to say "fits nowhere" |
+
+Real groups of people rarely satisfy these.
+
+---
+
+## A simulation with known structure
+
 ```r
-quakes |>
-  mutate(Cluster = factor(quake_db$cluster)) |>
-  ggplot(aes(x = long, y = lat, color = Cluster)) +
-  geom_point(alpha = 0.7, size = 1.5) +
-  coord_quickmap() +
-  scale_color_manual(values = c("0" = "grey70", "1" = "#1b365d", "2" = "#b8860b")) +
-  labs(title = "DBSCAN Traces Curved Ocean Trenches (Fiji Earthquakes)") +
-  theme_minimal(base_size = 12)
+shapes <- bind_rows(
+  tibble(x = rnorm(100, 0, 0.4), y = rnorm(100, 0, 0.4), truth = "Round group"),
+  tibble(x = rnorm(100, 3, 2),   y = rnorm(100, 1.4, 0.2), truth = "Long group"),
+  tibble(x = runif(15, -2, 7),   y = runif(15, -2, 4),     truth = "Scattered"))
+
+kmeans(xy, 2, nstart = 25)
+Mclust(xy, G = 2)
+dbscan(xy, eps = 0.5, minPts = 5)
 ```
 
-- DBSCAN effortlessly traces the two curved tectonic subduction trenches!
-- It marks isolated, intraplate tremors as **Noise** (`Cluster 0`).
-- $K$-means on this data would carve the long trenches into arbitrary spherical blobs.
+A round group, a long thin group, and 15 points that belong to neither.
 
 ---
 
-# Thesis Checkpoint: Reporting Advanced Clustering
+## Three methods, three answers
+
+```{r}
+#| fig-width: 10
+#| fig-height: 2.9
+ggplot(shape_clusters, aes(x, y, colour = cluster)) +
+  geom_point(size = 1.2) + facet_wrap(~ method) +
+  scale_colour_manual(values = c("1" = navy, "2" = copper, "3" = green, "4" = purple, noise = "grey70")) +
+  coord_equal() + labs(x = NULL, y = NULL, colour = NULL)
+```
+
+| k-means | mixture model | DBSCAN |
+|---|---|---|
+| ARI `r ari_of("k-means")` | ARI `r ari_of("Mixture model")` | ARI `r ari_of("DBSCAN")`, and `r db_noise_found` of 15 scattered points as noise |
 
 ---
 
-## Writing Up GMM & DBSCAN in an Academic Thesis
+## What each method saw
 
-> *"To identify latent behavioral and psychological typologies among graduate students (RQ7), model-based clustering was conducted via Gaussian Mixture Modeling using the mclust package in R. Input features (sleep, study hours, caffeine, exercise, stress, supervisor support, program satisfaction) were standardized to z-scores. Model selection evaluated one to eight mixture components across 14 covariance geometries using the Bayesian Information Criterion (BIC).*
->
-> *BIC decisively supported a three-cluster solution with ellipsoidal, equal-orientation geometry (EVE, BIC = -10,482), providing strong empirical support over a four-cluster alternative ($\Delta BIC = 28.4$). The extracted profiles characterized: Thriving/Balanced (n = 184, 30.7%), Overloaded Hustlers (n = 218, 36.3%), and Disengaged/Isolated (n = 198, 33.0%). Soft assignment analysis indicated that 89.3% of students exhibited high posterior classification certainty ($P \ge .80$), with 10.7% situated along transitional cluster boundaries.*
->
-> *Density-based spatial clustering (DBSCAN, $\epsilon = 2.0, \text{minPts} = 8$) demonstrated that the student body occupies a contiguous multivariate density manifold, while successfully isolating 14 severe behavioral anomalies (Cluster 0, Noise) displaying dangerous combinations of extreme workaholism or total disengagement. Cluster validity was externally corroborated against dropout intent, revealing a 7.4-fold disparity across profiles ($3.8\%$ vs. $28.3\%, p < .001$) despite dropout being excluded from model estimation."*
+- **k-means** drew a straight boundary through the long group;
+- the **mixture model** allowed the long group its elongated shape;
+- **DBSCAN** joined the groups where they touch, one continuous dense region, but alone could say "no group".
 
----
-
-## Chapter 14 Summary: Core Principles
-
-1. **Clusters Reflect Definitions**: Centroid models ($K$-means) find spheres; probabilistic models (GMM) find distributions; density models (DBSCAN) find connected manifolds.
-2. **Soft Assignments**: GMM provides posterior membership probabilities ($z_{ik}$); cases on margins are recognized as uncertain mixtures rather than forced categorizations.
-3. **Objective BIC Selection**: `mclust` uses BIC to choose both cluster count and geometric covariance constraints ($\Sigma_k$). Higher is better.
-4. **Noise Detection**: DBSCAN is uniquely capable of labeling isolated outliers as Cluster 0 (Noise), flagging high-risk multivariate anomalies for pastoral triage.
-5. **Continuous Clouds**: If DBSCAN returns 1 cluster, it proves the population forms a continuous cloud without vacuum gaps; profiles represent dense focal regions within that cloud.
-6. **Triangulate Validation**: Validate clusters via internal metrics (BIC, Silhouette), cross-method concordance (Adjusted Rand Index), and external relevance to downstream outcomes.
+No method is right in general. Choose the definition deliberately, and state it.
 
 ---
 
-# Questions & Practical Workshop
+## Gaussian mixture models
 
-### Next Step: Open `content/playground/chapter14.qmd` to fit Gaussian Mixture Models, visualize uncertainty boundaries, and run DBSCAN live in R!
+The data is a mix of several groups, each with its own normal distribution.
+
+The model estimates each group's **centre**, **spread**, and **size**.
+
+---
+
+## One variable: Old Faithful
+
+```r
+geyser <- Mclust(faithful$waiting)
+summary(geyser, parameters = TRUE)
+```
+
+| | Short waits | Long waits |
+|---|---|---|
+| mixing probability | `r round(100 * gp$pro[1])`% | `r round(100 * gp$pro[2])`% |
+| mean (minutes) | `r round(gp$mean[1])` | `r round(gp$mean[2])` |
+
+Mclust tried one to nine groups and chose `r geyser$G`.
+
+---
+
+## Two normal curves over the data
+
+```{r}
+#| fig-width: 8
+#| fig-height: 3.4
+curves <- tibble(waiting = seq(40, 100, length.out = 300)) |>
+  mutate(`Short waits` = gp$pro[1] * dnorm(waiting, gp$mean[1], sqrt(gp$variance$sigmasq)),
+         `Long waits`  = gp$pro[2] * dnorm(waiting, gp$mean[2], sqrt(gp$variance$sigmasq))) |>
+  tidyr::pivot_longer(-waiting, names_to = "group", values_to = "density")
+ggplot(faithful, aes(x = waiting)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 2, fill = "grey82", colour = "white") +
+  geom_line(data = curves, aes(y = density, colour = group), linewidth = 1.3) +
+  scale_colour_manual(values = c(`Short waits` = copper, `Long waits` = navy)) +
+  labs(x = "Waiting time (minutes)", y = "Density", colour = NULL)
+```
+
+Waiting times between 272 eruptions: two humps, two groups.
+
+---
+
+## Membership probabilities
+
+```r
+predict(geyser, newdata = c(50, 67, 85))$z
+```
+
+| Wait | P(short) | P(long) |
+|---|---|---|
+| 50 minutes | `r geyser_z[1, 1]` | `r geyser_z[1, 2]` |
+| 67 minutes | `r geyser_z[2, 1]` | `r geyser_z[2, 2]` |
+| 85 minutes | `r geyser_z[3, 1]` | `r geyser_z[3, 2]` |
+
+Not just which group, but how sure: **soft assignments**.
+
+---
+
+## Shapes and BIC
+
+With several variables, each group has a centre and a **covariance matrix**: round or elongated, tilted any way.
+
+mclust names each shape with three letters, such as `EEE` (all equal) or `VVV` (all variable).
+
+The **Bayesian information criterion** rewards fit and penalises parameters. In mclust, **higher** BIC is better.
+
+---
+
+## Choosing the number of profiles
+
+```r
+set.seed(123)
+profile_gmm <- Mclust(profile_data, G = 1:8)
+summary(profile_gmm)
+```
+
+BIC chooses `r profile_gmm$G` clusters with the `r profile_gmm$modelName` structure.
+
+The best four-cluster model is `r bic_gap` BIC points behind: above 6 is strong evidence, above 10 very strong.
+
+---
+
+## BIC by number of clusters
+
+```{r}
+#| fig-width: 9
+#| fig-height: 3.8
+bic <- as.data.frame(unclass(profile_gmm$BIC)); bic$G <- as.integer(rownames(bic))
+bic |> tidyr::pivot_longer(-G, names_to = "model", values_to = "BIC") |>
+  filter(!is.na(BIC)) |>
+  ggplot(aes(G, BIC, group = model)) +
+  geom_line(colour = "grey75") +
+  geom_line(data = ~ filter(.x, model == profile_gmm$modelName), colour = copper, linewidth = 1.3) +
+  scale_x_continuous(breaks = 1:8) + labs(x = "Number of clusters", y = "BIC (higher is better)")
+```
+
+Each grey line is one covariance structure; the chosen one is copper.
+
+---
+
+## Describing the three profiles
+
+```{r}
+#| results: asis
+profiles |>
+  summarise(students = n(), across(sleep_hours:satisfaction, ~ round(mean(.x), 1)), .by = gmm_cluster) |>
+  arrange(gmm_cluster) |>
+  rename(cluster = gmm_cluster, sleep = sleep_hours, study = study_hours,
+         caffeine = caffeine_mg, exercise = exercise_days) |>
+  knitr::kable()
+```
+
+Balanced, overloaded, and disengaged or isolated. Cluster numbers are arbitrary labels.
+
+---
+
+## Compared with k-means
+
+```r
+table(gmm = profile_gmm$classification, kmeans = kmeans_clusters$cluster)
+```
+
+- balanced and disengaged groups largely match;
+- k-means's two "overloaded" clusters are joined into one.
+
+With flexible shapes, the mixture model did not need to split the overloaded students.
+
+---
+
+## How certain is each assignment?
+
+```r
+head(round(profile_gmm$z, 2))
+certainty <- apply(profile_gmm$z, 1, max)
+sum(certainty < 0.8)
+```
+
+`apply(..., 1, max)` takes each row's largest probability.
+
+`r sum(certainty < 0.8)` students have less than 80% probability for their most likely profile.
+
+---
+
+## Uncertain students lie where profiles meet
+
+```{r}
+#| fig-width: 8
+#| fig-height: 3.9
+pc <- prcomp(profile_data)$x[, 1:2]
+tibble(PC1 = pc[, 1], PC2 = pc[, 2], cluster = factor(profile_gmm$classification),
+       uncertainty = profile_gmm$uncertainty) |>
+  ggplot(aes(PC1, PC2, colour = cluster, size = uncertainty)) +
+  geom_point(alpha = 0.6) +
+  scale_colour_manual(values = c(navy, copper, green)) + scale_size(range = c(0.6, 4)) +
+  labs(colour = "Cluster", size = "Uncertainty")
+```
+
+Report the share who clearly fit, and treat the rest as mixtures.
+
+---
+
+## DBSCAN: clusters as dense regions
+
+- a cluster is where cases are packed closely together;
+- clusters are separated by sparser regions;
+- cases in sparse regions are **noise**.
+
+No number of clusters in advance, any shape, and "this case fits nowhere".
+
+---
+
+## Core points, border points, noise
+
+| Setting or term | Meaning |
+|---|---|
+| `eps` | radius of each case's neighbourhood |
+| `minPts` | cases a neighbourhood needs to be dense |
+| core point | at least `minPts` cases within `eps` |
+| border point | near a core point, but not itself core |
+| noise | everything else |
+
+Core points within `eps` of each other join the same cluster.
+
+---
+
+## A small example
+
+```r
+tiny <- tibble(
+  x = c(1.0, 1.2, 1.1, 0.9, 1.3,   4.0, 4.2, 3.9, 4.1, 4.3,   2.5, 5.5),
+  y = c(1.0, 1.1, 1.3, 1.2, 0.9,   3.0, 3.2, 3.1, 2.8, 3.0,   4.5, 0.5))
+dbscan(tiny, eps = 0.5, minPts = 3)$cluster
+#>  [1] 1 1 1 1 1 2 2 2 2 2 0 0
+```
+
+Two tight groups become clusters 1 and 2; the two isolated points are 0, noise.
+
+k-means would have had to put them into a group.
+
+---
+
+## Choosing eps
+
+```r
+kNNdistplot(profile_data, k = 7)
+abline(h = 2, lty = "dashed")
+```
+
+Each student's distance to their seventh-nearest neighbour, sorted.
+
+The curve bends upward where isolated students begin: about 2. `minPts = 8`, roughly the number of variables plus one.
+
+---
+
+## One cloud, a few outsiders
+
+```r
+profile_db <- dbscan(profile_data, eps = 2, minPts = 8)
+```
+
+DBSCAN finds `r n_db_clusters` cluster and `r n_noise` noise points.
+
+Not a failure: students form one continuous cloud. The profiles are regions of that cloud, not separate islands.
+
+Smaller `eps` breaks the cloud into fragments and labels hundreds as noise.
+
+---
+
+## Students who fit no profile
+
+| Kind | Pattern |
+|---|---|
+| extreme workers (`r n_extreme_work`) | about 60 study hours, 4 hours' sleep, over 700 mg caffeine, no exercise |
+| extreme rest (`r n_extreme_rest`) | nearly 10 hours' sleep, very little study or caffeine, exercise almost daily |
+
+DBSCAN finds students unusual in their **combination** of values, not one variable at a time.
+
+Keep them, report them separately, and check the profiles without them.
+
+---
+
+## Evaluating a clustering
+
+There are usually no true answers, so evaluation rests on several kinds of evidence:
+
+| Evidence | Asks |
+|---|---|
+| internal measures | compact and well separated? |
+| agreement between methods | do reasonable methods agree? |
+| external validation | do clusters match known categories? |
+| stability | do they survive small changes? |
+| interpretability | do they make sense, and predict outcomes? |
+
+---
+
+## Internal: the silhouette
+
+```r
+profile_distances <- dist(profile_data)
+mean(silhouette(kmeans_clusters$cluster, profile_distances)[, "sil_width"])
+mean(silhouette(profile_gmm$classification, profile_distances)[, "sil_width"])
+```
+
+| k-means | mixture model |
+|---|---|
+| `r f2(sil_km)` | `r f2(sil_gmm)` |
+
+Both low on a −1 to 1 scale: the profiles overlap, as DBSCAN suggested.
+
+---
+
+## The adjusted Rand index
+
+```r
+first  <- c(1, 1, 1, 2, 2, 2)
+second <- c("B", "B", "B", "A", "A", "A")
+third  <- c(1, 1, 2, 2, 3, 3)
+adjustedRandIndex(first, second)   #> 1
+adjustedRandIndex(first, third)    #> much lower
+```
+
+Counts pairs put together or apart by both clusterings, adjusted for chance. Labels do not matter.
+
+k-means against the mixture model: ARI `r f2(ari_methods)`, substantial agreement for four clusters against three.
+
+---
+
+## Interpretability: do profiles predict outcomes?
+
+```{r}
+#| results: asis
+profiles |>
+  left_join(students |> select(student_id, considering_dropout), join_by(student_id)) |>
+  summarise(students = n(), considering_dropout = paste0(round(100 * mean(considering_dropout == "Yes")), "%"),
+            .by = gmm_cluster) |>
+  arrange(gmm_cluster) |> rename(cluster = gmm_cluster) |> knitr::kable()
+```
+
+Dropout played no part in finding the profiles, yet they differ clearly on it.
+
+---
+
+## Report the choices, not just the clusters
+
+- which variables, and how they were scaled;
+- which method, and why that definition of a group;
+- how many clusters, with the evidence (BIC, silhouette);
+- how clearly cases fit, such as the share above 0.8 probability;
+- how robust the profiles are to other reasonable choices.
+
+---
+
+## In your field: earth sciences
+
+```{r}
+#| fig-width: 5
+#| fig-height: 3.9
+quakes |> mutate(cluster = factor(quake_db$cluster)) |>
+  ggplot(aes(long, lat, colour = cluster, shape = cluster == "0")) +
+  geom_point(alpha = 0.7) +
+  scale_colour_manual(values = c("0" = "grey65", "1" = navy, "2" = copper)) +
+  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 4), guide = "none") +
+  coord_quickmap() + labs(x = "Longitude", y = "Latitude", colour = "Cluster")
+```
+
+1,000 earthquakes near Fiji: DBSCAN follows the two curved trenches. Here dense regions really are separated by gaps.
+
+---
+
+## Practical lab: the Chapter 14 playground
+
+Work through the playground exercises in your browser, with hints and solutions.
+
+The browser version uses a hand-written DBSCAN and ARI; the download uses mclust and dbscan.
+
+---
+
+## Practical exercises 1–4: mixture models and DBSCAN
+
+1. Four mixture profiles: which three-cluster profile splits?
+2. How many students have a membership probability above 0.95?
+3. DBSCAN with `eps` of 1.2, 1.6, and 2.4.
+4. Refit the mixture model without the noise students.
+
+---
+
+## Practical exercises 5–7: evaluation
+
+5. ARI between the mixture model and Ward's hierarchical clustering.
+6. Compare the profiles on final GPA.
+7. Separate the simulated groups with a gap: what changes for each method?
+
+---
+
+## Try this yourself
+
+For grouping in your own field:
+
+- which definition of a group fits your theory?
+- would partial membership be meaningful?
+- should some cases be allowed to fit no group?
+- which outcome, not used to build the groups, could validate them?
+
+---
+
+## Troubleshooting guide (Part 1)
+
+| Symptom | Likely cause |
+|---|---|
+| an elongated group cut in two | k-means assumes round clusters |
+| outliers forced into groups | k-means and mixtures place every case |
+| BIC favours 3 and 4 almost equally | report both, with the evidence |
+| lower BIC treated as better | in mclust, higher is better |
+
+---
+
+## Troubleshooting guide (Part 2)
+
+| Symptom | Likely cause |
+|---|---|
+| DBSCAN finds one cluster | a continuous cloud with no gaps |
+| hundreds of noise points | `eps` too small |
+| cluster labels differ between runs | labels are arbitrary; compare with ARI |
+| low silhouette for every method | groups overlap; no clustering will be crisp |
+
+---
+
+## Completion checklist
+
+- [ ] the definition of a group is chosen and stated;
+- [ ] the number of clusters is justified with BIC or silhouette;
+- [ ] membership certainty is reported;
+- [ ] students who fit no profile are identified and kept;
+- [ ] at least two methods are compared with the ARI;
+- [ ] stability is checked;
+- [ ] profiles are validated on an outcome not used to build them.
+
+---
+
+## Misconceptions to leave behind (Part 1)
+
+| Misconception | Better mental model |
+|---|---|
+| a sophisticated method finds the true groups | each finds groups matching its definition |
+| every case belongs to some group | probabilities and noise describe reality better |
+
+---
+
+## Misconceptions to leave behind (Part 2)
+
+| Misconception | Better mental model |
+|---|---|
+| the best BIC proves the number of groups | nearby models may be almost as good |
+| DBSCAN failed with one cluster | one continuous cloud is a finding |
+
+---
+
+## The chapter in one sentence
+
+> **Choose a definition of a group that fits your data, report how sure each assignment is and who fits nowhere, and judge clusters by agreement, stability, and meaning.**
+
+---
+
+## Next: Chapter 15
+
+The next chapter introduces neural networks:
+
+- a single neuron;
+- from neurons to networks;
+- a neural network for the dropout question;
+- when neural networks are worth using;
+- deep learning.
+
+---
+
+## Questions
+
+In your field, can a case belong partly to two groups?
+
+What would a case that fits no group tell you?

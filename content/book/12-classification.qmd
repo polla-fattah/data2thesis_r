@@ -1,3 +1,7 @@
+---
+number-offset: 11
+---
+
 # Classification Models {#sec-ch12}
 
 ```{r}

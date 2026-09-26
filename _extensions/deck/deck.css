@@ -1,0 +1,322 @@
+/* Lecture decks. Each slide is a 16:9 stage scaled to fit the window; all
+   sizes derive from --u, one hundredth of the stage width, so a slide looks
+   the same on a laptop and a projector. Without JavaScript the slides stack.
+   The same design as the companion decks of the front-end book. */
+
+@import url("https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=IBM+Plex+Mono:wght@400;600&family=Inter:ital,wght@0,400..700;1,400..700&display=swap");
+
+:root {
+  --navy: #1d588c;
+  --navy-deep: #0c2238;
+  --ink: #172a42;
+  --soft: #46586d;
+  --copper: #b4762e;
+  --copper-light: #e0b27a;
+  --paper: #f5f7fa;
+  --line: #d5dde8;
+  --u: min(1vw, 1.7778vh);
+  /* Read by Quarto's mermaid setup */
+  --mermaid-bg-color: #f5f7fa;
+  --mermaid-edge-color: #46586d;
+  --mermaid-node-fg-color: #172a42;
+  --mermaid-fg-color: #172a42;
+  --mermaid-fg-color--lighter: #46586d;
+  --mermaid-fg-color--lightest: #d5dde8;
+  --mermaid-font-family: "Inter", sans-serif;
+  --mermaid-label-bg-color: #f5f7fa;
+  --mermaid-label-fg-color: #172a42;
+  --mermaid-node-bg-color: #eaf0f7;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body.deck {
+  background: var(--navy-deep);
+  color: var(--ink);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* ---- Slides ------------------------------------------------------------ */
+
+.slide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2vh 0;
+}
+.slide__inner {
+  position: relative;
+  width: calc(var(--u) * 100);
+  aspect-ratio: 16 / 9;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(29, 88, 140, 0.25) transparent;
+  padding: calc(var(--u) * 4.2) calc(var(--u) * 6.5);
+  background: var(--paper);
+  background-image:
+    linear-gradient(rgba(29, 88, 140, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 88, 140, 0.05) 1px, transparent 1px);
+  background-size: calc(var(--u) * 4) calc(var(--u) * 4);
+  font-size: calc(var(--u) * 2.2);
+  line-height: 1.42;
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+}
+.slide__inner > :first-child { margin-top: 0; }
+.slide__inner > :last-child { margin-bottom: 0; }
+
+h1, h2 { font-family: "Chakra Petch", sans-serif; font-weight: 700; line-height: 1.08; }
+h2 {
+  margin: 0 0 calc(var(--u) * 2);
+  color: var(--navy);
+  font-size: calc(var(--u) * 4.2);
+}
+h2::after {
+  content: "";
+  display: block;
+  width: calc(var(--u) * 7);
+  height: calc(var(--u) * 0.4);
+  margin-top: calc(var(--u) * 1.2);
+  background: var(--copper);
+  border-radius: 1em;
+}
+p { margin: 0 0 calc(var(--u) * 1.2); }
+strong { color: var(--navy); }
+ul, ol { margin: 0 0 calc(var(--u) * 1.2); padding-inline-start: 1.3em; }
+/* Space between a block and the sentence that follows it. */
+table, pre { margin-bottom: calc(var(--u) * 1.4) !important; }
+.slide__inner > :last-child { margin-bottom: 0 !important; }
+li { margin: 0 0 calc(var(--u) * 0.8); }
+li::marker { color: var(--copper); font-weight: 700; }
+ul ul, ol ul { margin-top: calc(var(--u) * 0.6); font-size: 0.92em; }
+
+code {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.9em;
+  padding: 0.08em 0.35em;
+  border-radius: 0.3em;
+  background: rgba(29, 88, 140, 0.09);
+  color: var(--navy);
+}
+pre {
+  margin: 0;
+  padding: calc(var(--u) * 1.6) calc(var(--u) * 2.2);
+  border-radius: calc(var(--u) * 1.2);
+  background: var(--navy-deep);
+  color: #d9e3ef;
+  /* --fit is set by deck.js when a long command would not fit. */
+  font-size: calc(var(--u) * 1.75 * var(--fit, 1));
+  line-height: 1.45;
+  overflow: auto;
+}
+pre code { padding: 0; background: none; color: inherit; font-size: inherit; }
+
+table { width: 100%; border-collapse: collapse; font-size: calc(var(--u) * 1.8); line-height: 1.35; }
+th, td { padding: calc(var(--u) * 0.5) calc(var(--u) * 0.8); text-align: start; border-bottom: 1px solid var(--line); }
+th { color: var(--soft); font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.06em; }
+td:first-child { font-weight: 600; color: var(--navy); white-space: normal; }
+
+.mermaid {
+  max-height: calc(var(--u) * 36);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.mermaid svg {
+  max-height: calc(var(--u) * 35);
+  width: auto !important;
+}
+
+blockquote {
+  margin: calc(var(--u) * 2) 0 0;
+  padding: calc(var(--u) * 1.6) calc(var(--u) * 2.4);
+  border-inline-start: calc(var(--u) * 0.5) solid var(--copper);
+  background: rgba(180, 118, 46, 0.08);
+  font-family: "Chakra Petch", sans-serif;
+  font-size: calc(var(--u) * 3);
+  color: var(--ink);
+}
+blockquote p { margin: 0; }
+
+a { color: var(--navy); }
+
+/* ---- Title slides: the cover's dark navy ------------------------------- */
+
+.slide--title .slide__inner {
+  background:
+    radial-gradient(ellipse 70% 60% at 85% 20%, rgba(201, 138, 63, 0.18), transparent 60%),
+    linear-gradient(160deg, #0a1d31 0%, var(--navy-deep) 45%, #143e63 100%);
+  color: #c3d1e2;
+}
+.slide--title .slide__inner::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: calc(var(--u) * 4) calc(var(--u) * 4);
+  pointer-events: none;
+}
+.slide--title .slide__inner > * { position: relative; }
+.slide--title h1 {
+  margin: 0 0 calc(var(--u) * 2.4);
+  color: #ffffff;
+  font-size: calc(var(--u) * 6);
+}
+.slide--title p { font-size: calc(var(--u) * 2.6); }
+.slide--title p:first-of-type { font-style: italic; }
+.slide--title strong { color: var(--copper-light); }
+.slide--title code { background: rgba(255, 255, 255, 0.1); color: var(--copper-light); }
+
+/* ---- Presenting (JavaScript on): one slide at a time ------------------- */
+
+.deck-exit,
+.deck-controls,
+.deck-progress { display: none; }
+
+.js .deck { overflow: hidden; }
+.js .slide {
+  position: fixed;
+  inset: 0;
+  padding: 0;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+.js .slide.is-current { visibility: visible; opacity: 1; }
+
+.js .deck-exit {
+  display: block;
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  z-index: 2;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: #c3d1e2;
+  font: 500 13px/1 "Inter", sans-serif;
+  text-decoration: none;
+  opacity: 0.55;
+}
+.js .deck-exit::before { content: "\2190  "; }
+.js .deck-exit:hover,
+.js .deck-exit:focus-visible { opacity: 1; background: rgba(255, 255, 255, 0.08); }
+
+.js .deck-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  z-index: 2;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(12, 34, 56, 0.72);
+  color: #c3d1e2;
+  font: 500 13px/1 "IBM Plex Mono", monospace;
+  opacity: 0.4;
+  transition: opacity 160ms ease;
+}
+.js .deck-controls:hover,
+.js .deck-controls:focus-within { opacity: 1; }
+.deck-controls button {
+  width: 34px;
+  height: 30px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.deck-controls button:hover { background: rgba(255, 255, 255, 0.1); }
+.deck-controls button:focus-visible { outline: 2px solid var(--copper-light); outline-offset: 1px; }
+.deck-count { min-width: 64px; text-align: center; }
+
+.js .deck-progress {
+  display: block;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 4px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.06);
+}
+.deck-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--copper);
+  transition: width 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .slide, .deck-progress span { transition: none; }
+}
+
+/* ---- Print: one slide per landscape page ------------------------------- */
+
+@page { size: 16in 9in; margin: 0; }
+@media print {
+  body.deck { background: #fff; }
+  .js .deck { overflow: visible; }
+  .js .slide { position: static; visibility: visible; opacity: 1; }
+  .slide { padding: 0; break-after: page; height: 9in; }
+  .slide__inner { --u: 0.16in; width: 16in; height: 9in; }
+  .deck-exit, .deck-controls, .deck-progress { display: none !important; }
+}
+
+/* ---- Quarto's page wrapper ---------------------------------------------- */
+
+#title-block-header, #quarto-header, .quarto-title-block { display: none; }
+main.content, #quarto-content, #quarto-document-content { margin: 0; padding: 0; max-width: none; }
+div.sourceCode { margin: 0 0 calc(var(--u) * 1.4); background: none; border: 0; }
+.slide__inner > div.sourceCode:last-child,
+.slide__inner > .cell:last-child { margin-bottom: 0; }
+pre.sourceCode { margin-bottom: 0 !important; }
+pre code span { color: inherit; }
+.cell-output pre { background: #e8eef5; color: var(--ink); }
+.cell-output-display { text-align: center; }
+.cell-output-display img { max-height: calc(var(--u) * 29); max-width: 100%; }
+mjx-container { font-size: 105% !important; }
+
+/* Diagrams: Quarto draws mermaid as an SVG inside a figure. deck-script
+   sets --vbw to the drawing's natural width, so node text comes out at about
+   the size of the slide text whatever the stage size. */
+.slide figure { margin: 0; }
+svg[aria-roledescription] {
+  display: block;
+  margin: 0 auto;
+  width: 100%;
+  height: auto;
+  max-width: min(100%, calc(var(--vbw, 400) * var(--u) / 7.5)) !important;
+  max-height: calc(var(--u) * 34);
+}
+svg[aria-roledescription] .node rect,
+svg[aria-roledescription] .node polygon {
+  fill: #eaf0f7 !important;
+  stroke: var(--navy) !important;
+  stroke-width: 1.4px !important;
+}
+svg[aria-roledescription] .node rect { rx: 8px; ry: 8px; }
+svg[aria-roledescription] .nodeLabel,
+svg[aria-roledescription] .nodeLabel p { color: var(--ink) !important; font-family: "Inter", sans-serif; }
+svg[aria-roledescription] .flowchart-link { stroke: var(--soft) !important; }
+svg[aria-roledescription] marker path { fill: var(--soft) !important; stroke: var(--soft) !important; }
+svg[aria-roledescription] .edgeLabel,
+svg[aria-roledescription] .edgeLabel p { background: var(--paper) !important; color: var(--soft); }
+svg[aria-roledescription] .cluster rect { fill: rgba(29, 88, 140, 0.04) !important; stroke: var(--line) !important; }
+
+/* Two columns: ::: {.columns} with ::: {.column} inside. */
+.columns { display: flex; gap: calc(var(--u) * 3); align-items: flex-start; }
+.column { flex: 1 1 0; min-width: 0; }
+
+/* Task lists in the completion checklist. */
+ul.task-list { list-style: none; padding-inline-start: 0.2em; }
+ul.task-list input { margin-inline-end: 0.5em; accent-color: var(--copper); }
+
+/* Row groups in multi-row diagrams: subgraph R1[" "] draws no visible box. */
+svg[aria-roledescription] .cluster rect[style*="none"],
+svg[aria-roledescription] g.cluster:has(.cluster-label span:empty) rect { fill: transparent !important; stroke: transparent !important; }

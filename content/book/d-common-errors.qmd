@@ -1,4 +1,8 @@
-# Common Errors and How to Fix Them {#sec-app-errors}
+---
+number-sections: false
+---
+
+# Appendix D: Common Errors and How to Fix Them {#sec-app-errors}
 
 ```{r}
 #| label: setup

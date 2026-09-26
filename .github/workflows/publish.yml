@@ -1,7 +1,8 @@
 # Builds the website and the book with Quarto and publishes them to GitHub Pages.
 #
-# Code results are stored in site/_freeze and book/_freeze (render locally and
-# commit them), so this workflow does not need R.
+# Code results are stored in _freeze (render locally and commit it), so this
+# workflow does not need R. The pages are rendered under _site/content and copied
+# to the site root, so that /book/, /playground/, and /slides/ work as before.
 #
 # One-time setup on GitHub: Settings > Pages > Build and deployment >
 # Source: "GitHub Actions".
@@ -36,6 +37,7 @@ jobs:
         run: |
           quarto render
           cp -r _site/content/* _site/
+          touch _site/.nojekyll
 
       - name: Upload the site
         uses: actions/upload-pages-artifact@v3

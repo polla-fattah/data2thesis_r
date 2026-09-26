@@ -1,4 +1,8 @@
-# R Packages {#sec-app-packages}
+---
+number-sections: false
+---
+
+# Appendix C: R Packages {#sec-app-packages}
 
 ```{r}
 #| label: setup

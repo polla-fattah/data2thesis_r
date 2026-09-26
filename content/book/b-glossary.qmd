@@ -1,4 +1,8 @@
-# Glossary {#sec-app-glossary}
+---
+number-sections: false
+---
+
+# Appendix B: Glossary {#sec-app-glossary}
 
 ```{r}
 #| label: setup

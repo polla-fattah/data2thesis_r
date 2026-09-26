@@ -1,3 +1,7 @@
+---
+number-offset: 3
+---
+
 # Data Visualization {#sec-ch04}
 
 ```{r}

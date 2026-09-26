@@ -1,3 +1,7 @@
+---
+number-offset: 4
+---
+
 # From Research Question to Data {#sec-ch05}
 
 ```{r}

@@ -1,661 +1,622 @@
 ---
-title: "Artificial Intelligence in Academic Research"
-subtitle: "Coding Assistants, Qualitative NLP with ellmer, Cohen's Kappa, and Research Ethics"
-author: "Dr. Polla Fattah"
-institute: "From Data to Thesis: Research Data Analysis with R"
-format:
-  revealjs:
-    theme: [default, ../../styles/theme.scss]
-    slide-number: true
-    preview-links: auto
-    chalkboard: true
-    transition: slide
-    highlight-style: github
-    code-line-numbers: false
-    width: 1200
-    height: 750
+title: "Using AI with R"
+description: "Chapter 18: the reliability of coding and Cohen's kappa, how language models work, AI as a coding assistant, coding open-ended answers with a language model through ellmer, and using AI responsibly."
+format: deck-html
 execute:
+  echo: false
   freeze: auto
 ---
 
-# Artificial Intelligence with R
-
-### Augmenting Quantitative and Qualitative Science
-
-**Chapter 18 · From Data to Thesis**
-
-Dr. Polla Fattah
-
----
-
-## When Research Data is Unstructured Text
-
-Much of what researchers study cannot be captured on a 5-point Likert scale:
-
-- Open-ended survey responses
-- In-depth qualitative interview transcripts
-- Clinical admission notes and doctor discharge summaries
-- Policy documents, historical archives, and committee minutes
-
-> **The Methodological Bottleneck**:  
-> Reading and categorizing 1,000 open-ended responses by hand can take weeks of full-time labor.
-
-Can modern **Large Language Models (LLMs)** assist with qualitative coding without compromising scientific rigor?
-
----
-
-## The Two Faces of AI in Research
-
-In modern data science, Artificial Intelligence serves two distinct roles:
-
-```
-+-----------------------------------------------------------------------------------+
-|                            ARTIFICIAL INTELLIGENCE                                |
-+----------------------------------------+------------------------------------------+
-|          1. CODING ASSISTANT           |          2. QUALITATIVE ANALYST          |
-|  - Generates R code drafts             |  - Reads open-ended text                 |
-|  - Explains complex error traces       |  - Classifies responses into themes      |
-|  - Refactors tidyverse pipelines       |  - Extracts clinical entities from notes |
-|  - Interactive debugging partner       |  - Validated against human benchmarks    |
-+----------------------------------------+------------------------------------------+
-```
-
-In both roles, **the human researcher remains legally and intellectually responsible** for every line of code and every published finding.
-
----
-
-# Inter-Rater Reliability
-
-### Measuring Agreement Beyond Mere Chance
-
----
-
-## The Problem with Raw Agreement
-
-Suppose two research assistants code 20 student responses for their primary challenge: **Workload** vs. **Family**.
-
 ```{r}
-#| echo: true
-coder_a <- c(rep("Workload", 16), rep("Family", 4))
-coder_b <- c(rep("Workload", 14), rep("Family", 2),
-             rep("Workload", 2),  rep("Family", 2))
-
-# Raw percentage agreement:
-mean(coder_a == coder_b)
-```
-
-**80% agreement sounds impressive!** But does this reflect genuine coding consistency?
-
----
-
-## The Base-Rate Illusion
-
-Look closer at the marginal distributions:
-- Coder A categorized **80%** of all responses as *Workload*.
-- Coder B categorized **80%** of all responses as *Workload*.
-
-```
-Chance agreement on Workload:  0.80 × 0.80 = 0.64
-Chance agreement on Family:    0.20 × 0.20 = 0.04
-Total Expected Chance Agreement = 0.64 + 0.04 = 0.68 (68%)
-```
-
-Two coders throwing darts at a board with these base rates would agree **68% of the time purely by luck**!
-
-The observed $80\%$ agreement gained very little ground over sheer coincidence.
-
----
-
-## Cohen's Kappa ($\kappa$)
-
-Jacob Cohen (1960) formulated **Kappa** to measure agreement corrected for chance:
-
-$$\kappa = \frac{P_o - P_e}{1 - P_e}$$
-
-Where:
-- $P_o$ = **Observed proportion of agreement**
-- $P_e$ = **Expected agreement under independence (chance)**
-- $1 - P_e$ = Maximum possible agreement achievable beyond chance
-
-$$\kappa = \frac{0.80 - 0.68}{1 - 0.68} = \frac{0.12}{0.32} = \mathbf{0.375}$$
-
-What looked like an impressive $80\%$ is actually **poor-to-fair reliability** ($\kappa = 0.38$).
-
----
-
-## Interpreting Cohen's Kappa
-
-The standard benchmarks established by Landis & Koch (1977):
-
-| Cohen's $\kappa$ Range | Strength of Agreement | Acceptable for Science? |
-|---|---|---|
-| $< 0.20$ | Slight agreement | Unacceptable |
-| $0.21 - 0.40$ | Fair agreement | Problematic / Revise codebook |
-| $0.41 - 0.60$ | Moderate agreement | Minimum threshold for exploratory work |
-| $0.61 - 0.80$ | Substantial agreement | Good scientific reliability |
-| $0.81 - 1.00$ | Almost perfect | Gold standard benchmark |
-
-In `tidymodels` / `yardstick`, calculate it directly:
-```r
-yardstick::kap(df, truth = human_code, estimate = ai_code)
-```
-
----
-
-# How Large Language Models Work
-
-### Next-Token Probability Engines, Not Truth Oracles
-
----
-
-## The Autoregressive Mechanism
-
-LLMs (ChatGPT, Claude, Gemini, Gemma, Llama) are massive artificial neural networks trained on hundreds of billions of words.
-
-At their core, they perform one mathematical task:
-
-$$P(w_{t} \mid w_1, w_2, \dots, w_{t-1})$$
-
-> **Predicting the next token** (word or sub-word piece) given the entire sequence that came before it.
-
-```
-Input: "The student was stressed because of the upcoming ..."
-Probabilities:
-  - "deadline"  (58%)
-  - "exam"      (31%)
-  - "meeting"    (8%)
-  - "banana"    (0.00001%)
-```
-
-The model outputs text by sampling from this conditioned probability distribution.
-
----
-
-## What LLMs Excel At vs Where They Fail
-
-```
-+-------------------------------------+-------------------------------------+
-|         WHAT LLMs DO WELL           |         WHERE LLMs FAIL             |
-+-------------------------------------+-------------------------------------+
-| - Writing standard R / tidyverse    | - Plausible Hallucinations          |
-| - Explaining error messages         |   (Inventing fake functions & args) |
-| - Translating between languages     | - Fabricating academic citations    |
-| - Synthesizing qualitative text     | - Silent logic bugs in calculations |
-| - Adhering to structured schemas    | - Knowledge cutoffs (outdated APIs) |
-+-------------------------------------+-------------------------------------+
-```
-
-::: {.callout-important}
-### Plausibility $\neq$ Veracity
-An LLM does not generate text because it knows it is true. It generates text because it sounds **statistically probable**.
-:::
-
----
-
-# AI as an R Coding Assistant
-
-### Best Practices for Pair Programming
-
----
-
-## Crafting High-Precision Prompts
-
-An assistant can only be as accurate as your context:
-
-```
-POOR PROMPT:
-"Write R code to get the dropout rates."
-(Result: Generic code, assumed column names, likely base-R or outdated syntax)
-
-HIGH-PRECISION PROMPT:
-"I have a tibble called students. Here is glimpse(students):
-- student_id: chr
-- faculty: fct
-- considering_dropout: chr ('Yes', 'No')
-
-Calculate the percentage of students considering dropout WITHIN each faculty.
-Use modern dplyr syntax with the native pipe |>."
-```
-
----
-
-## The Subtle Trap of Plausible Logic Bugs
-
-Suppose you ask an assistant for the dropout percentage by faculty:
-
-```r
-# Assistant's Suggestion:
-students |>
-  summarise(
-    percent = 100 * sum(considering_dropout == "Yes") / nrow(students),
-    .by = faculty
-  )
-```
-
-### The Danger:
-- It executes without any error!
-- The numbers look reasonable ($3.2\%, 4.1\%, 2.8\%$).
-- **The flaw**: `nrow(students)` divides by the **entire university population**, not the faculty total! The percentages sum to the overall rate rather than each faculty's internal rate!
-
----
-
-## The Corrected Calculation
-
-To compute the proportion *within* each faculty group:
-
-```{r}
-#| echo: true
-library(dplyr)
+#| include: false
 library(data2thesis)
-
-students |>
-  summarise(
-    n_students = n(),
-    n_dropout  = sum(considering_dropout == "Yes"),
-    percent    = round(100 * mean(considering_dropout == "Yes"), 1),
-    .by        = faculty
-  ) |>
-  arrange(desc(percent))
-```
-
-The mean of a logical vector (`considering_dropout == "Yes"`) is mathematically identical to the internal proportion!
-
----
-
-## Four Verification Heuristics
-
-Whenever using AI-generated code in your research:
-
-1. **Test on Toy Data**: Run the code on a 4-row handmade tibble where you know the true answer by mental arithmetic.
-2. **Triangulate by Another Route**: Verify summary numbers against simple counts:
-   ```r
-   students |> count(faculty, considering_dropout)
-   ```
-3. **Verify Function Help**: Check `?function_name` in the R console to ensure suggested arguments actually exist in your installed package version.
-4. **Demand Explanations**: Ask: *"Explain line 3. Why did you use .data[[...]] instead of standard evaluation?"*
-
----
-
-# Qualitative Coding with R & LLMs
-
-### The RQ11 Case Study: Graduate Student Challenges
-
----
-
-## Research Question 11
-
-In the university wellbeing dataset, students completed an open-ended prompt:
-
-> *"What has been your biggest challenge during your studies?"*
-
-```{r}
-#| echo: true
+library(dplyr)
+library(ggplot2)
 library(stringr)
+library(yardstick)
 
-open_responses |>
-  slice(c(5, 9, 15, 55)) |>
-  pull(biggest_challenge)
-```
+navy <- "#1d588c"; copper <- "#b4762e"; soft <- "#46586d"
+theme_set(theme_minimal(base_size = 15) +
+  theme(panel.grid.minor = element_blank(),
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        axis.title = element_text(colour = soft)))
+knitr::opts_chunk$set(dev = "svg", dev.args = list(bg = "transparent"),
+                      message = FALSE, warning = FALSE)
+f2 <- function(x) sprintf("%.2f", x)
 
-**The Goal**: Categorize hundreds of free-text responses into a standardized codebook.
+coder_a <- c(rep("Workload", 16), rep("Family", 4))
+coder_b <- c(rep("Workload", 14), rep("Family", 2), rep("Workload", 2), rep("Family", 2))
+observed <- mean(coder_a == coder_b)
+chance <- sum(prop.table(table(coder_a)) * prop.table(table(coder_b)))
+kappa_ex <- (observed - chance) / (1 - chance)
 
----
+wrong <- students |> summarise(percent = 100 * sum(considering_dropout == "Yes") / nrow(students), .by = faculty)
+right <- students |> summarise(percent = 100 * mean(considering_dropout == "Yes"), .by = faculty)
 
-## The Seven-Theme Codebook
-
-Elaf developed a qualitative codebook with seven distinct themes:
-
-```
-1. Supervision : Supervisor friction, lack of feedback, missed meetings.
-2. Workload    : Excessive volume, tight deadlines, time management.
-3. Finances    : Tuition fees, living expenses, need for outside employment.
-4. Family      : Childcare, eldercare, partner commitments, home distractions.
-5. Health      : Physical illness, mental health, anxiety, chronic sleep loss.
-6. Isolation   : Loneliness, imposter syndrome, lack of peer community.
-7. Other       : Bureaucracy, ethics clearance, English proficiency, tech issues.
-```
-
-Elaf hand-coded a representative benchmark sample ($N = 100$) over two weeks.
-
----
-
-## Baseline Method: Keyword Dictionary
-
-Before jumping to deep neural networks, establish a transparent baseline using regular expressions:
-
-```{r}
-#| echo: true
 keywords <- c(
   Supervision = "\\b(supervis|feedback|guidance|meeting)",
   Workload    = "\\b(time|deadline|workload|too much|assignment|reading|busy)",
-  Finances    = "\\b(money|fee|scholarship|rent|afford|salary|income|funding|stipend)",
-  Family      = "\\b(famil|child|kid|son\\b|daughter|baby|parent|mother|father)",
-  Health      = "\\b(sleep|tired|stress|anxi|health|ill\\b|burnout|exhaust)",
-  Isolation   = "\\b(lonel|alone|friends|outsider|miss (home|my)|far from)",
-  Other       = "\\b(ethic|participant|statistic|library|procedure|english)"
-)
-```
-
----
-
-## Keyword Classification Logic
-
-Assign each response to the theme with the highest keyword count:
-
-```{r}
-#| echo: true
+  Finances    = "\\b(money|fee|scholarship|rent|afford|salary|income|funding|stipend|loan)",
+  Family      = "\\b(famil|child|kid|son\\b|daughter|baby|parent|mother|father|husband|wife)",
+  Health      = "\\b(sleep|tired|stress|anxi|health|ill\\b|burnout|headache|coffee|exhaust)",
+  Isolation   = "\\b(lonel|alone|friends|outsider|miss (home|my)|far from|know no one)",
+  Other       = "\\b(ethic|participant|statistic|library|procedure|english|power cut|laptop|internet|software)")
 code_by_keywords <- function(answer) {
   hits <- sapply(keywords, \(pattern) str_count(str_to_lower(answer), pattern))
   if (all(hits == 0)) "Other" else names(keywords)[which.max(hits)]
 }
-
-code_by_keywords("I miss my family and I cannot afford the tuition fees.")
-```
-
-- Matches 1 Family keyword ("family")
-- Matches 2 Finance keywords ("afford", "fees")
-- Classifies as: **Finances**
-
----
-
-## Evaluating Keyword Performance
-
-How well does the dictionary match Elaf's manual coding?
-
-```{r}
-#| echo: true
-library(yardstick)
-
 themes <- names(keywords)
-
 keyword_check <- open_responses_coded |>
-  mutate(
-    keyword_theme = sapply(biggest_challenge, code_by_keywords),
-    theme         = factor(theme, levels = themes),
-    keyword_theme = factor(keyword_theme, levels = themes)
-  )
+  mutate(keyword_theme = sapply(biggest_challenge, code_by_keywords),
+         theme = factor(theme, levels = themes), keyword_theme = factor(keyword_theme, levels = themes))
+kw_acc <- accuracy(keyword_check, theme, keyword_theme)$.estimate
+kw_kap <- kap(keyword_check, theme, keyword_theme)$.estimate
 
-keyword_check |> accuracy(truth = theme, estimate = keyword_theme)
-keyword_check |> kap(truth = theme, estimate = keyword_theme)
+ai <- read.csv("../../data-raw/ai_coding_results.csv")
+ai_meta <- read.csv("../../data-raw/ai_coding_meta.csv")
+ai_check <- open_responses_coded |>
+  left_join(ai, join_by(student_id)) |>
+  mutate(across(c(theme, ai_theme, ai_theme_rerun), \(x) factor(x, levels = themes)))
+ai_acc <- accuracy(ai_check, theme, ai_theme)$.estimate
+ai_kap <- kap(ai_check, theme, ai_theme)$.estimate
+rerun_agree <- mean(ai_check$ai_theme == ai_check$ai_theme_rerun, na.rm = TRUE)
+kappa_label <- function(k) as.character(cut(k, c(-Inf, 0.2, 0.4, 0.6, 0.8, Inf),
+  labels = c("slight", "fair", "moderate", "substantial", "almost perfect")))
+q_support <- questionnaire |>
+  mutate(support = rowMeans(pick(support_1:support_6), na.rm = TRUE)) |> select(student_id, support)
 ```
 
-**Results**: Accuracy $\approx 61\%$, $\kappa \approx 0.54$ (Moderate agreement).  
-**Why it fails**: Keywords cannot parse semantic context, negation, or competing clauses.
+# Using AI with R
+
+Draft with AI, check everything, and stay responsible
+
+**Chapter 18**
+
+Polla Fattah
 
 ---
 
-# Calling LLMs with `ellmer`
+## By the end of today you can
 
-### Seamless R Integration with Cloud and Local Models
-
----
-
-## Introducing the `ellmer` Package
-
-**`ellmer`** (developed by Hadley Wickham & Posit) connects R directly to state-of-the-art language models:
-
-```
-                       ellmer in R
-                            |
-           +----------------+----------------+
-           |                                 |
-   Cloud API Models                  Local Models
-   (Claude, OpenAI, Gemini)          (Ollama / Gemma / Llama)
-   - Highest accuracy                - 100% On-device privacy
-   - Requires API key                - Free / Zero API costs
-   - Data sent over internet         - Complies with strict ethics
-```
+- explain how the reliability of coding is measured, and why chance matters;
+- explain how large language models work, and why they make confident mistakes;
+- use an AI assistant to write, explain, and debug R code, and check its answers;
+- call a language model from R with ellmer, with structured answers;
+- validate AI coding against human coding with accuracy and Cohen's kappa;
+- use AI responsibly: protect data, keep work reproducible, and disclose it.
 
 ---
 
-## Protecting API Keys in R
+## Text as research data
 
-::: {.callout-caution}
-### Never Hard-Code API Keys in Your Scripts!
-If you push your script to GitHub, automated scrapers will steal your key within seconds.
-:::
+"What has been your biggest challenge during your studies?"
 
-Store keys in your user-level `.Renviron` file:
+`r nrow(open_responses)` students answered in their own words (RQ11).
+
+`r nrow(open_responses_coded)` answers were coded by hand into themes, which took most of two weeks. Could an AI tool code the rest reliably?
+
+---
+
+## Qualitative coding
+
+Reading each text and assigning it to a theme defined in a **codebook**.
+
+Coding is judgement, and judgements differ.
+
+Whether the coder is a person, a keyword list, or a program, the question is the same: does it code reliably?
+
+---
+
+## Raw agreement can mislead
 
 ```r
-# Open .Renviron safely in RStudio
-usethis::edit_r_environ()
+coder_a <- c(rep("Workload", 16), rep("Family", 4))
+coder_b <- c(rep("Workload", 14), rep("Family", 2),   # the first 16
+             rep("Workload", 2),  rep("Family", 2))   # the last 4
 ```
 
-Add your credentials:
-```bash
-ANTHROPIC_API_KEY=sk-ant-api03-...
-OPENAI_API_KEY=sk-proj-...
-GEMINI_API_KEY=AIzaSy...
-```
+| Observed agreement | Chance agreement | Cohen's kappa |
+|---|---|---|
+| `r round(100 * observed)`% | `r round(100 * chance)`% | `r f2(kappa_ex)` |
 
-R loads these environment variables silently on startup.
+Each coder puts 80% under Workload, so random coders would agree 68% of the time.
 
 ---
 
-## Running Models Locally with Ollama
+## Cohen's kappa
 
-For sensitive human participant data, use **Ollama** ([ollama.com](https://ollama.com)):
+$$
+\kappa = \frac{\text{observed} - \text{chance}}{1 - \text{chance}}
+$$
 
-1. Install Ollama on your computer.
-2. In your terminal, pull a compact, high-performance open model:
-   ```bash
-   ollama pull gemma4:e4b
-   ```
-3. Connect from R with zero configuration:
-   ```r
-   library(ellmer)
-   chat <- chat_ollama(model = "gemma4:e4b")
-   chat$chat("What is Cohen's kappa?")
-   ```
-- **Data never leaves your machine.**
-- Completely compliant with institutional IRB / Ethics boards!
+| Kappa | Agreement |
+|---|---|
+| 0 | no better than chance |
+| 0.41 to 0.60 | moderate |
+| 0.61 to 0.80 | substantial |
+| above 0.80 | almost perfect |
+
+`kap()` from yardstick. The standard measure of **inter-rater reliability**.
 
 ---
 
-## Structured Output Schemas
+## How large language models work
 
-When processing 1,000 texts, we cannot accept rambling conversational replies. We need **machine-readable structured output**.
+- a neural network (Chapter 15) with billions of weights;
+- trained on enormous amounts of text: books, websites, code;
+- learns to predict the next **token**, a word or part of one;
+- answers by generating one likely token at a time;
+- further training turns it into an assistant that follows instructions.
+
+---
+
+## Why they make confident mistakes
+
+| Strength or weakness | Because |
+|---|---|
+| fluent in R | much R was in the training text |
+| **hallucination**: plausible inventions | it produces what is plausible, not verified |
+| out of date | knowledge stops at the training cut-off |
+| knows nothing about your data | unless you tell it |
+
+> **Use AI to draft, and check everything it produces.**
+
+---
+
+## Asking good questions
+
+| Include | Example |
+|---|---|
+| the goal | the percentage per faculty who considered dropping out |
+| the data | column names and types, e.g. from `glimpse()`; never identifiable data |
+| the tools | dplyr with the native pipe |
+| for errors | the exact message and the code |
+
+---
+
+## A plausible answer that is wrong
 
 ```r
-codebook_prompt <- "
-You are an expert qualitative researcher coding student survey responses.
-Assign each text to exactly ONE theme from the codebook:
-Supervision, Workload, Finances, Family, Health, Isolation, Other.
-"
-
-# Define the strict schema:
-theme_type <- type_object(
-  theme = type_enum(themes, description = "The primary challenge theme")
-)
-
-chat <- chat_anthropic(
-  system_prompt = codebook_prompt,
-  model         = "claude-sonnet-5",
-  params        = params(temperature = 0) # Deterministic
-)
+students |>
+  summarise(percent = 100 * sum(considering_dropout == "Yes") / nrow(students),
+            .by = faculty)
 ```
 
-Setting `temperature = 0` forces the model to select greedy, reproducible tokens.
+It runs, and the numbers look reasonable.
+
+But they add up to `r round(sum(wrong$percent))`: `nrow(students)` counts every student, not those in each faculty.
 
 ---
 
-## Batch Qualitative Coding
-
-Process an entire survey column in parallel:
+## The corrected code
 
 ```r
-ai_results <- parallel_chat_structured(
-  chat,
-  prompts = as.list(open_responses$biggest_challenge),
-  type    = theme_type
-)
+students |>
+  summarise(percent = 100 * mean(considering_dropout == "Yes"),
+            .by = faculty)
 ```
 
-```
-+------------+-------------------------------------------+-------------+
-| student_id | biggest_challenge                         | theme       |
-+------------+-------------------------------------------+-------------+
-| STU_001    | Balancing lab experiments with child care | Family      |
-| STU_002    | Tuition fees are far too high this term   | Finances    |
-| STU_003    | Disagreements with my primary supervisor  | Supervision |
-+------------+-------------------------------------------+-------------+
-```
+The mean of TRUE/FALSE is the proportion TRUE, within each faculty (Chapter 6).
+
+Not a hallucination but a plausible misunderstanding: the most dangerous kind, because nothing looks wrong.
 
 ---
 
-## Evaluating the AI Coder vs Humans
+## Four checks
 
-Joining the AI model's classifications to Elaf's manual benchmark:
+- run the code on a **tiny example** with a known answer;
+- check a number **by another route**: `count(faculty, considering_dropout)`;
+- read the **help page**: does the function exist and do that?
+- ask the assistant to **explain** each line.
 
-```
-+--------------------+----------------+-------------------+
-| Metric             | Keyword Method | Local LLM (Gemma) |
-+--------------------+----------------+-------------------+
-| Raw Accuracy       | 61.0%          | 82.0%             |
-| Chance Agreement   | 15.3%          | 16.1%             |
-| Cohen's Kappa      | 0.54 (Fair)    | 0.78 (Substantial)|
-+--------------------+----------------+-------------------+
-```
-
-The language model approaches human-level agreement ($\kappa = 0.78$), far outperforming the dictionary approach!
+Assistants are excellent teachers: "explain this line by line", "why does this give NA?".
 
 ---
 
-## Inspecting Disagreements: Confusion Matrix
+## AI inside the editor
+
+- **GitHub Copilot** in RStudio suggests code as you type, even from a comment;
+- **Positron Assistant** and similar chats can see open files and, with permission, your data's structure.
+
+Suggestions arrive fast and look authoritative. Read each one before accepting it.
+
+---
+
+## The answers to be coded
+
+```r
+open_responses |> slice(c(5, 9, 15, 55)) |> pull(biggest_challenge)
+```
+
+They vary in length and style, often mention more than one challenge, and contain spelling mistakes.
+
+Seven themes. The hand-coded sample is the benchmark, like a test set (Chapter 11).
+
+---
+
+## The hand-coded themes
 
 ```{r}
-#| label: fig-confusion-matrix
-#| echo: false
+#| results: asis
+open_responses_coded |> count(theme, sort = TRUE) |> knitr::kable()
+```
+
+---
+
+## Coding by keywords
+
+```r
+keywords <- c(
+  Supervision = "\\b(supervis|feedback|guidance|meeting)",
+  Finances    = "\\b(money|fee|scholarship|rent|afford|salary|income|funding)",
+  Family      = "\\b(famil|child|kid|son\\b|daughter|baby|parent|husband|wife)"
+)  # plus Workload, Health, Isolation, and Other in the full list
+code_by_keywords <- function(answer) {
+  hits <- sapply(keywords, \(pattern) str_count(str_to_lower(answer), pattern))
+  if (all(hits == 0)) "Other" else names(keywords)[which.max(hits)]
+}
+```
+
+A **regular expression**: `|` means "or", `\\b` marks the start of a word.
+
+---
+
+## Words are not meaning
+
+```r
+code_by_keywords("I miss my family and I cannot afford the fees.")
+#> [1] "Finances"
+```
+
+One Family word, one Isolation phrase, two Finances words: Finances wins, where a reader might disagree.
+
+| Keywords against hand coding | Accuracy | Kappa |
+|---|---|---|
+| | `r round(100 * kw_acc)`% | `r f2(kw_kap)` |
+
+"My supervisor" in an answer about letting down one's family is about family.
+
+---
+
+## Calling a language model from R
+
+| Kind | Examples | Needs |
+|---|---|---|
+| online | `chat_anthropic()`, `chat_openai()`, `chat_google_gemini()` | an API key; small cost per request |
+| local | `chat_ollama()` through Ollama | a download; no key, no cost, text stays on your computer |
+
+Store an API key in `.Renviron` (`usethis::edit_r_environ()`), never in a shared script.
+
+---
+
+## A chat from R
+
+```r
+library(ellmer)
+chat <- chat_ollama(model = "gemma4:e4b")            # local
+# chat <- chat_anthropic(model = "claude-sonnet-5") # online, needs a key
+chat$chat("In one sentence, what does Cohen's kappa measure?")
+```
+
+Always set the `model` explicitly and record it: models are updated and retired.
+
+The study used a local model, so answers never left the computer and anyone can repeat it for free.
+
+---
+
+## The codebook as a system prompt
+
+```r
+codebook <- "
+You are helping a researcher code open-ended survey answers ...
+Assign each answer to exactly ONE theme: the main challenge.
+Themes:
+- Supervision: the supervisor; feedback, guidance, meetings.
+- Workload: too much work or too little time; deadlines, reading.
+- Finances: money, fees, scholarships, living costs.
+- Family: children, partners, parents, caring duties.
+- Health: physical or mental health, sleep, stress, burnout.
+- Isolation: loneliness, far from home, no colleagues.
+- Other: anything else, such as ethics approval or statistics.
+"
+```
+
+The same instructions for every answer.
+
+---
+
+## Structured answers for many texts
+
+```r
+theme_type <- type_object(
+  theme = type_enum(themes, "The single main theme of the answer."))
+
+chat <- chat_anthropic(system_prompt = codebook, model = "claude-sonnet-5",
+                       params = params(temperature = 0))
+
+ai_codes <- parallel_chat_structured(
+  chat, prompts = as.list(open_responses$biggest_challenge),
+  type = theme_type)
+```
+
+`type_enum()` restricts replies to the themes. `temperature = 0` makes answers as repeatable as possible.
+
+---
+
+## Checking a local model's replies in code
+
+```r
+chat <- chat_ollama(system_prompt = codebook, model = "gemma4:e4b",
+                    params = params(temperature = 0))
+replies  <- parallel_chat_text(chat, as.list(open_responses$biggest_challenge))
+ai_codes <- themes[match(tolower(gsub("[^A-Za-z]", "", replies)),
+                         tolower(themes))]
+```
+
+Smaller models may ignore the structured format. Ask for the theme name only, then let R check it.
+
+A reply that is not a theme becomes `NA`: counted, not silently accepted.
+
+---
+
+## Run once, save, analyse the file
+
+The script records the provider, model, date, software versions, and time taken, and codes the hand-coded sample twice.
+
+| | Value |
+|---|---|
+| model | `r ai_meta$model` |
+| requests | `r ai_meta$requests` |
+| time | about `r round(ai_meta$minutes)` minutes |
+| replies outside the themes | `r ai_meta$failed` |
+
+---
+
+## The model against the hand coding
+
+```r
+ai_check |> accuracy(truth = theme, estimate = ai_theme)
+ai_check |> kap(truth = theme, estimate = ai_theme)
+```
+
+| Coder | Accuracy | Kappa |
+|---|---|---|
+| keywords | `r round(100 * kw_acc)`% | `r f2(kw_kap)` |
+| language model | `r round(100 * ai_acc)`% | `r f2(ai_kap)` |
+
+The model reaches `r kappa_label(ai_kap)` agreement with the hand coding.
+
+---
+
+## Read the disagreements
+
+```{r}
+#| results: asis
+ai_check |> filter(theme != ai_theme) |>
+  mutate(biggest_challenge = str_trunc(biggest_challenge, 70)) |>
+  select(Answer = biggest_challenge, `Hand coding` = theme, Model = ai_theme) |>
+  head(4) |> knitr::kable()
+```
+
+Is the model wrong, the codebook unclear, or the answer ambiguous? A clearer rule helps human and machine alike.
+
+---
+
+## Is the model repeatable?
+
+Asked a second time, the model gave the same theme for `r round(100 * rerun_agree)`% of the answers.
+
+That is not guaranteed for every model or setting; online models can change between runs.
+
+So the outputs are saved and analysed from the file.
+
+---
+
+## What the students said
+
+```{r}
 #| fig-width: 8
-#| fig-height: 4.8
-#| fig-align: center
-library(ggplot2)
-# Simulate realistic agreement matrix
-set.seed(42)
-themes_short <- c("Sup", "Wrk", "Fin", "Fam", "Hlt", "Iso", "Oth")
-cm_data <- matrix(c(
-  14,  1,  0,  0,  0,  0,  1,
-   1, 22,  1,  1,  2,  0,  1,
-   0,  0, 16,  0,  0,  0,  0,
-   0,  1,  0, 12,  0,  0,  0,
-   0,  2,  0,  0, 15,  1,  0,
-   0,  0,  0,  0,  1,  8,  0,
-   1,  1,  0,  0,  0,  0,  4
-), nrow = 7, byrow = TRUE)
-
-cm_df <- as.data.frame(as.table(cm_data))
-colnames(cm_df) <- c("Human", "Model", "Count")
-levels(cm_df$Human) <- themes_short
-levels(cm_df$Model) <- themes_short
-
-ggplot(cm_df, aes(x = Model, y = Human, fill = Count)) +
-  geom_tile(colour = "white", linewidth = 0.8) +
-  geom_text(aes(label = Count), size = 5, fontface = "bold",
-            colour = ifelse(cm_df$Count > 10, "white", "black")) +
-  scale_fill_gradient(low = "#f7fbff", high = "#2171b5") +
-  labs(title = "Confusion Matrix: Human Coder vs. Language Model",
-       subtitle = "Strong diagonal concentration indicates substantial agreement",
-       x = "Model Classification", y = "Human Benchmark") +
-  theme_minimal(base_size = 14)
+#| fig-height: 3.6
+ai |> count(ai_theme) |> mutate(share = n / sum(n)) |>
+  ggplot(aes(share, reorder(ai_theme, share))) +
+  geom_col(fill = navy) + scale_x_continuous(labels = scales::label_percent()) +
+  labs(x = "Share of answers", y = NULL)
 ```
 
----
-
-## Qualitative Error Analysis
-
-When human and model disagree, read the specific text:
-
-> *"I am working 30 hours a week at a supermarket to pay rent, which leaves almost no time for reading."*
-
-- **Human Coder**: *Workload* (Focuses on lack of reading time).
-- **Model Coder**: *Finances* (Focuses on working to pay rent).
-
-::: {.callout-tip}
-### Codebook Refinement
-Disagreements often highlight **ambiguities in your qualitative codebook**, not model failure.  
-Rule addition: *"When paid work causes time pressure, code under Finances."*
-:::
+All `r nrow(ai)` answers, coded by the model once its agreement was checked.
 
 ---
 
-## Convergent Validity: Linking Text to Numbers
+## Text and numbers tell the same story
 
-Do the AI-classified themes correspond to validated psychometric scales?
-
-```
-Theme Classified by AI    | Mean Supervisor Support Scale (1 - 5)
---------------------------+--------------------------------------
-Supervision               | 2.12  <-- Lowest perceived support!
-Workload                  | 3.45
-Isolation                 | 3.20
-Finances                  | 3.82
-Family                    | 3.91
+```{r}
+#| results: asis
+ai |> left_join(q_support, join_by(student_id)) |>
+  summarise(students = n(), support = round(mean(support, na.rm = TRUE), 2), .by = ai_theme) |>
+  arrange(support) |> rename(theme = ai_theme, `mean support` = support) |> knitr::kable()
 ```
 
-- Students classified under **Supervision** reported drastically lower perceived supervisor support ($M = 2.12$ vs $3.8+$).
-- **Validity Confirmed**: The text answers and quantitative survey scales tell the exact same story!
+Students whose main challenge is supervision report the least supervisor support: a check of **validity**.
 
 ---
 
-# Responsible AI in Academic Research
+## Check, and stay responsible
 
-### Ethics, Privacy, and Disclosure
+- run code on known cases;
+- check facts and references against sources: assistants invent plausible references;
+- check coding against human coding.
+
+Whatever appears in your thesis is your responsibility, whoever or whatever drafted it.
 
 ---
 
-## The Core Tenets of Research AI Ethics
+## Protect your data
 
+- text sent online leaves your computer, and may be stored;
+- check the **ethics approval and consent forms** first;
+- check the provider's terms: free accounts often allow training on your data;
+- remove names, places, and identifying details;
+- for sensitive data, use a **local model**, and validate it too.
+
+---
+
+## Keep it reproducible
+
+| Record | Why |
+|---|---|
+| provider, exact model, date | models change and retire |
+| settings such as temperature | they change answers |
+| system prompt and codebook | the instructions are part of the method |
+| the model's outputs | analyse the saved file, not a new call |
+
+Code a sample twice to check consistency.
+
+---
+
+## Disclose it
+
+An AI tool cannot be an author: it cannot take responsibility (COPE).
+
+> Answers were coded into seven themes by a large language model (Gemma 4, e4b version, run locally with Ollama and the ellmer R package, temperature 0) using the codebook in Appendix X. Agreement with the author's hand coding of a random sample of `r nrow(open_responses_coded)` answers was assessed with Cohen's kappa.
+
+---
+
+## Be aware of bias
+
+Models learn from human text and can reproduce its biases:
+
+- in how they describe groups of people;
+- in which answers they find typical;
+- in how well they understand non-standard English.
+
+Check whether accuracy differs between groups, as for any model about people.
+
+---
+
+## In your field: medicine and public health
+
+```r
+medication_type <- type_object(
+  drug          = type_string("Name of the medication"),
+  dose_mg       = type_number("Dose in milligrams"),
+  times_per_day = type_integer("How many times a day it is taken"))
+
+chat$chat_structured(
+  "Patient to continue metformin 500 mg twice daily with meals.",
+  type = medication_type)
 ```
-      1. HUMAN RESPONSIBILITY               2. PARTICIPANT PRIVACY
-   You own every claim, error,           Never send confidential or
-   and hallucination in your thesis.     quasi-identifiable text to APIs.
-                  \                             /
-                   \                           /
-      3. METHODOLOGICAL DISCLOSURE          4. REPRODUCIBILITY FREEZE
-   Disclose model, version, prompts,     Save exact prompt templates and
-   and validation metrics explicitly.    cache outputs for publication.
-```
+
+Free text into fixed fields. Validate against clinician-checked records, and never send patient data to public services.
 
 ---
 
-## Guidelines for Thesis Disclosure (APA & COPE)
+## Practical lab: the Chapter 18 playground
 
-According to the **Committee on Publication Ethics (COPE)**:
-- **AI cannot be listed as an author** (it cannot assume legal responsibility).
-- Its use must be explicitly documented in your **Methods section**.
+Work through the playground exercises in your browser, with hints and solutions.
 
-### Example Methodology Statement:
-> *"Open-ended survey responses were categorized into seven predefined themes using an open-source large language model (Gemma 4, e4b variant) executed locally via Ollama and the R ellmer package (temperature = 0). The prompt contained the full codebook (Appendix B). The model's classifications were validated against a benchmark sample of 100 responses coded independently by the primary author, yielding substantial inter-rater reliability (Accuracy = 82.0%, Cohen's $\kappa = 0.78$)."*
+The saved model coding is included, so no API key is needed.
 
 ---
 
-## Algorithmic Bias and Representativeness
+## Practical exercises 1–3: assistants and keywords
 
-LLMs inherit the linguistic and cultural biases of their training corpora:
-
-- **Dialect Discrepancies**: Models often misinterpret regional idioms, non-native English phrasings, or vernacular expressions.
-- **Sentiment Asymmetry**: Subtle complaints from specific demographic subgroups may be downplayed or misinterpreted.
-
-### The Mitigation Protocol:
-Always test your model's classification accuracy **across demographic strata** (e.g. domestic vs. international students, native vs. ESL speakers).
+1. Ask an assistant for average sleep by faculty and semester, and check it two ways.
+2. Add three keywords: does kappa improve, or are you overfitting?
+3. Read ten keyword disagreements: do you agree with the hand coding?
 
 ---
 
-## Chapter Summary
+## Practical exercises 4–6: models and reliability
 
-- **Qualitative Coding at Scale**: LLMs provide powerful assistance for categorizing text, bridging qualitative nuance and quantitative scale.
-- **Inter-Rater Reliability**: Raw agreement is distorted by high base rates. Always compute **Cohen's Kappa ($\kappa$)** to evaluate agreement beyond chance.
-- **Prompt Engineering in R**: Provide explicit goals, tibble schemas (`glimpse`), and style constraints. Always test generated code with toy data.
-- **`ellmer` Architecture**: Seamlessly stream prompts and enforce strict schema types (`type_enum`) with cloud APIs or private local models (Ollama).
-- **Validation is Non-Negotiable**: Validate AI output against a human-coded benchmark sample before applying it to full datasets.
-- **Transparency & Integrity**: Disclose model versions, save prompt templates, freeze outputs, and protect participant anonymity.
+4. Code 20 answers with a language model; change one theme definition and recode.
+5. Write the methods paragraph for AI coding in your own study.
+6. A coder who always says Workload: raw agreement and kappa?
 
 ---
 
-## Recommended Exercises & Next Steps
+## Try this yourself
 
-1. **Verify Base-Rate Impact**: Calculate Cohen's $\kappa$ by hand for two coders who agree 90% of the time, where theme A occurs 90% of the time.
-2. **Dictionary vs LLM**: Add 3 keywords to the regex dictionary to capture multi-word phrases and test if $\kappa$ improves.
-3. **Local LLM Setup**: Install Ollama, pull a lightweight model (`gemma4:e4b`), and test a basic text prompt using `chat_ollama()`.
-4. **Draft Methodology Disclosure**: Write the formal AI usage disclosure paragraph for your own master's or doctoral thesis.
+Plan AI use in your own research.
+
+- what would you ask it to do, and what would you check by hand?
+- does your consent form allow sending data to a company?
+- which local model could you use instead?
+- what would you record, and how would you disclose it?
+
+---
+
+## Troubleshooting guide (Part 1)
+
+| Symptom | Likely cause |
+|---|---|
+| high agreement, low kappa | one theme dominates; chance inflates agreement |
+| a function that does not exist | hallucination; check the help page |
+| code runs but answers the wrong question | a plausible misunderstanding; test it |
+| an outdated way of doing something | the training cut-off |
+
+---
+
+## Troubleshooting guide (Part 2)
+
+| Symptom | Likely cause |
+|---|---|
+| replies in the wrong format | a small model ignored structure; check in code |
+| different answers on another day | model or settings changed; save outputs |
+| an API key in a shared script | store it in `.Renviron` |
+| the model disagrees on two-challenge answers | the codebook's rule is unclear |
+
+---
+
+## Completion checklist
+
+- [ ] AI-drafted code is tested on known cases;
+- [ ] AI coding is validated against human coding with kappa;
+- [ ] disagreements are read, and the codebook improved;
+- [ ] data sent to a model is allowed by consent and anonymised;
+- [ ] provider, model, date, settings, and prompts are recorded;
+- [ ] outputs are saved and analysed from the file;
+- [ ] AI use is disclosed.
+
+---
+
+## Misconceptions to leave behind (Part 1)
+
+| Misconception | Better mental model |
+|---|---|
+| high agreement means reliable coding | kappa shows agreement beyond chance |
+| the AI knows the answer | it produces plausible text, to be validated |
+
+---
+
+## Misconceptions to leave behind (Part 2)
+
+| Misconception | Better mental model |
+|---|---|
+| a model's answers never change | versions, settings, and dates change them |
+| AI use must be hidden | most allow it with disclosure |
+
+---
+
+## The chapter in one sentence
+
+> **Treat AI output as a draft: validate it against human judgement, protect participants, record what you did, and say so.**
+
+---
+
+## Next: Chapter 19
+
+The final chapter puts everything together:
+
+- the shape of a research project;
+- from raw export to clean data, and describing the sample;
+- answering each research question;
+- the chain of reasoning and the results chapter;
+- choosing a method, and where to go next.
+
+---
+
+## Questions
+
+Which part of your own analysis would you trust an AI to draft?
+
+How would you check it?

@@ -21,3 +21,14 @@ $navbar-fg: #b6c2d2;
 $navbar-hl: #f4f8fc;
 $sidebar-bg: #111821;
 $footer-bg: #0b1119;
+
+// Diagrams (mermaid): raised navy cards with soft outlines on a navy panel,
+// light text, slate arrows. Quarto passes these to every diagram as CSS variables.
+$mermaid-bg-color: #121c29;
+$mermaid-node-bg-color: #1a2738;
+$mermaid-node-fg-color: #34485f;   // the outline of each box
+$mermaid-fg-color: #e8eef6;
+$mermaid-label-fg-color: #e8eef6;  // the text inside boxes
+$mermaid-label-bg-color: #121c29;  // the background of labels on arrows
+$mermaid-edge-color: #93a3b8;
+$mermaid-font-family: "Inter", "Segoe UI", system-ui, sans-serif;

@@ -1,3 +1,7 @@
+---
+number-offset: 14
+---
+
 # Neural Networks {#sec-ch15}
 
 ```{r}

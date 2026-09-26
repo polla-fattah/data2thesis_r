@@ -118,7 +118,7 @@ toc: false
 Install the package from this website:
 
 ```r
-install.packages("https://polla-fattah.github.io/data2thesis_r/downloads/data2thesis_1.1.0.tar.gz",
+install.packages("https://polla.dev/data2thesis_r/downloads/data2thesis_1.1.0.tar.gz",
                  repos = NULL, type = "source")
 library(data2thesis)
 head(students)
@@ -152,8 +152,8 @@ Or download the [package file](downloads/data2thesis_1.1.0.tar.gz) and the [data
   <h2>Start with the first research question</h2>
   <p>Read online for free, chapter by chapter.</p>
   <div class="actions">
-    <a class="btn btn-primary btn-lg" href="book/index.html">Read the book</a>
-    <a class="btn btn-outline-primary btn-lg" href="playground/index.html">Open the playground</a>
+    <a class="btn btn-primary btn-lg" href="content/book/index.html">Read the book</a>
+    <a class="btn btn-outline-primary btn-lg" href="content/playground/index.html">Open the playground</a>
   </div>
 </section>
 

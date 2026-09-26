@@ -1,3 +1,7 @@
+---
+number-offset: 0
+---
+
 # Getting Started with R {#sec-ch01}
 
 ```{r}
