@@ -38,11 +38,9 @@ toc: false
     <h2>The book in numbers</h2>
   </div>
   <div class="row g-3">
-    <div class="col-6 col-md-4 col-lg metric"><div class="value">19</div><div class="label">chapters</div><div class="note">from a first R command to a finished thesis chapter</div></div>
-    <div class="col-6 col-md-4 col-lg metric"><div class="value">19</div><div class="label">slide decks</div><div class="note">interactive RevealJS decks for classroom instruction</div></div>
-    <div class="col-6 col-md-4 col-lg metric"><div class="value">600</div><div class="label">students</div><div class="note">in the case study, followed over four semesters</div></div>
-    <div class="col-6 col-md-6 col-lg metric"><div class="value">12</div><div class="label">research questions</div><div class="note">each one answered with a different method</div></div>
-    <div class="col-6 col-md-6 col-lg metric"><div class="value">1</div><div class="label">R package</div><div class="note">with all the data: <code>data2thesis</code></div></div>
+    <div class="col-12 col-md-4 metric"><div class="value">19</div><div class="label">chapters</div><div class="note">from a first R command to a finished thesis chapter</div></div>
+    <div class="col-12 col-md-4 metric"><div class="value">600</div><div class="label">students</div><div class="note">in the case study, followed over four semesters</div></div>
+    <div class="col-12 col-md-4 metric"><div class="value">12</div><div class="label">research questions</div><div class="note">each one answered with a different method</div></div>
   </div>
 </section>
 
