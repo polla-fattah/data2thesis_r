@@ -23,3 +23,6 @@ downloads/
 
 # Stray plot files from running R scripts outside an interactive session
 Rplots.pdf
+
+# Temporary Office files
+~$*

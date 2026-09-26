@@ -1092,6 +1092,20 @@ body:has(.landing) {
   margin: 0.7rem 0 0.2rem;
   color: var(--d2t-soft);
 }
+.landing details ol,
+.landing details ul {
+  margin: 0.5rem 0 0.8rem 1.2rem;
+  color: var(--d2t-soft);
+  padding-left: 0.5rem;
+}
+.landing details li {
+  margin-bottom: 0.35rem;
+}
+.landing details hr {
+  border-color: var(--d2t-line);
+  margin: 1rem 0;
+  opacity: 0.6;
+}
 
 /* Call to action */
 .landing .cta {
