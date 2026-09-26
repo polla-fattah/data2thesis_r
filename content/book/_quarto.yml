@@ -1,0 +1,67 @@
+project:
+  type: book
+  output-dir: ../../downloads
+
+book:
+  title: "From Data to Thesis"
+  subtitle: "Modern Data Analysis in the Age of AI"
+  author: "Polla Fattah and Collection of LLMs"
+  date: today
+  chapters:
+    - index.qmd
+    - dedication.qmd
+    - foreword.qmd
+    - part: "Foundations of R Programming and Data Handling"
+      chapters:
+        - 01-getting-started.qmd
+        - 02-data-structures.qmd
+        - 03-data-manipulation.qmd
+        - 04-data-visualization.qmd
+    - part: "Statistical Analysis for Research"
+      chapters:
+        - 05-research-question.qmd
+        - 06-descriptive-statistics.qmd
+        - 07-hypothesis-testing.qmd
+        - 08-anova-regression.qmd
+        - 09-multivariate.qmd
+        - 10-mixed-models.qmd
+    - part: "Machine Learning with R"
+      chapters:
+        - 11-machine-learning.qmd
+        - 12-classification.qmd
+        - 13-predictive-regression.qmd
+        - 14-advanced-clustering.qmd
+        - 15-neural-networks.qmd
+        - 16-time-series.qmd
+    - part: "Reproducible Research and Applications"
+      chapters:
+        - 17-reproducible-research.qmd
+        - 18-ai.qmd
+        - 19-putting-it-together.qmd
+    - references.qmd
+  appendices:
+    - a-installation.qmd
+    - b-glossary.qmd
+    - c-packages.qmd
+    - d-common-errors.qmd
+    - e-resources.qmd
+
+bibliography: references.bib
+
+execute:
+  freeze: true
+
+format:
+  typst:
+    papersize: a4
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    section-numbering: "1.1.1"
+    mainfont: "Inter"
+    fontsize: 10pt
+    margin:
+      x: 2.2cm
+      top: 2.5cm
+      bottom: 2.5cm
+    include-after-body: ../../typst/back-cover.typ

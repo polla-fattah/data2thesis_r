@@ -122,7 +122,7 @@ A **Gaussian mixture model** (GMM) assumes that the data comes from a mix of sev
 
 ### A one-variable example
 
-The idea is easiest to see with one variable. R's `faithful` data records the waiting time, in minutes, between 272 eruptions of the Old Faithful geyser in Yellowstone National Park. The histogram in @fig-faithful has two humps: short waits and long waits. The **mclust** package fits a mixture model with `Mclust()`:
+The idea is easiest to see with one variable. R's `faithful` data records the waiting time, in minutes, between 272 eruptions of the Old Faithful geyser in Yellowstone National Park. The histogram in @fig-faithful-gmm has two humps: short waits and long waits. The **mclust** package fits a mixture model with `Mclust()`:
 
 ```{r}
 geyser <- Mclust(faithful$waiting)
@@ -134,10 +134,10 @@ summary(geyser, parameters = TRUE)
 gp <- geyser$parameters
 ```
 
-The function tried mixtures of one to nine groups and chose `r geyser$G`. The output describes them: the **mixing probabilities** are the sizes of the groups (about `r round(100 * gp$pro[1])`% and `r round(100 * gp$pro[2])`% of eruptions), the **means** are their centres (about `r round(gp$mean[1])` and `r round(gp$mean[2])` minutes), and the **variances** their spreads. @fig-faithful draws the two fitted normal curves over the data.
+The function tried mixtures of one to nine groups and chose `r geyser$G`. The output describes them: the **mixing probabilities** are the sizes of the groups (about `r round(100 * gp$pro[1])`% and `r round(100 * gp$pro[2])`% of eruptions), the **means** are their centres (about `r round(gp$mean[1])` and `r round(gp$mean[2])` minutes), and the **variances** their spreads. @fig-faithful-gmm draws the two fitted normal curves over the data.
 
 ```{r}
-#| label: fig-faithful
+#| label: fig-faithful-gmm
 #| fig-cap: "Waiting times between eruptions of Old Faithful, with the two normal distributions of the fitted mixture model."
 #| fig-alt: "Histogram of waiting times from about 43 to 96 minutes, with two humps, at about 55 and 80 minutes. Two bell curves, one smaller and one larger, are drawn over the two humps."
 #| fig-width: 6

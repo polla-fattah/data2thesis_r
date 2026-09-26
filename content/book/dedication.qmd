@@ -1,0 +1,8 @@
+# Dedication {.unnumbered}
+
+```{=typst}
+#v(30%)
+#align(center)[
+  #text(size: 20pt, style: "italic", fill: rgb("#334155"))[Dedicated to Tano]
+]
+```

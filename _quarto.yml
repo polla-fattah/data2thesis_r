@@ -32,6 +32,8 @@ website:
       - text: Get the data
         href: index.qmd#get-the-data
     right:
+      - text: "PDF Book"
+        href: downloads/From-Data-to-Thesis.pdf
       - icon: github
         href: https://github.com/polla-fattah/data2thesis_r
         aria-label: GitHub

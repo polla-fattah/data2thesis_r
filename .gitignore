@@ -16,7 +16,8 @@ content/slides/*.html
 
 # Copied in by copy_resources.ts before each build
 content/playground/*.csv
-downloads/
+downloads/*
+!downloads/From-Data-to-Thesis.pdf
 
 /.quarto/
 **/*.quarto_ipynb

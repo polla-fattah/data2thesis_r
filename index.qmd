@@ -16,6 +16,7 @@ toc: false
       <p>No programming or statistics background needed.</p>
       <div class="actions">
         <a class="btn btn-primary btn-lg" href="content/book/index.html">Start reading</a>
+        <a class="btn btn-outline-primary btn-lg" href="downloads/From-Data-to-Thesis.pdf" download><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
         <a class="btn btn-outline-primary btn-lg" href="content/playground/index.html">Try the playground</a>
         <a class="btn btn-outline-primary btn-lg" href="content/slides/index.html">Lecture slides</a>
       </div>
