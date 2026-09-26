@@ -18,7 +18,6 @@ toc: false
         <a class="btn btn-primary btn-lg" href="content/book/index.html">Start reading</a>
         <a class="btn btn-outline-primary btn-lg" href="content/playground/index.html">Try the playground</a>
         <a class="btn btn-outline-primary btn-lg" href="content/slides/index.html">Lecture slides</a>
-        <a class="btn btn-outline-secondary btn-lg" href="#get-the-data">Get the data</a>
       </div>
     </div>
     <div class="col-lg-5 text-center">
