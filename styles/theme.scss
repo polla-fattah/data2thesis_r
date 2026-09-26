@@ -971,7 +971,7 @@ body.quarto-dark .landing .hero-status-dot {
 .landing .hero-cover-panel {
   position: relative;
   width: 100%;
-  max-width: 400px;
+  max-width: 360px;
   aspect-ratio: 1 / 1.414;
   background-image: url("images/cover-front.png");
   background-size: cover;
@@ -981,16 +981,7 @@ body.quarto-dark .landing .hero-status-dot {
     -4px 0 8px rgba(0, 0, 0, 0.18),
     0 24px 60px rgba(0, 0, 0, 0.32),
     0 0 0 1px rgba(255, 255, 255, 0.08);
-  transform: perspective(900px) rotateY(-4deg);
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
   z-index: 1;
-}
-.landing .hero-cover-panel:hover {
-  transform: perspective(900px) rotateY(0deg) scale(1.015);
-  box-shadow:
-    0 0 0 rgba(0, 0, 0, 0),
-    0 30px 70px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 

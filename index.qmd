@@ -10,7 +10,7 @@ toc: false
 <section class="hero" aria-labelledby="hero-title">
   <div class="hero-glow" aria-hidden="true"></div>
   <div class="row align-items-center g-5">
-    <div class="col-lg-6 hero-copy">
+    <div class="col-12 col-md-7 hero-copy order-2">
       <p class="hero-eyebrow"><span class="hero-status-dot" aria-hidden="true"></span><span>Open access · free PDF · interactive playground</span></p>
       <h1 id="hero-title">FROM DATA TO THESIS</h1>
       <p class="hero-subtitle">Using R for Non-Technical</p>
@@ -20,7 +20,7 @@ toc: false
         <a class="btn hero-btn-ghost" href="downloads/From-Data-to-Thesis.pdf" download><i class="bi bi-file-earmark-pdf"></i> <span>Download PDF</span></a>
       </div>
     </div>
-    <div class="col-lg-6 d-none d-lg-flex justify-content-center">
+    <div class="col-12 col-md-5 d-flex justify-content-center order-1">
       <div class="hero-cover-panel"
            role="img"
            aria-label="Book cover: FROM DATA TO THESIS – Using R for Non-Technical by Polla Fattah">
