@@ -11,6 +11,7 @@ project:
     - downloads/
     - content/playground/*.zip
     - content/playground/*.csv
+    - images/
 
 website:
   title: "From Data to Thesis"

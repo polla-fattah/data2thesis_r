@@ -21,13 +21,21 @@ toc: false
         <a class="btn btn-outline-secondary btn-lg" href="#get-the-data">Get the data</a>
       </div>
     </div>
-    <div class="col-lg-5">
-      <div class="cover-card">
-        <div>
-          <div class="cover-title">From Data to Thesis</div>
-          <div class="cover-sub">Research Data Analysis with R</div>
+    <div class="col-lg-5 text-center">
+      <div class="book-3d-wrap">
+        <div class="book-3d-card" id="bookCard" onclick="this.classList.toggle('flipped')" title="Click to flip cover">
+          <div class="book-side book-front">
+            <img src="images/cover-front.png" alt="From Data to Thesis Using R - Front Cover" class="book-cover-img" />
+          </div>
+          <div class="book-side book-back">
+            <img src="images/cover-back.jpg" alt="From Data to Thesis Using R - Back Cover" class="book-cover-img" />
+          </div>
         </div>
-        <div class="cover-author">Polla Fattah</div>
+        <div class="cover-flip-hint">
+          <button type="button" class="btn-flip" id="btnFlipCover" onclick="document.getElementById('bookCard').classList.toggle('flipped')">
+            <i class="bi bi-arrow-repeat"></i> <span id="flipLabel">View Back Cover</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -179,6 +187,17 @@ Or download the [package file](downloads/data2thesis_1.1.0.tar.gz) and the [data
     <a class="btn btn-outline-primary btn-lg" href="content/playground/index.html">Open the playground</a>
   </div>
 </section>
+
+<script>
+  const card = document.getElementById('bookCard');
+  const label = document.getElementById('flipLabel');
+  if (card && label) {
+    const observer = new MutationObserver(() => {
+      label.textContent = card.classList.contains('flipped') ? 'View Front Cover' : 'View Back Cover';
+    });
+    observer.observe(card, { attributes: true, attributeFilter: ['class'] });
+  }
+</script>
 
 </div>
 ```

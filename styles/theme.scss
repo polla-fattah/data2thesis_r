@@ -857,6 +857,95 @@ body:has(.landing) {
   font-size: 0.98rem;
 }
 
+/* 3D Book Cover */
+.landing .book-3d-wrap {
+  perspective: 1200px;
+  max-width: 310px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.landing .book-3d-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1.414;
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.25, 0.8, 0.25, 1);
+  cursor: pointer;
+  transform: rotateY(-7deg) rotateX(2deg);
+}
+
+.landing .book-3d-card:hover {
+  transform: rotateY(-2deg) rotateX(0deg) scale(1.02);
+}
+
+.landing .book-3d-card.flipped {
+  transform: rotateY(180deg);
+}
+
+.landing .book-3d-card.flipped:hover {
+  transform: rotateY(182deg) scale(1.02);
+}
+
+.landing .book-side {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 8px 14px 14px 8px;
+  overflow: hidden;
+  box-shadow: 
+    -6px 0 12px rgba(0, 0, 0, 0.2),
+    0 22px 50px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.12);
+  background-color: #111;
+}
+
+.landing .book-front {
+  transform: rotateY(0deg);
+}
+
+.landing .book-back {
+  transform: rotateY(180deg);
+}
+
+.landing .book-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.landing .cover-flip-hint {
+  margin-top: 1.1rem;
+}
+
+.landing .btn-flip {
+  background: var(--d2t-card-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--d2t-line, rgba(255, 255, 255, 0.15));
+  color: var(--d2t-soft, #cbd5e1);
+  padding: 0.35rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.2s ease;
+}
+
+.landing .btn-flip:hover {
+  background: var(--d2t-copper, #c27d38);
+  border-color: var(--d2t-copper, #c27d38);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
 .landing .cover-card {
   position: relative;
   display: flex;
