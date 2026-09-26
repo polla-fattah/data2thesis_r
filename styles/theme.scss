@@ -968,39 +968,39 @@ body.quarto-dark .landing .hero-status-dot {
 }
 
 /* Book cover panel — flat image, SSG-book style */
-.landing .hero-cover-panel {
+.landing .hero-grid {
   position: relative;
-  width: 100%;
-  max-width: 360px;
-  aspect-ratio: 1 / 1.414;
-  background-image: url("images/cover-front.png");
-  background-size: cover;
-  background-position: center top;
-  border-radius: 6px 14px 14px 6px;
-  box-shadow:
-    -4px 0 8px rgba(0, 0, 0, 0.18),
-    0 24px 60px rgba(0, 0, 0, 0.32),
-    0 0 0 1px rgba(255, 255, 255, 0.08);
   z-index: 1;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 36px;
+  align-items: center;
 }
 
-@media (max-width: 575.98px) {
-  .landing .hero .row {
-    row-gap: 2rem;
-  }
+.landing .hero-cover-panel {
+  text-align: center;
+}
 
-  .landing .hero-copy,
-  .landing .hero .row > .hero-copy,
-  .landing .hero .row > div:has(.hero-cover-panel) {
-    width: 100%;
+.landing .hero-cover-image {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 8px;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 760px) {
+  .landing .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
   }
 
   .landing .hero-copy {
-    order: 2;
-  }
-
-  .landing .hero .row > div:has(.hero-cover-panel) {
-    order: 1;
+    text-align: center;
   }
 }
 
