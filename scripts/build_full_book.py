@@ -1245,66 +1245,219 @@ tr:hover td {{
   background-color: var(--primary-light);
 }}
 
-/* Callout Alerts */
+/* Callout Alerts - High Contrast & Maximum Readability */
 .callout {{
   border-radius: var(--radius-md);
-  padding: 18px 20px;
+  padding: 16px 20px;
   margin: 1.8em 0;
-  border-left: 4px solid;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  border-left: 4px solid var(--primary);
+  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: var(--bg-card);
 }}
 
-.callout-header {{
+.callout .callout-header {{
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 800;
-  font-size: 0.88rem;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  margin-bottom: 6px;
+  gap: 10px;
+  font-weight: 750;
+  font-size: 0.96rem;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
 }}
 
-.callout-body {{
+.callout .callout-title-container {{
+  font-weight: 750;
+  font-size: 0.98rem;
+  color: var(--text-main);
+}}
+
+.callout .callout-icon-container {{
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.1rem;
+}}
+
+.callout .callout-body,
+.callout .callout-body-container {{
   font-size: 0.96rem;
   line-height: 1.7;
+  color: var(--text-body);
 }}
 
-.callout-body p:first-child {{
+.callout .callout-body p,
+.callout .callout-body-container p {{
+  color: inherit !important;
+  margin: 0.6em 0;
+}}
+
+.callout .callout-body p:first-child,
+.callout .callout-body-container p:first-child {{
   margin-top: 0;
 }}
 
-.callout-body p:last-child {{
+.callout .callout-body p:last-child,
+.callout .callout-body-container p:last-child {{
   margin-bottom: 0;
 }}
 
-.callout-tip {{
-  border-left-color: var(--accent-emerald);
-  background: var(--accent-emerald-light);
-  color: #064e3b;
+.callout .callout-body strong,
+.callout .callout-body-container strong {{
+  color: var(--text-main);
+  font-weight: 700;
 }}
-.callout-tip .callout-header {{ color: var(--accent-emerald); }}
+
+.callout code:not([class*="sourceCode"]) {{
+  background-color: rgba(0, 0, 0, 0.06) !important;
+  color: var(--text-main) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}}
+
+/* Callout Themes - Light Mode */
+.callout-tip {{
+  border-left-color: #059669 !important;
+  background-color: #f0fdf4 !important;
+  border-color: #bbf7d0 #bbf7d0 #bbf7d0 #059669 !important;
+}}
+.callout-tip .callout-header,
+.callout-tip .callout-title-container,
+.callout-tip .callout-icon {{
+  color: #065f46 !important;
+}}
+.callout-tip .callout-body,
+.callout-tip .callout-body-container {{
+  color: #064e3b !important;
+}}
 
 .callout-note {{
-  border-left-color: var(--primary);
-  background: var(--primary-light);
-  color: #1e3a8a;
+  border-left-color: #2563eb !important;
+  background-color: #eff6ff !important;
+  border-color: #bfdbfe #bfdbfe #bfdbfe #2563eb !important;
 }}
-.callout-note .callout-header {{ color: var(--primary); }}
+.callout-note .callout-header,
+.callout-note .callout-title-container,
+.callout-note .callout-icon {{
+  color: #1e40af !important;
+}}
+.callout-note .callout-body,
+.callout-note .callout-body-container {{
+  color: #1e3a8a !important;
+}}
 
-.callout-important, .callout-warning {{
-  border-left-color: var(--accent-amber);
-  background: var(--accent-amber-light);
-  color: #78350f;
+.callout-important, 
+.callout-warning {{
+  border-left-color: #d97706 !important;
+  background-color: #fffbeb !important;
+  border-color: #fde68a #fde68a #fde68a #d97706 !important;
 }}
-.callout-important .callout-header, .callout-warning .callout-header {{ color: var(--accent-amber); }}
+.callout-important .callout-header,
+.callout-important .callout-title-container,
+.callout-important .callout-icon,
+.callout-warning .callout-header,
+.callout-warning .callout-title-container,
+.callout-warning .callout-icon {{
+  color: #92400e !important;
+}}
+.callout-important .callout-body,
+.callout-important .callout-body-container,
+.callout-warning .callout-body,
+.callout-warning .callout-body-container {{
+  color: #78350f !important;
+}}
 
 .callout-caution {{
-  border-left-color: var(--accent-rose);
-  background: var(--accent-rose-light);
-  color: #881337;
+  border-left-color: #e11d48 !important;
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 #fecdd3 #fecdd3 #e11d48 !important;
 }}
-.callout-caution .callout-header {{ color: var(--accent-rose); }}
+.callout-caution .callout-header,
+.callout-caution .callout-title-container,
+.callout-caution .callout-icon {{
+  color: #9f1239 !important;
+}}
+.callout-caution .callout-body,
+.callout-caution .callout-body-container {{
+  color: #881337 !important;
+}}
+
+/* Callout Themes - Dark Mode */
+[data-theme="dark"] .callout {{
+  background-color: #131d2e !important;
+}}
+
+[data-theme="dark"] .callout code:not([class*="sourceCode"]) {{
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}}
+
+[data-theme="dark"] .callout-tip {{
+  border-left-color: #10b981 !important;
+  background-color: rgba(16, 185, 129, 0.14) !important;
+  border-color: rgba(16, 185, 129, 0.28) rgba(16, 185, 129, 0.28) rgba(16, 185, 129, 0.28) #10b981 !important;
+}}
+[data-theme="dark"] .callout-tip .callout-header,
+[data-theme="dark"] .callout-tip .callout-title-container,
+[data-theme="dark"] .callout-tip .callout-icon {{
+  color: #6ee7b7 !important;
+}}
+[data-theme="dark"] .callout-tip .callout-body,
+[data-theme="dark"] .callout-tip .callout-body-container {{
+  color: #ecfdf5 !important;
+}}
+
+[data-theme="dark"] .callout-note {{
+  border-left-color: #38bdf8 !important;
+  background-color: rgba(56, 189, 248, 0.14) !important;
+  border-color: rgba(56, 189, 248, 0.28) rgba(56, 189, 248, 0.28) rgba(56, 189, 248, 0.28) #38bdf8 !important;
+}}
+[data-theme="dark"] .callout-note .callout-header,
+[data-theme="dark"] .callout-note .callout-title-container,
+[data-theme="dark"] .callout-note .callout-icon {{
+  color: #7dd3fc !important;
+}}
+[data-theme="dark"] .callout-note .callout-body,
+[data-theme="dark"] .callout-note .callout-body-container {{
+  color: #f0f9ff !important;
+}}
+
+[data-theme="dark"] .callout-important,
+[data-theme="dark"] .callout-warning {{
+  border-left-color: #fbbf24 !important;
+  background-color: rgba(251, 191, 36, 0.14) !important;
+  border-color: rgba(251, 191, 36, 0.28) rgba(251, 191, 36, 0.28) rgba(251, 191, 36, 0.28) #fbbf24 !important;
+}}
+[data-theme="dark"] .callout-important .callout-header,
+[data-theme="dark"] .callout-important .callout-title-container,
+[data-theme="dark"] .callout-important .callout-icon,
+[data-theme="dark"] .callout-warning .callout-header,
+[data-theme="dark"] .callout-warning .callout-title-container,
+[data-theme="dark"] .callout-warning .callout-icon {{
+  color: #fde68a !important;
+}}
+[data-theme="dark"] .callout-important .callout-body,
+[data-theme="dark"] .callout-important .callout-body-container,
+[data-theme="dark"] .callout-warning .callout-body,
+[data-theme="dark"] .callout-warning .callout-body-container {{
+  color: #fffbeb !important;
+}}
+
+[data-theme="dark"] .callout-caution {{
+  border-left-color: #f43f5e !important;
+  background-color: rgba(244, 63, 94, 0.14) !important;
+  border-color: rgba(244, 63, 94, 0.28) rgba(244, 63, 94, 0.28) rgba(244, 63, 94, 0.28) #f43f5e !important;
+}}
+[data-theme="dark"] .callout-caution .callout-header,
+[data-theme="dark"] .callout-caution .callout-title-container,
+[data-theme="dark"] .callout-caution .callout-icon {{
+  color: #fda4af !important;
+}}
+[data-theme="dark"] .callout-caution .callout-body,
+[data-theme="dark"] .callout-caution .callout-body-container {{
+  color: #fff1f2 !important;
+}}
 
 /* Images Inside Chapter */
 .chapter-body img {{
@@ -1578,7 +1731,7 @@ tr:hover td {{
           <div class="hero-details-row">
             <span class="hero-badge-pill"><i class="fa-solid fa-book-open"></i> {total_chapters} Chapters</span>
             <span class="hero-badge-pill"><i class="fa-solid fa-paperclip"></i> {total_appendices} Appendices</span>
-            <span class="hero-badge-pill"><i class="fa-solid fa-file-pdf"></i> 295-Page Companion PDF</span>
+            <span class="hero-badge-pill"><i class="fa-solid fa-file-pdf"></i> 482-Page Companion PDF</span>
             <span class="hero-badge-pill"><i class="fa-solid fa-code"></i> Quarto &amp; R 4.4</span>
             <span class="hero-badge-pill"><i class="fa-solid fa-database"></i> 600-Student Case Study</span>
           </div>

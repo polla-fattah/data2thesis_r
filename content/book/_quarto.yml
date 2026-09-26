@@ -53,15 +53,14 @@ execute:
 
 format:
   typst:
+    keep-typ: true
     papersize: a4
     toc: true
     toc-depth: 3
     number-sections: true
     section-numbering: "1.1.1"
-    mainfont: "Inter"
-    fontsize: 10pt
+    fontsize: 12pt
     margin:
-      x: 2.2cm
-      top: 2.5cm
-      bottom: 2.5cm
+      x: 2.0cm
+      y: 2.0cm
     include-after-body: ../../typst/back-cover.typ

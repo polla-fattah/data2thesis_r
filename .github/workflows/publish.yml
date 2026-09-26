@@ -33,11 +33,30 @@ jobs:
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install beautifulsoup4 pypdf
+
       - name: Render website and book
         run: |
           quarto render
           cp -r _site/content/* _site/
           touch _site/.nojekyll
+
+      - name: Build Full Book Single-Page Edition
+        run: python scripts/build_full_book.py
+
+      - name: Copy PDF book to site
+        run: |
+          mkdir -p _site/downloads
+          cp -n downloads/*.pdf _site/downloads/ 2>/dev/null || true
+          cp -n downloads/*.csv _site/downloads/ 2>/dev/null || true
+          cp -n downloads/*.xlsx _site/downloads/ 2>/dev/null || true
+          cp -n downloads/*.tar.gz _site/downloads/ 2>/dev/null || true
 
       - name: Upload the site
         uses: actions/upload-pages-artifact@v3

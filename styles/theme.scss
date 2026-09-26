@@ -579,6 +579,13 @@ div.callout {
   border-radius: 10px;
   background: var(--d2t-paper);
   box-shadow: var(--d2t-shadow-sm);
+  color: var(--d2t-ink);
+}
+div.callout .callout-body,
+div.callout .callout-body-container,
+div.callout .callout-body p,
+div.callout .callout-body-container p {
+  color: var(--d2t-ink) !important;
 }
 div.callout.callout-style-default > .callout-header {
   background: transparent;
@@ -591,6 +598,36 @@ div.callout .callout-title-container {
 }
 div.callout.callout-style-simple {
   padding: 0.5rem 1rem;
+}
+div.callout.callout-tip {
+  border-left-color: #059669 !important;
+  background: color-mix(in srgb, #059669 8%, var(--d2t-paper)) !important;
+}
+div.callout.callout-tip .callout-title-container {
+  color: #065f46;
+}
+div.callout.callout-note {
+  border-left-color: #2563eb !important;
+  background: color-mix(in srgb, #2563eb 8%, var(--d2t-paper)) !important;
+}
+div.callout.callout-note .callout-title-container {
+  color: #1e40af;
+}
+div.callout.callout-important,
+div.callout.callout-warning {
+  border-left-color: #d97706 !important;
+  background: color-mix(in srgb, #d97706 8%, var(--d2t-paper)) !important;
+}
+div.callout.callout-important .callout-title-container,
+div.callout.callout-warning .callout-title-container {
+  color: #92400e;
+}
+div.callout.callout-caution {
+  border-left-color: #e11d48 !important;
+  background: color-mix(in srgb, #e11d48 8%, var(--d2t-paper)) !important;
+}
+div.callout.callout-caution .callout-title-container {
+  color: #9f1239;
 }
 
 /* ---------- Tables, quotes, figures ---------- */
