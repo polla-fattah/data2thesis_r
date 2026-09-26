@@ -1,4 +1,4 @@
-# From Data to Thesis: Research Data Analysis with R
+# FROM DATA TO THESIS: Using R for Non-Technical
 # Playground, Chapter 19: Putting It All Together
 #
 # This script holds the R parts of the playground page. The project tasks

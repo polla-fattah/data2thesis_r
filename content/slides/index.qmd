@@ -1,6 +1,6 @@
 ---
 title: "Lecture Slides"
-subtitle: "Presentation Decks for Research Data Analysis with R"
+subtitle: "Presentation Decks for FROM DATA TO THESIS: Using R for Non-Technical"
 toc: false
 ---
 

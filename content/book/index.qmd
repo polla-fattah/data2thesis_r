@@ -3,7 +3,12 @@
 ::: {.callout-note appearance="simple"}
 ## Complete Course & Companion Slides
 
-All 19 chapters of *From Data to Thesis* are available, accompanied by interactive [Playground](../playground/index.html) exercises and [Lecture Slide Decks](../slides/index.html) for teaching and review.
+All 19 chapters of *FROM DATA TO THESIS: Using R for Non-Technical* are available, accompanied by interactive [Playground](../playground/index.html) exercises and [Lecture Slide Decks](../slides/index.html) for teaching and review.
+:::
+
+::: {.callout-tip appearance="simple"}
+## Prefer reading everything in one continuous page?
+Open the [📖 Complete Book Online Edition (Single-Page Reader)](full/index.html) or [📥 Download Companion PDF Book (7.5 MB)](../../downloads/From-Data-to-Thesis.pdf).
 :::
 
 This book follows Elaf, a Master's student in Educational Psychology, through her thesis. She studies 600 graduate students over four semesters to learn how sleep, stress, and supervisor support relate to their wellbeing, grades, and thoughts of dropping out, and whether a short wellbeing workshop helps.

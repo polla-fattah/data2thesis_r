@@ -1,4 +1,4 @@
-# From Data to Thesis: Research Data Analysis with R
+# FROM DATA TO THESIS: Using R for Non-Technical
 # Playground, Chapter 11: Introduction to Machine Learning in R
 #
 # Four parts, as on the playground page:

@@ -1,5 +1,5 @@
 ---
-pagetitle: "Research Data Analysis with R"
+pagetitle: "FROM DATA TO THESIS: Using R for Non-Technical"
 page-layout: custom
 toc: false
 ---
@@ -10,8 +10,8 @@ toc: false
 <section class="hero">
   <div class="row align-items-center g-5">
     <div class="col-lg-7">
-      <h1>From Data to Thesis</h1>
-      <div class="subtitle">Research Data Analysis with R</div>
+      <h1>FROM DATA TO THESIS</h1>
+      <div class="subtitle">Using R for Non-Technical</div>
       <p class="lead">Follow one Master's thesis from a messy survey export to results that can be defended. Every method in the book answers one of the study's research questions, so you learn R the way you will use it: on a real research project.</p>
       <p>No programming or statistics background needed.</p>
       <div class="actions">
@@ -25,10 +25,10 @@ toc: false
       <div class="book-3d-wrap">
         <div class="book-3d-card" id="bookCard" onclick="this.classList.toggle('flipped')" title="Click to flip cover">
           <div class="book-side book-front">
-            <img src="images/cover-front.png" alt="From Data to Thesis Using R - Front Cover" class="book-cover-img" />
+            <img src="images/cover-front.png" alt="FROM DATA TO THESIS: Using R for Non-Technical - Front Cover" class="book-cover-img" />
           </div>
           <div class="book-side book-back">
-            <img src="images/cover-back.jpg" alt="From Data to Thesis Using R - Back Cover" class="book-cover-img" />
+            <img src="images/cover-back.jpg" alt="FROM DATA TO THESIS: Using R for Non-Technical - Back Cover" class="book-cover-img" />
           </div>
         </div>
         <div class="cover-flip-hint">
@@ -179,12 +179,141 @@ Or download the [package file](downloads/data2thesis_1.1.0.tar.gz) and the [data
   </div>
 </section>
 
-<section class="cta">
-  <h2>Start with the first research question</h2>
-  <p>Read online for free, chapter by chapter.</p>
-  <div class="actions">
-    <a class="btn btn-primary btn-lg" href="content/book/index.html">Read the book</a>
-    <a class="btn btn-outline-primary btn-lg" href="content/playground/index.html">Open the playground</a>
+<style>
+.read-download-section {
+  margin: 3.5rem 0 2rem 0;
+  width: 100%;
+}
+
+.read-download-banner {
+  background-color: #0b1120;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  border: 1px dashed rgba(217, 119, 6, 0.45);
+  border-radius: 14px;
+  padding: 34px 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
+  transition: border-color 200ms ease;
+}
+
+.read-download-banner:hover {
+  border-color: rgba(245, 158, 11, 0.7);
+}
+
+.read-download-text {
+  flex: 1;
+  min-width: 260px;
+}
+
+.read-download-title {
+  color: #ffffff !important;
+  font-size: 1.25rem !important;
+  font-weight: 750 !important;
+  margin: 0 0 8px 0 !important;
+  letter-spacing: -0.01em;
+  font-family: inherit;
+}
+
+.read-download-desc {
+  color: #94a3b8 !important;
+  font-size: 0.94rem !important;
+  line-height: 1.55 !important;
+  margin: 0 !important;
+  max-width: 560px;
+}
+
+.read-download-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.btn-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none !important;
+  transition: all 160ms ease;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.btn-banner svg {
+  flex-shrink: 0;
+}
+
+.btn-banner-green {
+  background-color: #059669;
+  color: #ffffff !important;
+  border: 1px solid #059669;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.35);
+}
+
+.btn-banner-green:hover {
+  background-color: #047857;
+  border-color: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.5);
+}
+
+.btn-banner-dark {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.btn-banner-dark:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 991px) {
+  .read-download-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 26px 24px;
+    gap: 22px;
+  }
+  
+  .read-download-actions {
+    width: 100%;
+  }
+}
+</style>
+
+<section class="read-download-section">
+  <div class="read-download-banner">
+    <div class="read-download-text">
+      <h3 class="read-download-title">Read the Complete Book Online or Download</h3>
+      <p class="read-download-desc">View all 19 chapters entirely in your browser, download the full PDF with covers and bookmarks, or read chapter by chapter.</p>
+    </div>
+    <div class="read-download-actions">
+      <a href="content/book/full/index.html" class="btn-banner btn-banner-green">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 1 3-3h7z"></path></svg>
+        <span>View Entirely (HTML)</span>
+      </a>
+      <a href="downloads/From-Data-to-Thesis.pdf" class="btn-banner btn-banner-green" download>
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+        <span>Download (PDF)</span>
+      </a>
+      <a href="content/book/01-getting-started.html" class="btn-banner btn-banner-dark">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+        <span>Start Chapter 1</span>
+      </a>
+    </div>
   </div>
 </section>
 

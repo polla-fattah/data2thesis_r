@@ -43,6 +43,10 @@ if (-not $NoBuild) {
     Write-Host "Rendering website, book, and playground..." -ForegroundColor Cyan
     & $quarto render
 
+    # Build Full Book Online Edition
+    Write-Host "Building Full Book Single-Page Edition..." -ForegroundColor Cyan
+    python (Join-Path $root "scripts/build_full_book.py")
+
     # Mirror content/ paths to root URLs for backward compatibility
     if (Test-Path "$root/_site/content") {
       Copy-Item -Path "$root/_site/content/*" -Destination "$root/_site" -Recurse -Force

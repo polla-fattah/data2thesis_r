@@ -3,8 +3,8 @@ project:
   output-dir: ../../downloads
 
 book:
-  title: "From Data to Thesis"
-  subtitle: "Modern Data Analysis in the Age of AI"
+  title: "FROM DATA TO THESIS"
+  subtitle: "Using R for Non-Technical"
   author: "Polla Fattah and Collection of LLMs"
   date: today
   chapters:

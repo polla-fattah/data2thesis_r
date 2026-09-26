@@ -1,4 +1,4 @@
-# From Data to Thesis: Research Data Analysis with R
+# FROM DATA TO THESIS: Using R for Non-Technical
 # Playground, Chapter 18: Solutions
 #
 # One possible solution for each exercise in parts A and B, and model answers

@@ -18,6 +18,7 @@ content/slides/*.html
 content/playground/*.csv
 downloads/*
 !downloads/From-Data-to-Thesis.pdf
+!downloads/FROM-DATA-TO-THESIS.pdf
 
 /.quarto/
 **/*.quarto_ipynb

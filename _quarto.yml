@@ -14,7 +14,7 @@ project:
     - images/
 
 website:
-  title: "From Data to Thesis"
+  title: "FROM DATA TO THESIS"
   site-url: https://polla-fattah.github.io/data2thesis_r
   repo-url: https://github.com/polla-fattah/data2thesis_r
   page-navigation: true
@@ -39,7 +39,7 @@ website:
         aria-label: GitHub
   sidebar:
     - id: book
-      title: "From Data to Thesis"
+      title: "FROM DATA TO THESIS"
       style: docked
       search: true
       contents:
@@ -208,7 +208,7 @@ website:
             - href: content/slides/19-putting-it-together.qmd
               text: "19  Putting It All Together"
   page-footer:
-    left: "© Polla Fattah. *From Data to Thesis: Research Data Analysis with R*."
+    left: "© Polla Fattah. *FROM DATA TO THESIS: Using R for Non-Technical*."
     right: "Built with [Quarto](https://quarto.org)"
 
 bibliography: content/book/references.bib
