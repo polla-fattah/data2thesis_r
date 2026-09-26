@@ -984,6 +984,26 @@ body.quarto-dark .landing .hero-status-dot {
   z-index: 1;
 }
 
+@media (max-width: 575.98px) {
+  .landing .hero .row {
+    row-gap: 2rem;
+  }
+
+  .landing .hero-copy,
+  .landing .hero .row > .hero-copy,
+  .landing .hero .row > div:has(.hero-cover-panel) {
+    width: 100%;
+  }
+
+  .landing .hero-copy {
+    order: 2;
+  }
+
+  .landing .hero .row > div:has(.hero-cover-panel) {
+    order: 1;
+  }
+}
+
 
 /* Numbers */
 .landing .metric {
