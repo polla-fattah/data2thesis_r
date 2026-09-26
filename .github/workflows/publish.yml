@@ -46,39 +46,6 @@ jobs:
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: local::data2thesis
-          extra-packages: |
-            any::broom
-            any::bslib
-            any::car
-            any::cluster
-            any::corrplot
-            any::dbscan
-            any::dplyr
-            any::ellmer
-            any::fable
-            any::factoextra
-            any::feasts
-            any::ggplot2
-            any::haven
-            any::here
-            any::lme4
-            any::lmerTest
-            any::mclust
-            any::nnet
-            any::patchwork
-            any::psych
-            any::readr
-            any::readxl
-            any::rpart
-            any::shiny
-            any::stringr
-            any::swirl
-            any::themis
-            any::tidymodels
-            any::tidyr
-            any::tidyverse
-            any::tsibble
-            any::yardstick
 
       - name: Set up Python
         uses: actions/setup-python@v5
