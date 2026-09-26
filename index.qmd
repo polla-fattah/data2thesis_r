@@ -7,35 +7,23 @@ toc: false
 ```{=html}
 <div class="landing container">
 
-<section class="hero">
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-glow" aria-hidden="true"></div>
   <div class="row align-items-center g-5">
-    <div class="col-lg-7">
-      <h1>FROM DATA TO THESIS</h1>
-      <div class="subtitle">Using R for Non-Technical</div>
-      <p class="lead">Follow one Master's thesis from a messy survey export to results that can be defended. Every method in the book answers one of the study's research questions, so you learn R the way you will use it: on a real research project.</p>
-      <p>No programming or statistics background needed.</p>
+    <div class="col-lg-6 hero-copy">
+      <p class="hero-eyebrow"><span class="hero-status-dot" aria-hidden="true"></span><span>Open access · free PDF · interactive playground</span></p>
+      <h1 id="hero-title">FROM DATA TO THESIS</h1>
+      <p class="hero-subtitle">Using R for Non-Technical</p>
+      <p class="hero-lead">Follow one Master's thesis from a messy survey export to results that can be defended. Every method in the book answers one of the study's research questions, so you learn R the way you will use it: on a real research project.</p>
       <div class="actions">
-        <a class="btn btn-primary btn-lg" href="content/book/index.html">Start reading</a>
-        <a class="btn btn-outline-primary btn-lg" href="downloads/From-Data-to-Thesis.pdf" download><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
-        <a class="btn btn-outline-primary btn-lg" href="content/playground/index.html">Try the playground</a>
-        <a class="btn btn-outline-primary btn-lg" href="content/slides/index.html">Lecture slides</a>
+        <a class="btn hero-btn-primary" href="content/book/index.html"><i class="bi bi-book-open"></i> <span>Start reading</span></a>
+        <a class="btn hero-btn-ghost" href="downloads/From-Data-to-Thesis.pdf" download><i class="bi bi-file-earmark-pdf"></i> <span>Download PDF</span></a>
       </div>
     </div>
-    <div class="col-lg-5 text-center">
-      <div class="book-3d-wrap">
-        <div class="book-3d-card" id="bookCard" onclick="this.classList.toggle('flipped')" title="Click to flip cover">
-          <div class="book-side book-front">
-            <img src="images/cover-front.png" alt="FROM DATA TO THESIS: Using R for Non-Technical - Front Cover" class="book-cover-img" />
-          </div>
-          <div class="book-side book-back">
-            <img src="images/cover-back.jpg" alt="FROM DATA TO THESIS: Using R for Non-Technical - Back Cover" class="book-cover-img" />
-          </div>
-        </div>
-        <div class="cover-flip-hint">
-          <button type="button" class="btn-flip" id="btnFlipCover" onclick="document.getElementById('bookCard').classList.toggle('flipped')">
-            <i class="bi bi-arrow-repeat"></i> <span id="flipLabel">View Back Cover</span>
-          </button>
-        </div>
+    <div class="col-lg-6 d-none d-lg-flex justify-content-center">
+      <div class="hero-cover-panel"
+           role="img"
+           aria-label="Book cover: FROM DATA TO THESIS – Using R for Non-Technical by Polla Fattah">
       </div>
     </div>
   </div>

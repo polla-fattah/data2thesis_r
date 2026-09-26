@@ -838,198 +838,161 @@ body:has(.landing) {
   font-size: clamp(1rem, 1.25vw, 1.12rem);
 }
 
-/* Hero */
+
+
+/* Hero glow backdrop */
 .landing .hero {
   position: relative;
+  overflow: hidden;
   padding: clamp(56px, 8vw, 104px) 0 clamp(48px, 6vw, 80px);
 }
-.landing .hero .eyebrow {
+
+.landing .hero-glow {
+  position: absolute;
+  top: -180px;
+  right: -120px;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 60% 40%,
+    rgba(var(--d2t-accent-rgb, 36, 95, 148), 0.18) 0%,
+    rgba(var(--d2t-accent-rgb, 36, 95, 148), 0.06) 45%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Eyebrow */
+.landing .hero-eyebrow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 1.4rem;
   color: var(--d2t-silk);
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.72rem;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-.landing .hero .eyebrow::before {
-  content: "";
+
+.landing .hero-status-dot {
+  display: inline-block;
   width: 8px;
   height: 8px;
-  border: 1.5px solid var(--d2t-copper);
   border-radius: 50%;
+  background: var(--d2t-copper);
+  box-shadow: 0 0 0 0 rgba(180, 118, 46, 0.7);
+  animation: pulse-dot 2.4s ease-in-out infinite;
+  flex-shrink: 0;
 }
-.landing .hero h1 {
-  margin: 0 0 1rem;
-  font-family: "Chakra Petch", "Inter", sans-serif;
-  font-size: clamp(2.3rem, 4.4vw, 3.5rem);
-  font-weight: 700;
-  line-height: 1.04;
-  color: var(--d2t-emphasis);
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(180, 118, 46, 0.65); }
+  50%       { box-shadow: 0 0 0 6px rgba(180, 118, 46, 0);  }
 }
-.landing .hero .subtitle {
-  margin-bottom: 1.3rem;
+
+body.quarto-dark .landing .hero-status-dot {
+  background: var(--d2t-copper);
+  animation-name: pulse-dot-dark;
+}
+
+@keyframes pulse-dot-dark {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 163, 92, 0.6); }
+  50%       { box-shadow: 0 0 0 6px rgba(224, 163, 92, 0); }
+}
+
+/* Hero copy z-index (above glow) */
+.landing .hero-copy {
+  position: relative;
+  z-index: 1;
+}
+
+.landing .hero .hero-subtitle {
+  margin-bottom: 1.2rem;
   color: var(--d2t-silk);
-  font-size: clamp(1.15rem, 1.8vw, 1.35rem);
+  font-size: clamp(1.1rem, 1.8vw, 1.3rem);
   font-style: italic;
 }
-.landing .hero .lead {
+
+.landing .hero .hero-lead {
   max-width: 38rem;
   color: var(--d2t-soft);
-  font-size: clamp(1.02rem, 1.45vw, 1.17rem);
-}
-.landing .hero p {
-  color: var(--d2t-soft);
-}
-.landing .hero .actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 1.9rem;
-}
-.landing .hero .btn-lg {
-  padding: 0.75rem 1.5rem;
-  font-size: 0.98rem;
+  font-size: clamp(1rem, 1.4vw, 1.13rem);
+  line-height: 1.75;
+  margin-bottom: 0;
 }
 
-/* 3D Book Cover */
-.landing .book-3d-wrap {
-  perspective: 1200px;
-  max-width: 310px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.landing .book-3d-card {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1.414;
-  transform-style: preserve-3d;
-  transition: transform 0.65s cubic-bezier(0.25, 0.8, 0.25, 1);
-  cursor: pointer;
-  transform: rotateY(-7deg) rotateX(2deg);
-}
-
-.landing .book-3d-card:hover {
-  transform: rotateY(-2deg) rotateX(0deg) scale(1.02);
-}
-
-.landing .book-3d-card.flipped {
-  transform: rotateY(180deg);
-}
-
-.landing .book-3d-card.flipped:hover {
-  transform: rotateY(182deg) scale(1.02);
-}
-
-.landing .book-side {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  border-radius: 8px 14px 14px 8px;
-  overflow: hidden;
-  box-shadow: 
-    -6px 0 12px rgba(0, 0, 0, 0.2),
-    0 22px 50px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.12);
-  background-color: #111;
-}
-
-.landing .book-front {
-  transform: rotateY(0deg);
-}
-
-.landing .book-back {
-  transform: rotateY(180deg);
-}
-
-.landing .book-cover-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.landing .cover-flip-hint {
-  margin-top: 1.1rem;
-}
-
-.landing .btn-flip {
-  background: var(--d2t-card-bg, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--d2t-line, rgba(255, 255, 255, 0.15));
-  color: var(--d2t-soft, #cbd5e1);
-  padding: 0.35rem 0.95rem;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  cursor: pointer;
+/* Redesigned hero buttons */
+.landing .hero-btn-primary {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  transition: all 0.2s ease;
+  gap: 0.5rem;
+  padding: 0.75rem 1.55rem;
+  background: var(--d2t-button);
+  color: #fff !important;
+  border: 1.5px solid var(--d2t-button);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.97rem;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(var(--d2t-accent-rgb, 36, 95, 148), 0.25);
+}
+.landing .hero-btn-primary:hover {
+  background: var(--d2t-button-hover);
+  border-color: var(--d2t-button-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(var(--d2t-accent-rgb, 36, 95, 148), 0.35);
 }
 
-.landing .btn-flip:hover {
-  background: var(--d2t-copper, #c27d38);
-  border-color: var(--d2t-copper, #c27d38);
-  color: #fff;
-  transform: translateY(-1px);
+.landing .hero-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.55rem;
+  background: transparent;
+  color: var(--d2t-link) !important;
+  border: 1.5px solid var(--d2t-line-strong);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.97rem;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+.landing .hero-btn-ghost:hover {
+  background: var(--d2t-surface);
+  border-color: var(--d2t-link);
+  transform: translateY(-2px);
 }
 
-.landing .cover-card {
+/* Book cover panel — flat image, SSG-book style */
+.landing .hero-cover-panel {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  max-width: 300px;
-  aspect-ratio: 3 / 4;
-  margin: 0 auto;
-  padding: 2rem 1.6rem;
-  border-radius: 14px;
-  background: linear-gradient(150deg, #1d588c 0%, #16334f 62%, #7a4f22 130%);
-  color: #fff;
-  box-shadow: 0 26px 70px rgba(1, 6, 14, 0.26);
-  overflow: hidden;
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 1 / 1.414;
+  background-image: url("images/cover-front.png");
+  background-size: cover;
+  background-position: center top;
+  border-radius: 6px 14px 14px 6px;
+  box-shadow:
+    -4px 0 8px rgba(0, 0, 0, 0.18),
+    0 24px 60px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+  transform: perspective(900px) rotateY(-4deg);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  z-index: 1;
 }
-.landing .cover-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 22px 22px;
+.landing .hero-cover-panel:hover {
+  transform: perspective(900px) rotateY(0deg) scale(1.015);
+  box-shadow:
+    0 0 0 rgba(0, 0, 0, 0),
+    0 30px 70px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.12);
 }
-.landing .cover-card > * {
-  position: relative;
-}
-.landing .cover-card .cover-title {
-  font-family: "Chakra Petch", "Inter", sans-serif;
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.08;
-}
-.landing .cover-card .cover-sub {
-  margin-top: 0.6rem;
-  font-size: 1.05rem;
-  opacity: 0.9;
-}
-.landing .cover-card .cover-author {
-  padding-top: 0.8rem;
-  border-top: 1px solid rgba(224, 163, 92, 0.6);
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.95;
-}
+
 
 /* Numbers */
 .landing .metric {
