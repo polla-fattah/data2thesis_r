@@ -1,8 +1,9 @@
 # Builds the website and the book with Quarto and publishes them to GitHub Pages.
 #
-# Code results are stored in _freeze (render locally and commit it), so this
-# workflow does not need R. The pages are rendered under _site/content and copied
-# to the site root, so that /book/, /playground/, and /slides/ work as before.
+# The rendered chapters contain executable R examples, so the workflow installs
+# R and the packages used by the book before rendering. The pages are rendered
+# under _site/content and copied to the site root, so that /book/, /playground/,
+# and /slides/ work as before.
 #
 # One-time setup on GitHub: Settings > Pages > Build and deployment >
 # Source: "GitHub Actions".
@@ -34,6 +35,50 @@ jobs:
         uses: quarto-dev/quarto-actions/setup@v2
         with:
           version: 1.10.18
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: local::data2thesis
+          extra-packages: |
+            any::broom
+            any::bslib
+            any::car
+            any::cluster
+            any::corrplot
+            any::dbscan
+            any::dplyr
+            any::ellmer
+            any::fable
+            any::factoextra
+            any::feasts
+            any::ggplot2
+            any::haven
+            any::here
+            any::lme4
+            any::lmerTest
+            any::mclust
+            any::nnet
+            any::patchwork
+            any::psych
+            any::readr
+            any::readxl
+            any::rpart
+            any::shiny
+            any::stringr
+            any::swirl
+            any::themis
+            any::tidymodels
+            any::tidyr
+            any::tidyverse
+            any::tsibble
+            any::yardstick
 
       - name: Set up Python
         uses: actions/setup-python@v5
