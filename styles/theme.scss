@@ -907,6 +907,15 @@ body.quarto-dark .landing .hero-status-dot {
 .landing .hero-copy {
   position: relative;
   z-index: 1;
+  max-width: 660px;
+}
+
+.landing .hero .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 1.9rem;
 }
 
 .landing .hero .hero-subtitle {
@@ -972,35 +981,55 @@ body.quarto-dark .landing .hero-status-dot {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 36px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 340px);
+  gap: clamp(36px, 5vw, 64px);
   align-items: center;
 }
 
 .landing .hero-cover-panel {
-  text-align: center;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .landing .hero-cover-image {
   display: block;
   width: 100%;
-  max-width: 280px;
+  max-width: 320px;
   height: auto;
-  margin: 0 auto;
+  margin: 0;
   border-radius: 8px;
   box-shadow:
     0 20px 50px rgba(0, 0, 0, 0.28),
     0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 820px) {
   .landing .hero-grid {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 2.5rem;
   }
 
   .landing .hero-copy {
     text-align: center;
+    max-width: 100%;
+  }
+
+  .landing .hero-eyebrow {
+    justify-content: center;
+  }
+
+  .landing .hero .actions {
+    justify-content: center;
+  }
+
+  .landing .hero-cover-panel {
+    justify-content: center;
+  }
+
+  .landing .hero-cover-image {
+    max-width: 280px;
+    margin: 0 auto;
   }
 }
 
