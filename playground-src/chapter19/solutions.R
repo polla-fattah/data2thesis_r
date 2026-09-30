@@ -1,4 +1,4 @@
-# FROM DATA TO THESIS: Using R for Non-technical
+# FROM DATA TO THESIS: Using R for Non-Technical
 # Playground, Chapter 19: Solutions
 #
 # One possible solution for the R exercises in parts A and B, and model answers

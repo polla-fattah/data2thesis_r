@@ -1,4 +1,4 @@
-From Data to Thesis: Using R for Non-technical
+FROM DATA TO THESIS: Using R for Non-Technical
 Playground, Chapter 19: Putting It All Together
 
 The complete thesis project, from the raw survey export to a results chapter.

@@ -1,4 +1,4 @@
-From Data to Thesis: Using R for Non-technical
+FROM DATA TO THESIS: Using R for Non-Technical
 Playground, Chapter 11: Introduction to Machine Learning in R
 
 How to use this project

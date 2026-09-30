@@ -1,4 +1,4 @@
-# FROM DATA TO THESIS: Using R for Non-technical
+# FROM DATA TO THESIS: Using R for Non-Technical
 # Playground, Chapter 5: From Research Question to Data
 #
 # Four parts, as on the playground page:

@@ -1,6 +1,6 @@
 # data2thesis
 
-Data for the book *From Data to Thesis: Using R for Non-technical*: the **Graduate Wellbeing Study**, the book's running case study.
+Data for the book *FROM DATA TO THESIS: Using R for Non-Technical*: the **Graduate Wellbeing Study**, the book's running case study.
 
 Elaf, a Master's student in Educational Psychology, follows 600 graduate students over four semesters to learn how lifestyle, stress, and supervisor support relate to their wellbeing, grades, and thoughts of dropping out, and whether a wellbeing workshop helps.
 

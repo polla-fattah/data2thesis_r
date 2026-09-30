@@ -1,11 +1,11 @@
 Package: data2thesis
 Type: Package
-Title: Data for 'From Data to Thesis: Using R for Non-technical'
+Title: Data for 'FROM DATA TO THESIS: Using R for Non-Technical'
 Version: 1.1.0
 Authors@R: person("Polla", "Fattah", email = "polla.fattah@gmail.com",
     role = c("aut", "cre"))
 Description: The Graduate Wellbeing Study, the simulated case study used
-    throughout the book 'From Data to Thesis: Using R for Non-technical'. It follows 600
+    throughout the book 'FROM DATA TO THESIS: Using R for Non-Technical'. It follows 600
     graduate students over four semesters: background information, a
     22-item questionnaire on stress, burnout, supervisor support and
     satisfaction, semester records of GPA, sleep, study habits and

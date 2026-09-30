@@ -1,4 +1,4 @@
-From Data to Thesis: Using R for Non-technical
+FROM DATA TO THESIS: Using R for Non-Technical
 Playground, Chapter 6: Descriptive Statistics and Exploratory Data Analysis
 
 How to use this project

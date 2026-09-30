@@ -553,7 +553,7 @@
 #callout(
 body: 
 [
-All 19 chapters of #emph[FROM DATA TO THESIS: Using R for Non-technical] are available, accompanied by interactive #link("../playground/index.html")[Playground] exercises and #link("../slides/index.html")[Lecture Slide Decks] for teaching and review.
+All 19 chapters of #emph[FROM DATA TO THESIS: Using R for Non-Technical] are available, accompanied by interactive #link("../playground/index.html")[Playground] exercises and #link("../slides/index.html")[Lecture Slide Decks] for teaching and review.
 
 ]
 , 

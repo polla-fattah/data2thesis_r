@@ -1,5 +1,5 @@
 ---
-pagetitle: "FROM DATA TO THESIS: Using R for Non-technical"
+pagetitle: "FROM DATA TO THESIS: Using R for Non-Technical"
 page-layout: custom
 toc: false
 ---

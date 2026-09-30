@@ -1,4 +1,4 @@
-# FROM DATA TO THESIS: Using R for Non-technical
+# FROM DATA TO THESIS: Using R for Non-Technical
 # Playground, Chapter 9: Multivariate Statistical Methods
 #
 # Four parts, as on the playground page:

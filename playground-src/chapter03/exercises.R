@@ -1,4 +1,4 @@
-# FROM DATA TO THESIS: Using R for Non-technical
+# FROM DATA TO THESIS: Using R for Non-Technical
 # Playground, Chapter 3: Data Manipulation
 #
 # Four parts, as on the playground page:
