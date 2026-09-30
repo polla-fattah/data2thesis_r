@@ -67,10 +67,10 @@ jobs:
       - name: Copy PDF book to site
         run: |
           mkdir -p _site/downloads
-          cp -n downloads/*.pdf _site/downloads/ 2>/dev/null || true
-          cp -n downloads/*.csv _site/downloads/ 2>/dev/null || true
-          cp -n downloads/*.xlsx _site/downloads/ 2>/dev/null || true
-          cp -n downloads/*.tar.gz _site/downloads/ 2>/dev/null || true
+          cp -f downloads/*.pdf _site/downloads/ 2>/dev/null || true
+          cp -f downloads/*.csv _site/downloads/ 2>/dev/null || true
+          cp -f downloads/*.xlsx _site/downloads/ 2>/dev/null || true
+          cp -f downloads/*.tar.gz _site/downloads/ 2>/dev/null || true
 
       - name: Upload the site
         uses: actions/upload-pages-artifact@v3

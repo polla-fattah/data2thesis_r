@@ -208,7 +208,7 @@ website:
             - href: content/slides/19-putting-it-together.qmd
               text: "19  Putting It All Together"
   page-footer:
-    left: "© Polla Fattah. *FROM DATA TO THESIS: Using R for Non-Technical*."
+    left: "© Polla Fattah. *FROM DATA TO THESIS: Using R for Non-technical*."
     right: "Built with [Quarto](https://quarto.org)"
 
 bibliography: content/book/references.bib

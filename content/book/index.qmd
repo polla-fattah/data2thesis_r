@@ -3,7 +3,7 @@
 ::: {.callout-note appearance="simple"}
 ## Complete Course & Companion Slides
 
-All 19 chapters of *FROM DATA TO THESIS: Using R for Non-Technical* are available, accompanied by interactive [Playground](../playground/index.html) exercises and [Lecture Slide Decks](../slides/index.html) for teaching and review.
+All 19 chapters of *FROM DATA TO THESIS: Using R for Non-technical* are available, accompanied by interactive [Playground](../playground/index.html) exercises and [Lecture Slide Decks](../slides/index.html) for teaching and review.
 :::
 
 ::: {.callout-tip appearance="simple"}

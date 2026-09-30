@@ -1,4 +1,4 @@
-From Data to Thesis: Research Data Analysis with R
+From Data to Thesis: Using R for Non-technical
 Playground, Chapter 15: Neural Networks
 
 How to use this project

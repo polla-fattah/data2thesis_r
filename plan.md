@@ -1,6 +1,6 @@
 # Revision Plan: From Data to Thesis
 
-Working plan for revising *From Data to Thesis: Research Data Analysis with R* (formerly *R for Non-Technical Researchers*; the repository and website address remain `R4NTR`). The chapter outline lives in [README.md](README.md); this file holds the instructions that apply across the book, the known defects, and the order of work.
+Working plan for revising *From Data to Thesis: Using R for Non-technical* (the repository and website address remain `R4NTR`). The chapter outline lives in [README.md](README.md); this file holds the instructions that apply across the book, the known defects, and the order of work.
 
 Most chapters are first drafts from 2025, and many sections were generated with AI tools. Treat every chapter as a draft to be restructured, fact-checked, and updated, not as finished text.
 

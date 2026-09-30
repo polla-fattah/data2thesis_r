@@ -47,6 +47,10 @@ if (-not $NoBuild) {
     Write-Host "Building Full Book Single-Page Edition..." -ForegroundColor Cyan
     python (Join-Path $root "scripts/build_full_book.py")
 
+    # Build PDF Book with Covers
+    Write-Host "Building PDF Book with Front and Back Covers..." -ForegroundColor Cyan
+    python (Join-Path $root "scripts/build_pdf.py")
+
     # Mirror content/ paths to root URLs for backward compatibility
     if (Test-Path "$root/_site/content") {
       Copy-Item -Path "$root/_site/content/*" -Destination "$root/_site" -Recurse -Force

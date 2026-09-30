@@ -1,4 +1,4 @@
-From Data to Thesis: Research Data Analysis with R
+From Data to Thesis: Using R for Non-technical
 Playground, Chapter 2: Data Structures in R
 
 How to use this project

@@ -2,10 +2,10 @@
 \alias{data2thesis-package}
 \alias{data2thesis}
 \docType{package}
-\title{Data for 'From Data to Thesis: Research Data Analysis with R'}
+\title{Data for 'From Data to Thesis: Using R for Non-technical'}
 \description{
 The Graduate Wellbeing Study, the running case study of the book
-\emph{From Data to Thesis: Research Data Analysis with R}. Elaf, a Master's student in
+\emph{From Data to Thesis: Using R for Non-technical}. Elaf, a Master's student in
 Educational Psychology, follows 600 graduate students over four semesters
 to learn how lifestyle, stress, and supervisor support relate to their
 wellbeing, grades, and thoughts of dropping out, and whether a wellbeing

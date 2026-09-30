@@ -496,9 +496,9 @@
 
 #show: book.with(
   title: [FROM DATA TO THESIS],
-  subtitle: [Using R for Non-Technical],
+  subtitle: [Using R for Non-technical],
   author: "Polla Fattah and Collection of LLMs",
-  date: "2026-09-27",
+  date: "2026-09-30",
   main-color: brand-color.at("primary", default: blue),
   logo: {
     let logo-info = brand-logo.at("medium", default: none)
@@ -515,17 +515,17 @@
 
 #show: marginalia.setup.with(
   inner: (
-    far: 0cm,
-    width: 0cm,
-    sep: 2.0cm,
+    far: 0.634in,
+    width: 0.792in,
+    sep: 0.787in,
   ),
   outer: (
-    far: 2.0cm,
-    width: 0cm,
-    sep: 0cm,
+    far: 0.787in,
+    width: 1.582in,
+    sep: 0.316in,
   ),
-  top: 2.0cm,
-  bottom: 2.0cm,
+  top: 1.25in,
+  bottom: 1.25in,
   // CRITICAL: Enable book mode for recto/verso awareness
   book: true,
   clearance: 12pt,
@@ -553,7 +553,7 @@
 #callout(
 body: 
 [
-All 19 chapters of #emph[FROM DATA TO THESIS: Using R for Non-Technical] are available, accompanied by interactive #link("../playground/index.html")[Playground] exercises and #link("../slides/index.html")[Lecture Slide Decks] for teaching and review.
+All 19 chapters of #emph[FROM DATA TO THESIS: Using R for Non-technical] are available, accompanied by interactive #link("../playground/index.html")[Playground] exercises and #link("../slides/index.html")[Lecture Slide Decks] for teaching and review.
 
 ]
 , 

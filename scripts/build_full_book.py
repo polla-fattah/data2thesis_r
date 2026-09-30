@@ -320,7 +320,7 @@ def generate_template(chapters_data, foreword_html, total_chapters, total_append
               </div>
               <h1 class="chapter-main-title">{ch['title']}</h1>
               <div class="chapter-meta-banner">
-                From Data to Thesis · Comprehensive Online Reader
+                From Data to Thesis: Using R for Non-technical · Comprehensive Online Reader
               </div>
             </div>
             
@@ -347,8 +347,8 @@ def generate_template(chapters_data, foreword_html, total_chapters, total_append
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>From Data to Thesis — Modern Data Analysis in the Age of AI (Full Book)</title>
-  <meta name="description" content="Complete textbook 'From Data to Thesis: Modern Data Analysis in the Age of AI' by Dr. Polla Abdulhamid Fattah. Read all 19 chapters, references, and appendices online." />
+  <title>From Data to Thesis: Using R for Non-technical (Full Book)</title>
+  <meta name="description" content="Complete textbook 'From Data to Thesis: Using R for Non-technical' by Dr. Polla Abdulhamid Fattah and Collection of LLMs. Read all 19 chapters, references, and appendices online." />
   
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="../images/cover-front.png" />
@@ -1715,12 +1715,12 @@ tr:hover td {{
       <!-- Hero Card -->
       <section class="book-hero-card" id="book-hero">
         <div class="book-hero-cover">
-          <img src="../images/cover-front.png" alt="From Data to Thesis Cover" class="book-cover-img" />
+          <img src="../images/cover-front.png" alt="From Data to Thesis: Using R for Non-technical Cover" class="book-cover-img" />
         </div>
         <div class="book-hero-meta">
           <div class="hero-kicker">Complete Textbook Online Edition</div>
           <h1 class="hero-main-title">From Data to Thesis</h1>
-          <p class="hero-subtitle">Modern Data Analysis in the Age of AI</p>
+          <p class="hero-subtitle">Using R for Non-technical</p>
           
           <div class="hero-author-box">
             <div class="hero-author-name">Dr. Polla Abdulhamid Fattah &amp; Collection of LLMs</div>
@@ -1765,13 +1765,13 @@ tr:hover td {{
       <!-- Back Cover Section -->
       <section class="book-back-cover-card" id="back-cover">
         <div class="book-hero-cover">
-          <img src="../images/cover-back.jpg" alt="From Data to Thesis Back Cover" class="book-cover-img" />
+          <img src="../images/cover-back.jpg" alt="From Data to Thesis: Using R for Non-technical Back Cover" class="book-cover-img" />
         </div>
         <div class="book-hero-meta">
           <div class="hero-kicker">About this Publication</div>
           <h2 class="hero-main-title" style="font-size: 1.8rem;">End of Book Edition</h2>
           <p class="hero-subtitle">
-            You have reached the end of <em>From Data to Thesis: Modern Data Analysis in the Age of AI</em>.
+            You have reached the end of <em>From Data to Thesis: Using R for Non-technical</em>.
             May this research journey empower your thesis defense and future scientific publications.
           </p>
           <div class="hero-author-box">

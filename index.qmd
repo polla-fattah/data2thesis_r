@@ -1,5 +1,5 @@
 ---
-pagetitle: "FROM DATA TO THESIS: Using R for Non-Technical"
+pagetitle: "FROM DATA TO THESIS: Using R for Non-technical"
 page-layout: custom
 toc: false
 ---
@@ -13,7 +13,7 @@ toc: false
     <div class="hero-copy">
       <p class="hero-eyebrow"><span class="hero-status-dot" aria-hidden="true"></span><span>Open access · free PDF · interactive playground</span></p>
       <h1 id="hero-title">FROM DATA TO THESIS</h1>
-      <p class="hero-subtitle">Using R for Non-Technical</p>
+      <p class="hero-subtitle">Using R for Non-technical</p>
       <p class="hero-lead">Follow one Master's thesis from a messy survey export to results that can be defended. Every method in the book answers one of the study's research questions, so you learn R the way you will use it: on a real research project.</p>
       <div class="actions">
         <a class="btn hero-btn-primary" href="content/book/index.html"><i class="bi bi-book-open"></i> <span>Start reading</span></a>
@@ -23,7 +23,7 @@ toc: false
     <div class="hero-cover-panel">
       <img class="hero-cover-image"
            src="images/cover-front.png"
-           alt="Book cover: FROM DATA TO THESIS – Using R for Non-Technical by Polla Fattah">
+           alt="Book cover: FROM DATA TO THESIS – Using R for Non-technical by Polla Fattah">
     </div>
   </div>
 </section>

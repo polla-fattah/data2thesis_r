@@ -1,4 +1,4 @@
-From Data to Thesis: Research Data Analysis with R
+From Data to Thesis: Using R for Non-technical
 Playground, Chapter 6: Descriptive Statistics and Exploratory Data Analysis
 
 How to use this project

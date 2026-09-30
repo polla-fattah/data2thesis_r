@@ -1,4 +1,4 @@
-From Data to Thesis: Research Data Analysis with R
+From Data to Thesis: Using R for Non-technical
 Playground, Chapter 14: Advanced Clustering
 
 How to use this project

@@ -4,7 +4,7 @@ project:
 
 book:
   title: "FROM DATA TO THESIS"
-  subtitle: "Using R for Non-Technical"
+  subtitle: "Using R for Non-technical"
   author: "Polla Fattah and Collection of LLMs"
   date: today
   chapters:

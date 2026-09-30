@@ -1,4 +1,4 @@
-# FROM DATA TO THESIS: Using R for Non-Technical
+# FROM DATA TO THESIS: Using R for Non-technical
 # Playground, Chapter 7: Hypothesis Testing and Statistical Inference
 #
 # Four parts, as on the playground page:

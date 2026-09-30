@@ -1,6 +1,6 @@
 # Slide Architecture & Development Plan: From Data to Thesis (R4NTR)
 
-This document establishes the pedagogical design, slide anatomy, depth targets, and chapter-by-chapter blueprint for the lecture slide decks of **From Data to Thesis: Research Data Analysis with R**.
+This document establishes the pedagogical design, slide anatomy, depth targets, and chapter-by-chapter blueprint for the lecture slide decks of **From Data to Thesis: Using R for Non-technical**.
 
 It is directly modeled on the depth, cadence, and architectural standards of the companion engineering book (`new-lectures`), adapting its proven slide engineering practices to graduate research methodology, biostatistics, and data science with R.
 
