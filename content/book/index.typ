@@ -505,32 +505,14 @@
     if logo-info != none { image(logo-info.path, alt: logo-info.at("alt", default: none)) }
   },
   outline-depth: 3,
+  margin: (
+    top: 22mm,
+    bottom: 22mm,
+    x: 20mm,
+  ),
+  font-size: 10.5pt,
   padded-heading-number: false,
 )
-
-// Configure marginalia page geometry for book context
-// Geometry computed by Quarto's meta.lua filter (typstGeometryFromPaperWidth)
-// IMPORTANT: This must come AFTER book.with() to override the book format's margin settings
-#import "@preview/marginalia:0.3.1" as marginalia
-
-#show: marginalia.setup.with(
-  inner: (
-    far: 0.634in,
-    width: 0.792in,
-    sep: 0.787in,
-  ),
-  outer: (
-    far: 0.787in,
-    width: 1.582in,
-    sep: 0.316in,
-  ),
-  top: 1.25in,
-  bottom: 1.25in,
-  // CRITICAL: Enable book mode for recto/verso awareness
-  book: true,
-  clearance: 12pt,
-)
-
 // Reset Quarto's custom figure counters at each chapter (level-1 heading).
 // Orange-book only resets kind:image and kind:table, but Quarto uses custom kinds.
 // This list is generated dynamically from crossref.categories.

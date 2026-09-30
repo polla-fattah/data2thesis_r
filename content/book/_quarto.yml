@@ -55,12 +55,16 @@ format:
   typst:
     keep-typ: true
     papersize: a4
+    template-partials:
+      - typst-show.typ
     toc: true
     toc-depth: 3
     number-sections: true
     section-numbering: "1.1.1"
-    fontsize: 12pt
+    fontsize: 10.5pt
     margin:
-      x: 2.0cm
-      y: 2.0cm
+      top: 22mm
+      bottom: 22mm
+      left: 20mm
+      right: 20mm
     include-after-body: ../../typst/back-cover.typ

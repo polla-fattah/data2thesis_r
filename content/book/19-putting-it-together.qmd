@@ -335,8 +335,6 @@ What a results chapter must contain is not left to taste. **Reporting standards*
 
 The choice of method for a new research question depends on the goal, on the kind of **outcome**, and on how the **observations** are related. @fig-choose summarises the methods of this book as a guide.
 
-::: {.column-page-right}
-
 ```{mermaid}
 %%| label: fig-choose
 %%| fig-cap: "A guide to choosing a method, with the chapters that cover each."
@@ -352,8 +350,6 @@ flowchart TD
   N -->|No| R[t-test, ANOVA,<br/>regression<br/>Ch 7-8]
   N -->|Yes| M[Mixed-effects<br/>models<br/>Ch 10]
 ```
-
-:::
 
 @tbl-map shows how each of the study's research questions was answered.
 
