@@ -7,24 +7,34 @@ toc: false
 ```{=html}
 <div class="landing container">
 
-<section class="hero" aria-labelledby="hero-title">
-  <div class="hero-glow" aria-hidden="true"></div>
-  <div class="hero-grid">
-    <div class="hero-copy">
-      <p class="hero-eyebrow"><span class="hero-status-dot" aria-hidden="true"></span><span>Open access · free PDF · interactive playground</span></p>
-      <h1 id="hero-title">FROM DATA TO THESIS</h1>
-      <p class="hero-subtitle">Using R for Non-technical</p>
-      <p class="hero-lead">Follow one Master's thesis from a messy survey export to results that can be defended. Every method in the book answers one of the study's research questions, so you learn R the way you will use it: on a real research project.</p>
-      <div class="actions">
-        <a class="btn hero-btn-primary" href="content/book/index.html"><i class="bi bi-book-open"></i> <span>Start reading</span></a>
-        <a class="btn hero-btn-ghost" href="downloads/From-Data-to-Thesis.pdf" download><i class="bi bi-file-earmark-pdf"></i> <span>Download PDF</span></a>
+<section id="hero" class="td-landing-hero td-landing-hero--with-media td-landing-hero--hide-media-below-md" style="--td-hero-title-size: 3rem; --td-hero-columns: 1fr 1fr; --td-hero-media-max: 620px;" aria-labelledby="hero-title">
+  <div class="td-landing-hero__glow" aria-hidden="true"></div>
+  <div class="td-site-container">
+    <div class="td-landing-hero__copy">
+      <p class="td-landing-hero__eyebrow">
+        <span class="td-landing-status-dot" aria-hidden="true"></span>
+        <span>Open access · free PDF · interactive playground</span>
+      </p>
+      <h1 class="td-landing-hero__title td-landing-hero__title--with-brand" id="hero-title">
+        <span class="td-landing-hero__brand" aria-label="Book logo">
+          <img src="images/logo.svg" alt="Book logo" />
+        </span>
+        <span class="td-landing-hero__title-text">FROM DATA TO THESIS</span>
+      </h1>
+      <p class="td-landing-hero__subtitle">Using R for Non-technical</p>
+      <p class="td-landing-hero__lead">Follow one Master's thesis from a messy survey export to results that can be defended. Every method in the book answers one of the study's research questions, so you learn R the way you will use it: on a real research project.</p>
+      <div class="td-landing-hero__actions">
+        <a class="td-landing-button td-landing-button--primary" href="content/book/index.html">
+          <i class="bi bi-book-open" aria-hidden="true"></i>
+          <span>Start reading: Chapter 1</span>
+        </a>
+        <a class="td-landing-button td-landing-button--ghost" href="downloads/From-Data-to-Thesis.pdf" download>
+          <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+          <span>Download PDF</span>
+        </a>
       </div>
     </div>
-    <div class="hero-cover-panel">
-      <img class="hero-cover-image"
-           src="images/cover-front.png"
-           alt="Book cover: FROM DATA TO THESIS – Using R for Non-technical by Polla Fattah">
-    </div>
+    <div class="td-landing-hero__media" style="--td-hero-image-light: url(images/cover-front.png); --td-hero-image-dark: url(images/cover-front.png);" role="img" aria-label="Book cover: FROM DATA TO THESIS – Using R for Non-technical by Polla Fattah"></div>
   </div>
 </section>
 

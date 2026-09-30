@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <style>
+      .shield-bg { fill: #173857; }
+      .shield-left { fill: #2f6793; }
+      .shield-right { fill: #225177; }
+      .facet-highlight { fill: #6ba8dc; opacity: 0.25; }
+      .text-left { fill: #FFFFFF; }
+      .text-right { fill: #E6EFF8; }
+    </style>
+  </defs>
+
+  <!-- Outer Lip -->
+  <polygon class="shield-bg" points="72,36 440,36 408,420 256,476 104,420" />
+
+  <!-- Left Facet -->
+  <polygon class="shield-left" points="256,66 102,66 128,392 256,438" />
+
+  <!-- Right Facet -->
+  <polygon class="shield-right" points="256,66 410,66 384,392 256,438" />
+
+  <!-- Top Bevel Highlight -->
+  <polygon class="facet-highlight" points="102,66 410,66 394,106 118,106" />
+
+  <!-- Monogram R: Left side (pure white) & Right side (subtly shaded) -->
+  <g class="text-left">
+    <!-- Vertical stem -->
+    <path d="M 148 162 L 256 162 L 256 204 L 202 204 L 202 350 L 148 350 Z" />
+    <!-- Lower bar of loop connecting across center line -->
+    <path d="M 202 232 L 256 232 L 256 268 L 202 268 Z" />
+  </g>
+  <g class="text-right">
+    <!-- Curved right side of the R head -->
+    <path d="M 256 162 L 316 162 C 358 162 382 184 382 215 C 382 247 358 268 316 268 L 256 268 L 256 232 L 310 232 C 328 232 338 225 338 215 C 338 205 328 198 310 198 L 256 198 Z" />
+    <!-- Diagonal right leg of R -->
+    <path d="M 256 256 L 298 256 L 376 350 L 314 350 L 256 280 Z" />
+  </g>
+</svg>
