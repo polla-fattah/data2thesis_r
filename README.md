@@ -1,5 +1,11 @@
 # FROM DATA TO THESIS: Using R for Non-Technical
 
+<p align="left">
+  <a href="https://github.com/polla-fattah/data2thesis_r"><img src="https://img.shields.io/badge/Open_Source-Project-181717?style=for-the-badge&logo=github&logoColor=white" alt="Open Source Project"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=for-the-badge" alt="License: Apache 2.0"></a>
+  <a href="https://github.com/polla-fattah/data2thesis_r"><img src="https://img.shields.io/badge/Amendments-Welcomed-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="Amendments Welcomed"></a>
+</p>
+
 A practical guide to analysing research data with R, for researchers with no programming or statistics background. The book follows Elaf, a Master's student, through her thesis on graduate student wellbeing, introducing each method as the answer to one of her research questions.
 
 **Read it online:** https://polla-fattah.github.io/data2thesis_r

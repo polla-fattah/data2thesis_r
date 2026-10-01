@@ -235,4 +235,75 @@ format:
           // Chapter titles are shortened to one line in the sidebar; show the full title on hover
           document.querySelectorAll(".sidebar-navigation .menu-text, .sidebar-navigation .sidebar-item-text")
             .forEach(function (el) { el.title = el.textContent.replace(/\s+/g, " ").trim(); });
+
+          // GitHub Edit / Pencil Button for Chapters (Chapters 01 to 19 only)
+          (function() {
+            var path = window.location.pathname;
+            // Ignore slides and playground
+            if (path.indexOf("/slides/") !== -1 || path.indexOf("/playground/") !== -1) return;
+            // Strictly match chapter files 01 to 19
+            var match = path.match(/(?:^|\/)(0[1-9]|1[0-9])-([a-z0-9-]+)\.html(?:[?#].*)?$/i);
+            if (!match) return;
+
+            var chapterFile = match[1] + "-" + match[2] + ".qmd";
+            var editUrl = "https://github.com/polla-fattah/data2thesis_r/edit/main/content/book/" + chapterFile;
+
+            function initChapterEdit() {
+              if (document.getElementById("d2t-chapter-pencil-init")) return;
+
+              // 1. Top pencil button under H1
+              var h1 = document.querySelector("main.content h1");
+              if (h1 && !document.querySelector(".d2t-chapter-amendments-bar")) {
+                var bar = document.createElement("div");
+                bar.className = "d2t-chapter-amendments-bar";
+                bar.id = "d2t-chapter-pencil-init";
+                bar.innerHTML = '<a href="' + editUrl + '" target="_blank" rel="noopener noreferrer" class="d2t-pencil-btn" title="Open GitHub editor to propose amendments">' +
+                  '<i class="bi bi-pencil-square" aria-hidden="true"></i> ' +
+                  '<span>Amendments are welcomed</span>' +
+                  '</a>';
+                h1.insertAdjacentElement("afterend", bar);
+              }
+
+              // 2. Margin TOC action link
+              var toc = document.getElementById("TOC") || document.getElementById("quarto-margin-sidebar");
+              if (toc && !document.querySelector(".d2t-margin-amendments")) {
+                var pageActions = document.createElement("div");
+                pageActions.className = "quarto-page-actions d2t-margin-amendments";
+                pageActions.innerHTML = '<div class="quarto-page-action">' +
+                  '<a href="' + editUrl + '" target="_blank" rel="noopener noreferrer" class="toc-action d2t-toc-pencil" title="Amendments are welcomed on GitHub">' +
+                  '<i class="bi bi-pencil-square" aria-hidden="true"></i> ' +
+                  '<span>Amendments are welcomed</span>' +
+                  '</a></div>';
+                toc.appendChild(pageActions);
+              }
+
+              // 3. Bottom chapter footer callout
+              var pageNav = document.querySelector("nav.page-navigation");
+              var mainContent = document.querySelector("main.content");
+              if (mainContent && !document.querySelector(".d2t-chapter-amendments-footer")) {
+                var footerCard = document.createElement("div");
+                footerCard.className = "d2t-chapter-amendments-footer";
+                footerCard.innerHTML = '<div class="d2t-chapter-amendments-footer__content">' +
+                  '<i class="bi bi-pencil-fill d2t-chapter-amendments-footer__icon" aria-hidden="true"></i>' +
+                  '<div class="d2t-chapter-amendments-footer__text">' +
+                  'Spotted an error, typo, or have a suggestion to improve this chapter? <strong>Amendments are welcomed!</strong>' +
+                  '</div></div>' +
+                  '<a href="' + editUrl + '" target="_blank" rel="noopener noreferrer" class="d2t-pencil-btn d2t-pencil-btn--small" title="Edit ' + chapterFile + ' on GitHub">' +
+                  '<i class="bi bi-pencil-square" aria-hidden="true"></i> ' +
+                  '<span>Amendments are welcomed</span>' +
+                  '</a>';
+                if (pageNav && pageNav.parentNode) {
+                  pageNav.parentNode.insertBefore(footerCard, pageNav);
+                } else {
+                  mainContent.appendChild(footerCard);
+                }
+              }
+            }
+
+            if (document.readyState === "loading") {
+              document.addEventListener("DOMContentLoaded", initChapterEdit);
+            } else {
+              initChapterEdit();
+            }
+          })();
         </script>
