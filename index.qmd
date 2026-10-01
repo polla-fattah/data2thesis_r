@@ -34,7 +34,9 @@ toc: false
         </a>
       </div>
     </div>
-    <div class="td-landing-hero__media" style="--td-hero-image-light: url(images/cover-front.png); --td-hero-image-dark: url(images/cover-front.png);" role="img" aria-label="Book cover: FROM DATA TO THESIS – Using R for Non-technical by Polla Fattah"></div>
+    <div class="td-landing-hero__media">
+      <img src="images/cover-front.png" alt="Book cover: FROM DATA TO THESIS – Using R for Non-technical by Polla Fattah" />
+    </div>
   </div>
 </section>
 
