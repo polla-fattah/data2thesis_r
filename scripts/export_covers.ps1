@@ -26,4 +26,17 @@ $ppt.Quit()
 [System.Runtime.InteropServices.Marshal]::ReleaseComObject($presentation) | Out-Null
 [System.Runtime.InteropServices.Marshal]::ReleaseComObject($ppt) | Out-Null
 
+# Sync exported covers to book and site image folders
+$targetDirs = @(
+    "content\book\images",
+    "_site\images",
+    "_site\book\images",
+    "_site\content\book\images"
+)
+foreach ($dir in $targetDirs) {
+    if (Test-Path $dir) {
+        Copy-Item $frontCover, $backCover, $backCoverJpg -Destination $dir -Force
+    }
+}
+
 Get-Item $frontCover, $backCover, $backCoverJpg | Select-Object Name, Length, LastWriteTime
